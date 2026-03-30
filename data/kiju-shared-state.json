@@ -1,0 +1,512 @@
+{
+  "version": 3,
+  "updatedAt": "2026-03-30T17:16:07.982Z",
+  "state": {
+    "users": [
+      {
+        "id": "user-admin",
+        "name": "System Admin",
+        "username": "Admin",
+        "role": "admin",
+        "password": "Admin1234",
+        "active": true,
+        "lastSeenAt": "2026-03-30T16:55:27.952Z"
+      },
+      {
+        "id": "user-waiter-1",
+        "name": "Service",
+        "username": "Service",
+        "role": "waiter",
+        "password": "Service1234",
+        "pin": "1234",
+        "active": true,
+        "lastSeenAt": "2026-03-30T16:55:27.952Z"
+      },
+      {
+        "id": "user-kitchen",
+        "name": "Kueche",
+        "username": "Kueche",
+        "role": "kitchen",
+        "password": "Kitchen1234",
+        "pin": "2026",
+        "active": true,
+        "lastSeenAt": "2026-03-30T16:55:27.952Z"
+      }
+    ],
+    "tables": [
+      {
+        "id": "table-1",
+        "name": "Tisch 1",
+        "seatCount": 5,
+        "active": true,
+        "plannedOnly": false,
+        "x": 63,
+        "y": 60,
+        "width": 15,
+        "height": 20,
+        "seats": [
+          {
+            "id": "table-1-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-1-seat-2",
+            "label": "P2"
+          },
+          {
+            "id": "table-1-seat-3",
+            "label": "P3"
+          },
+          {
+            "id": "table-1-seat-4",
+            "label": "P4"
+          },
+          {
+            "id": "table-1-seat-5",
+            "label": "P5"
+          }
+        ]
+      },
+      {
+        "id": "table-2",
+        "name": "Tisch 2",
+        "seatCount": 5,
+        "active": true,
+        "plannedOnly": false,
+        "x": 78,
+        "y": 60,
+        "width": 15,
+        "height": 20,
+        "seats": [
+          {
+            "id": "table-2-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-2-seat-2",
+            "label": "P2"
+          },
+          {
+            "id": "table-2-seat-3",
+            "label": "P3"
+          },
+          {
+            "id": "table-2-seat-4",
+            "label": "P4"
+          },
+          {
+            "id": "table-2-seat-5",
+            "label": "P5"
+          }
+        ]
+      },
+      {
+        "id": "table-3",
+        "name": "Tisch 3",
+        "seatCount": 5,
+        "active": true,
+        "plannedOnly": false,
+        "x": 58,
+        "y": 43,
+        "width": 18,
+        "height": 15,
+        "seats": [
+          {
+            "id": "table-3-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-3-seat-2",
+            "label": "P2"
+          },
+          {
+            "id": "table-3-seat-3",
+            "label": "P3"
+          },
+          {
+            "id": "table-3-seat-4",
+            "label": "P4"
+          },
+          {
+            "id": "table-3-seat-5",
+            "label": "P5"
+          }
+        ]
+      },
+      {
+        "id": "table-4",
+        "name": "Tisch 4",
+        "seatCount": 5,
+        "active": true,
+        "plannedOnly": false,
+        "x": 46,
+        "y": 32,
+        "width": 16,
+        "height": 14,
+        "seats": [
+          {
+            "id": "table-4-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-4-seat-2",
+            "label": "P2"
+          },
+          {
+            "id": "table-4-seat-3",
+            "label": "P3"
+          },
+          {
+            "id": "table-4-seat-4",
+            "label": "P4"
+          },
+          {
+            "id": "table-4-seat-5",
+            "label": "P5"
+          }
+        ]
+      },
+      {
+        "id": "table-5",
+        "name": "Tisch 5",
+        "seatCount": 4,
+        "active": true,
+        "plannedOnly": false,
+        "x": 33,
+        "y": 27,
+        "width": 14,
+        "height": 13,
+        "seats": [
+          {
+            "id": "table-5-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-5-seat-2",
+            "label": "P2"
+          },
+          {
+            "id": "table-5-seat-3",
+            "label": "P3"
+          },
+          {
+            "id": "table-5-seat-4",
+            "label": "P4"
+          }
+        ]
+      },
+      {
+        "id": "table-6",
+        "name": "Tisch 6",
+        "seatCount": 5,
+        "active": true,
+        "plannedOnly": false,
+        "x": 18,
+        "y": 27,
+        "width": 14,
+        "height": 13,
+        "seats": [
+          {
+            "id": "table-6-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-6-seat-2",
+            "label": "P2"
+          },
+          {
+            "id": "table-6-seat-3",
+            "label": "P3"
+          },
+          {
+            "id": "table-6-seat-4",
+            "label": "P4"
+          },
+          {
+            "id": "table-6-seat-5",
+            "label": "P5"
+          }
+        ]
+      },
+      {
+        "id": "table-7",
+        "name": "Sicherheitstisch 7",
+        "seatCount": 2,
+        "active": false,
+        "plannedOnly": true,
+        "x": 45,
+        "y": 49,
+        "width": 16,
+        "height": 13,
+        "note": "Nur über das Menü auswählbar",
+        "seats": [
+          {
+            "id": "table-7-seat-1",
+            "label": "P1"
+          },
+          {
+            "id": "table-7-seat-2",
+            "label": "P2"
+          }
+        ]
+      }
+    ],
+    "products": [
+      {
+        "id": "starter-greeting",
+        "name": "Gruß aus der Küche",
+        "category": "starter",
+        "description": "Kleiner Gruß aus der Küche als Einstieg.",
+        "priceCents": 800,
+        "taxRate": 7,
+        "allergens": [],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "starter-pizza-bread-aioli",
+        "name": "Pizza Brot mit Aioli",
+        "category": "starter",
+        "description": "Frisch gebackenes Pizzabrot mit cremigem Aioli.",
+        "priceCents": 250,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Ei"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pasta-pesto",
+        "name": "Nudeln mit grüner Pesto",
+        "category": "main",
+        "description": "Pasta mit würziger grüner Pesto.",
+        "priceCents": 700,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Nüsse"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pasta-tomato",
+        "name": "Nudeln mit Tomatensauce",
+        "category": "main",
+        "description": "Pasta mit klassischer Tomatensauce.",
+        "priceCents": 700,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pizza-ham",
+        "name": "Pizza Kochschinken",
+        "category": "main",
+        "description": "Pizza mit Tomate, Käse und Kochschinken.",
+        "priceCents": 800,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Milch"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pizza-salami",
+        "name": "Pizza Salami",
+        "category": "main",
+        "description": "Pizza mit Tomate, Käse und Salami.",
+        "priceCents": 800,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Milch"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pizza-speciale",
+        "name": "Pizza Speziale",
+        "category": "main",
+        "description": "Pizza Speziale mit herzhafter Belegung.",
+        "priceCents": 800,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Milch"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pizza-tuna",
+        "name": "Pizza Thunfisch",
+        "category": "main",
+        "description": "Pizza mit Thunfisch und Tomatensauce.",
+        "priceCents": 800,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Fisch",
+          "Milch"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "drink-beer",
+        "name": "Bier",
+        "category": "drinks",
+        "description": "Kalt serviertes Bier.",
+        "priceCents": 300,
+        "taxRate": 19,
+        "allergens": [
+          "Gluten"
+        ],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "drink-cola",
+        "name": "Cola",
+        "category": "drinks",
+        "description": "Klassische Cola, kalt serviert.",
+        "priceCents": 250,
+        "taxRate": 19,
+        "allergens": [
+          "Koffein"
+        ],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "drink-water",
+        "name": "Wasser Still",
+        "category": "drinks",
+        "description": "Stilles Wasser.",
+        "priceCents": 200,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "drink-wine",
+        "name": "Wein",
+        "category": "drinks",
+        "description": "Hauswein im Glas.",
+        "priceCents": 400,
+        "taxRate": 19,
+        "allergens": [
+          "Sulfite"
+        ],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "dessert-pizza-bread-nutella",
+        "name": "Pizza Brot mit Nutella",
+        "category": "dessert",
+        "description": "Warmes Pizzabrot mit Nutella.",
+        "priceCents": 250,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Milch",
+          "Nüsse"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      }
+    ],
+    "sessions": [
+      {
+        "id": "session-table-1-290e18f1-b192-4a02-83d1-8d65bc5e99be",
+        "tableId": "table-1",
+        "waiterId": "user-waiter-1",
+        "status": "waiting",
+        "items": [
+          {
+            "id": "item-8e4b9f69-95c6-43fb-b651-8fe7d2859236",
+            "seatId": "table-1-seat-1",
+            "productId": "starter-greeting",
+            "category": "starter",
+            "quantity": 1,
+            "modifiers": []
+          }
+        ],
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 10,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "countdown",
+            "countdownMinutes": 10,
+            "manualRelease": false,
+            "sentAt": "2026-03-30T17:16:07.960Z",
+            "releasedAt": "2026-03-30T17:16:07.960Z"
+          },
+          "main": {
+            "course": "main",
+            "status": "not-recorded",
+            "countdownMinutes": 10,
+            "manualRelease": false
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 10,
+            "manualRelease": false
+          }
+        },
+        "payments": [],
+        "receipt": {}
+      }
+    ],
+    "notifications": [
+      {
+        "id": "notification-43350549-c2ed-4164-9f89-79923afa0e78",
+        "createdAt": "2026-03-30T17:16:07.960Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf die vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      }
+    ],
+    "dailyStats": {
+      "date": "2026-03-30",
+      "servedTables": 0,
+      "servedGuests": 0,
+      "revenueCents": 0,
+      "closedOrderIds": []
+    },
+    "catalogVersion": 1
+  }
+}

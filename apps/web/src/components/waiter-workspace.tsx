@@ -43,7 +43,7 @@ const normalizePublicBasePath = (value?: string) => {
   return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
 };
 
-const waiterFloorplanImageSrc = `${normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"])}/kellner-haupt-bild.png`;
+const waiterFloorplanImageSrc = `${normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"])}/haus-amos-floorplan-map.svg`;
 
 type FloorplanHotspot = {
   left: number;
@@ -149,7 +149,7 @@ const courseTicketStatusTones: Record<string, "navy" | "amber" | "red" | "green"
 export const WaiterWorkspace = () => {
   const { state, currentUser, unreadNotifications, sharedSync, actions } = useDemoApp();
   const serviceSectionRef = useRef<HTMLElement | null>(null);
-  const dashboard = buildDashboardSummary(state);
+  const dashboard = useMemo(() => buildDashboardSummary(state), [state]);
   const defaultTableId =
     dashboard.find((entry) => entry.table.active)?.table.id ?? dashboard[0]?.table.id ?? null;
   const [selectedTableId, setSelectedTableId] = useState<string | null>(defaultTableId);
@@ -463,6 +463,9 @@ export const WaiterWorkspace = () => {
                 src={waiterFloorplanImageSrc}
                 alt="Kellner Hauptbild mit dem kompletten Gastraum und den Tischen 1 bis 6"
                 className="kiju-floorplan-hero__image"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
               />
               <div className="kiju-floorplan-hero__overlay">
                 {waiterFloorplanEntries.map((entry) => {

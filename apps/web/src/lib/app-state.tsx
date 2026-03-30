@@ -37,7 +37,7 @@ import {
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-v2";
 const SHARED_SYNC_POLL_MS = 1000;
-const DEFAULT_API_PORT = process.env["NEXT_PUBLIC_KIJU_API_PORT"] ?? "4000";
+const SHARED_SYNC_REQUEST_TIMEOUT_MS = 2500;
 
 type SharedSyncState = {
   status: "connecting" | "online" | "offline";
@@ -400,49 +400,50 @@ const resolveSharedStateUrl = () => {
     return `${window.location.origin}/api/kiju/state`;
   }
 
-  return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_API_PORT}/api/state`;
+  return `${window.location.origin}/api/state`;
+};
+
+const requestSharedSnapshot = async (input: string, init?: RequestInit) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), SHARED_SYNC_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(input, {
+      cache: "no-store",
+      ...init,
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as SharedStateSnapshot;
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 };
 
 const fetchSharedSnapshot = async () => {
   const sharedStateUrl = resolveSharedStateUrl();
   if (!sharedStateUrl) return null;
 
-  try {
-    const response = await fetch(sharedStateUrl, {
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as SharedStateSnapshot;
-  } catch {
-    return null;
-  }
+  return requestSharedSnapshot(sharedStateUrl);
 };
 
 const replaceSharedSnapshot = async (state: AppState) => {
   const sharedStateUrl = resolveSharedStateUrl();
   if (!sharedStateUrl) return null;
 
-  try {
-    const response = await fetch(sharedStateUrl, {
+  return requestSharedSnapshot(sharedStateUrl, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(state)
     });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as SharedStateSnapshot;
-  } catch {
-    return null;
-  }
 };
 
 export const DemoAppProvider = ({ children }: PropsWithChildren) => {
@@ -456,6 +457,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const sharedSyncEnabledRef = useRef(false);
   const sharedVersionRef = useRef<number | null>(null);
+  const stateRef = useRef(state);
+  const currentUserIdRef = useRef(currentUserId);
+  const localWriteRevisionRef = useRef(0);
 
   const broadcast = useCallback((nextState: AppState, nextUserId: string | null) => {
     channelRef.current?.postMessage({
@@ -467,6 +471,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const commit = useCallback(
     (nextState: AppState, nextUserId: string | null = currentUserId) => {
       const normalizedState = normalizeAppState(nextState);
+      localWriteRevisionRef.current += 1;
+      stateRef.current = normalizedState;
+      currentUserIdRef.current = nextUserId;
 
       setState(normalizedState);
       setCurrentUserId(nextUserId);
@@ -502,10 +509,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const storedAuth = readStoredAuth();
 
     if (storedState) {
-      setState(normalizeAppState(storedState));
+      const normalizedStoredState = normalizeAppState(storedState);
+      stateRef.current = normalizedStoredState;
+      setState(normalizedStoredState);
     }
 
     if (storedAuth) {
+      currentUserIdRef.current = storedAuth.currentUserId;
       setCurrentUserId(storedAuth.currentUserId);
     }
 
@@ -513,7 +523,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
       channelRef.current.onmessage = (event) => {
         const payload = event.data as { state: AppState; currentUserId: string | null };
-        setState(normalizeAppState(payload.state));
+        const normalizedBroadcastState = normalizeAppState(payload.state);
+        stateRef.current = normalizedBroadcastState;
+        currentUserIdRef.current = payload.currentUserId;
+        setState(normalizedBroadcastState);
         setCurrentUserId(payload.currentUserId);
       };
     }
@@ -521,7 +534,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
         try {
-          setState(normalizeAppState(JSON.parse(event.newValue) as AppState));
+          const normalizedStoredState = normalizeAppState(JSON.parse(event.newValue) as AppState);
+          stateRef.current = normalizedStoredState;
+          setState(normalizedStoredState);
         } catch {
           // Ignore malformed local cache entries.
         }
@@ -530,6 +545,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (event.key === AUTH_KEY && event.newValue) {
         try {
           const parsedAuth = JSON.parse(event.newValue) as { currentUserId: string | null };
+          currentUserIdRef.current = parsedAuth.currentUserId;
           setCurrentUserId(parsedAuth.currentUserId);
         } catch {
           // Ignore malformed local auth cache entries.
@@ -540,6 +556,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     window.addEventListener("storage", handleStorage);
     let isActive = true;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
+    const bootWriteRevision = localWriteRevisionRef.current;
+    setHydrated(true);
 
     const hydrateSharedState = async () => {
       const snapshot = await fetchSharedSnapshot();
@@ -548,15 +566,21 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         sharedSyncEnabledRef.current = true;
         sharedVersionRef.current = snapshot.version;
         const normalizedSnapshotState = normalizeAppState(snapshot.state);
-        setState(normalizedSnapshotState);
-        commitStorage(normalizedSnapshotState, storedAuth?.currentUserId ?? null);
+        const hasLocalWritesSinceBoot = localWriteRevisionRef.current !== bootWriteRevision;
+
+        if (!hasLocalWritesSinceBoot) {
+          stateRef.current = normalizedSnapshotState;
+          setState(normalizedSnapshotState);
+          commitStorage(normalizedSnapshotState, currentUserIdRef.current);
+        }
+
         setSharedSync({
           status: "online",
           usingSharedState: true,
           lastSyncedAt: snapshot.updatedAt
         });
 
-        if (JSON.stringify(normalizedSnapshotState) !== JSON.stringify(snapshot.state)) {
+        if (!hasLocalWritesSinceBoot && JSON.stringify(normalizedSnapshotState) !== JSON.stringify(snapshot.state)) {
           void replaceSharedSnapshot(normalizedSnapshotState).then((normalizedSnapshot) => {
             if (!normalizedSnapshot || !isActive) return;
             sharedVersionRef.current = normalizedSnapshot.version;
@@ -568,15 +592,33 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           });
         }
 
+        if (hasLocalWritesSinceBoot) {
+          void replaceSharedSnapshot(stateRef.current).then((latestSnapshot) => {
+            if (!latestSnapshot || !isActive) return;
+            sharedVersionRef.current = latestSnapshot.version;
+            setSharedSync({
+              status: "online",
+              usingSharedState: true,
+              lastSyncedAt: latestSnapshot.updatedAt
+            });
+          });
+        }
+
         pollTimer = setInterval(async () => {
           const latestSnapshot = await fetchSharedSnapshot();
           if (!latestSnapshot || !isActive) return;
-          if (sharedVersionRef.current === latestSnapshot.version) return;
+          if (
+            sharedVersionRef.current !== null &&
+            latestSnapshot.version <= sharedVersionRef.current
+          ) {
+            return;
+          }
 
           sharedVersionRef.current = latestSnapshot.version;
           const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
+          stateRef.current = normalizedSnapshotState;
           setState(normalizedSnapshotState);
-          commitStorage(normalizedSnapshotState, storedAuth?.currentUserId ?? null);
+          commitStorage(normalizedSnapshotState, currentUserIdRef.current);
           setSharedSync({
             status: "online",
             usingSharedState: true,
@@ -590,10 +632,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           status: "offline",
           usingSharedState: false
         });
-      }
-
-      if (isActive) {
-        setHydrated(true);
       }
     };
 

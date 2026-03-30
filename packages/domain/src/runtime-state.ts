@@ -1,6 +1,8 @@
 import type { AppState, UserAccount } from "./types";
 import { demoProducts, demoTables } from "./demo-data";
 
+const SYSTEM_CATALOG_VERSION = 1;
+
 const createSystemUsers = (): UserAccount[] => {
   const now = new Date().toISOString();
 
@@ -77,7 +79,11 @@ const mergeSeededTables = (tables: AppState["tables"]) => {
   ];
 };
 
-const mergeSeededProducts = (products: AppState["products"], sessions: AppState["sessions"]) => {
+const mergeSeededProducts = (
+  products: AppState["products"],
+  sessions: AppState["sessions"],
+  forceCanonicalSeed: boolean
+) => {
   const canonicalProductIds = new Set(demoProducts.map((product) => product.id));
   const managedProductIds = new Set([...canonicalProductIds, ...legacySeedProductIds]);
   const referencedProductIds = new Set(
@@ -86,10 +92,14 @@ const mergeSeededProducts = (products: AppState["products"], sessions: AppState[
   const existingById = new Map(products.map((product) => [product.id, product]));
 
   return [
-    ...demoProducts.map((seededProduct) => ({
-      ...structuredClone(seededProduct),
-      ...structuredClone(existingById.get(seededProduct.id) ?? {})
-    })),
+    ...demoProducts.map((seededProduct) =>
+      forceCanonicalSeed
+        ? structuredClone(seededProduct)
+        : {
+            ...structuredClone(seededProduct),
+            ...structuredClone(existingById.get(seededProduct.id) ?? {})
+          }
+    ),
     ...products
       .filter((product) => {
         if (!managedProductIds.has(product.id)) {
@@ -102,12 +112,17 @@ const mergeSeededProducts = (products: AppState["products"], sessions: AppState[
   ];
 };
 
-export const normalizeOperationalState = (state: AppState): AppState => ({
-  ...state,
-  users: mergeSeededUsers(state.users),
-  tables: mergeSeededTables(state.tables),
-  products: mergeSeededProducts(state.products, state.sessions)
-});
+export const normalizeOperationalState = (state: AppState): AppState => {
+  const forceCanonicalSeed = (state.catalogVersion ?? 0) < SYSTEM_CATALOG_VERSION;
+
+  return {
+    ...state,
+    catalogVersion: SYSTEM_CATALOG_VERSION,
+    users: mergeSeededUsers(state.users),
+    tables: mergeSeededTables(state.tables),
+    products: mergeSeededProducts(state.products, state.sessions, forceCanonicalSeed)
+  };
+};
 
 export const createDefaultOperationalState = (): AppState =>
   normalizeOperationalState({

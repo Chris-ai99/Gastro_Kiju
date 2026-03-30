@@ -153,6 +153,7 @@ export interface AppNotification {
 }
 
 export interface AppState {
+  catalogVersion?: number;
   users: UserAccount[];
   tables: TableLayout[];
   products: Product[];

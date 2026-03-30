@@ -8,6 +8,8 @@ coverage
 .env
 .env.local
 tmp
-data/
+data/*
+!data/kiju-shared-state.json
+apps/web/data/*
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
