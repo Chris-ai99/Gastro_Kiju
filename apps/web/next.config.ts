@@ -1,4 +1,5 @@
 import { networkInterfaces } from "node:os";
+import { resolve } from "node:path";
 
 import type { NextConfig } from "next";
 
@@ -29,13 +30,17 @@ const resolveAllowedDevOrigins = () => {
 
 const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
 const exportStatic = process.env.KIJU_EXPORT_STATIC === "1";
+const workspaceRoot = resolve(process.cwd(), "../..");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: exportStatic ? "export" : "standalone",
   basePath,
   trailingSlash: exportStatic,
-  // Erlaubt Tablets und andere Geräte im lokalen Netzwerk den Dev-Client sauber zu laden.
+  turbopack: {
+    root: workspaceRoot
+  },
+  // Erlaubt Tablets und andere Geraete im lokalen Netzwerk den Dev-Client sauber zu laden.
   allowedDevOrigins: resolveAllowedDevOrigins()
 };
 
