@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "updatedAt": "2026-03-30T17:16:07.982Z",
+  "version": 4,
+  "updatedAt": "2026-03-30T17:20:50.839Z",
   "state": {
     "users": [
       {
@@ -254,9 +254,9 @@
     "products": [
       {
         "id": "starter-greeting",
-        "name": "Gruß aus der Küche",
+        "name": "Gru�Y aus der Küche",
         "category": "starter",
-        "description": "Kleiner Gruß aus der Küche als Einstieg.",
+        "description": "Kleiner Gru�Y aus der Küche als Einstieg.",
         "priceCents": 800,
         "taxRate": 7,
         "allergens": [],
@@ -440,66 +440,8 @@
         "modifierGroups": []
       }
     ],
-    "sessions": [
-      {
-        "id": "session-table-1-290e18f1-b192-4a02-83d1-8d65bc5e99be",
-        "tableId": "table-1",
-        "waiterId": "user-waiter-1",
-        "status": "waiting",
-        "items": [
-          {
-            "id": "item-8e4b9f69-95c6-43fb-b651-8fe7d2859236",
-            "seatId": "table-1-seat-1",
-            "productId": "starter-greeting",
-            "category": "starter",
-            "quantity": 1,
-            "modifiers": []
-          }
-        ],
-        "skippedCourses": [],
-        "courseTickets": {
-          "drinks": {
-            "course": "drinks",
-            "status": "not-recorded",
-            "countdownMinutes": 10,
-            "manualRelease": false
-          },
-          "starter": {
-            "course": "starter",
-            "status": "countdown",
-            "countdownMinutes": 10,
-            "manualRelease": false,
-            "sentAt": "2026-03-30T17:16:07.960Z",
-            "releasedAt": "2026-03-30T17:16:07.960Z"
-          },
-          "main": {
-            "course": "main",
-            "status": "not-recorded",
-            "countdownMinutes": 10,
-            "manualRelease": false
-          },
-          "dessert": {
-            "course": "dessert",
-            "status": "not-recorded",
-            "countdownMinutes": 10,
-            "manualRelease": false
-          }
-        },
-        "payments": [],
-        "receipt": {}
-      }
-    ],
-    "notifications": [
-      {
-        "id": "notification-43350549-c2ed-4164-9f89-79923afa0e78",
-        "createdAt": "2026-03-30T17:16:07.960Z",
-        "read": false,
-        "title": "Vorspeise gesendet",
-        "body": "Tisch 1 wartet auf die vorspeise.",
-        "tone": "info",
-        "tableId": "table-1"
-      }
-    ],
+    "sessions": [],
+    "notifications": [],
     "dailyStats": {
       "date": "2026-03-30",
       "servedTables": 0,
