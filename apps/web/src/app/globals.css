@@ -1672,8 +1672,8 @@ html[data-theme="dark"] .kiju-admin-shell {
   }
 
   .kiju-floorplan-hero {
-    --kiju-seat-hotspot-size: clamp(1.3rem, 5.2cqw, 2.4rem);
-    --kiju-seat-hotspot-font-size: clamp(0.5rem, 1.7cqw, 0.82rem);
+    --kiju-seat-hotspot-size: clamp(1.05rem, 4.3cqw, 1.95rem);
+    --kiju-seat-hotspot-font-size: clamp(0.42rem, 1.35cqw, 0.68rem);
     border-radius: 24px;
   }
 
