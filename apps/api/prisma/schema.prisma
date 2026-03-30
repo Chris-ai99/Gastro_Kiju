@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String         @id @default(cuid())
+  name        String
+  username    String         @unique
+  role        Role
+  password    String
+  pin         String?
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  sessions    OrderSession[]
+  auditEvents AuditEvent[]
+}
+
+model DiningTable {
+  id           String         @id @default(cuid())
+  name         String
+  seatCount    Int
+  active       Boolean        @default(true)
+  plannedOnly  Boolean        @default(false)
+  x            Float
+  y            Float
+  width        Float
+  height       Float
+  note         String?
+  seats        Seat[]
+  sessions     OrderSession[]
+}
+
+model Seat {
+  id          String        @id @default(cuid())
+  label       String
+  tableId     String
+  table       DiningTable   @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+}
+
+model Product {
+  id               String          @id @default(cuid())
+  name             String
+  category         CourseKey
+  description      String
+  priceCents       Int
+  taxRate          Float
+  showInKitchen    Boolean         @default(true)
+  productionTarget ProductionTarget
+  allergens        String[]
+  orderItems       OrderItem[]
+}
+
+model OrderSession {
+  id            String        @id @default(cuid())
+  tableId       String
+  waiterId      String
+  status        SessionStatus
+  holdReason    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  receiptPrintedAt DateTime?
+  receiptClosedAt  DateTime?
+  table         DiningTable   @relation(fields: [tableId], references: [id])
+  waiter        User          @relation(fields: [waiterId], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+}
+
+model OrderItem {
+  id           String       @id @default(cuid())
+  sessionId    String
+  seatId       String
+  productId    String
+  category     CourseKey
+  quantity     Int
+  note         String?
+  sentAt       DateTime?
+  preparedAt   DateTime?
+  servedAt     DateTime?
+  session      OrderSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seat         Seat         @relation(fields: [seatId], references: [id])
+  product      Product      @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  sessionId   String
+  label       String
+  amountCents Int
+  method      PaymentMethod
+  createdAt   DateTime      @default(now())
+  session     OrderSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId     String
+  message     String
+  tableRef    String?
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id])
+}
+
+enum Role {
+  admin
+  waiter
+  kitchen
+}
+
+enum CourseKey {
+  drinks
+  starter
+  main
+  dessert
+}
+
+enum SessionStatus {
+  planned
+  idle
+  serving
+  hold
+  waiting
+  ready_to_bill
+  closed
+}
+
+enum PaymentMethod {
+  cash
+  card
+  voucher
+}
+
+enum ProductionTarget {
+  service
+  bar
+  kitchen
+}

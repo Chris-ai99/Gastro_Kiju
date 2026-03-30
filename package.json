@@ -1,0 +1,22 @@
+{
+  "name": "kiju-gastro-order-system",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.22.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter @kiju/config build && pnpm --filter @kiju/domain build && pnpm --filter @kiju/ui build && pnpm --filter @kiju/print-bridge build && pnpm --filter @kiju/api build && pnpm --filter @kiju/web build",
+    "dev": "concurrently -n CONFIG,DOMAIN,UI,WEB,API,PRINT -c cyan,magenta,yellow,green,blue,red \"pnpm --filter @kiju/config dev\" \"pnpm --filter @kiju/domain dev\" \"pnpm --filter @kiju/ui dev\" \"pnpm --filter @kiju/web dev\" \"pnpm --filter @kiju/api dev\" \"pnpm --filter @kiju/print-bridge dev\"",
+    "dev:web": "pnpm --filter @kiju/web dev",
+    "dev:api": "pnpm --filter @kiju/api dev",
+    "test": "pnpm --filter @kiju/domain test",
+    "typecheck": "pnpm --filter @kiju/config typecheck && pnpm --filter @kiju/domain typecheck && pnpm --filter @kiju/ui typecheck && pnpm --filter @kiju/api typecheck && pnpm --filter @kiju/web typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}

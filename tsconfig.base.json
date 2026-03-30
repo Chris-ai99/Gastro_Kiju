@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@kiju/config": ["packages/config/src/index.ts"],
+      "@kiju/config/*": ["packages/config/src/*"],
+      "@kiju/domain": ["packages/domain/src/index.ts"],
+      "@kiju/domain/*": ["packages/domain/src/*"],
+      "@kiju/ui": ["packages/ui/src/index.ts"],
+      "@kiju/ui/*": ["packages/ui/src/*"]
+    }
+  }
+}

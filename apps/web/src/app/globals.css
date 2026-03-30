@@ -1,0 +1,1689 @@
+:root {
+  --deep-navy: #1e3a8a;
+  --ivory: #f8fafc;
+  --amber: #ca8a04;
+  --service-red: #dc2626;
+  --ready-green: #16a34a;
+  --slate: #0f172a;
+  --muted: #475569;
+  --line: #cbd5e1;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --shadow-card: 0 18px 40px rgba(15, 23, 42, 0.12);
+  --shadow-stage: 0 30px 80px rgba(30, 58, 138, 0.16);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --page-background:
+    radial-gradient(circle at top left, rgba(30, 58, 138, 0.18), transparent 36%),
+    linear-gradient(135deg, #eff6ff 0%, var(--ivory) 45%, #fff7ed 100%);
+}
+
+html[data-theme="dark"] {
+  --deep-navy: #22c55e;
+  --ivory: #020617;
+  --amber: #f59e0b;
+  --service-red: #f87171;
+  --ready-green: #22c55e;
+  --slate: #f8fafc;
+  --muted: #cbd5e1;
+  --line: rgba(148, 163, 184, 0.28);
+  --surface: rgba(15, 23, 42, 0.84);
+  --surface-strong: rgba(15, 23, 42, 0.96);
+  --shadow-card: 0 18px 40px rgba(2, 6, 23, 0.56);
+  --shadow-stage: 0 30px 80px rgba(2, 6, 23, 0.72);
+  --page-background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(30, 64, 175, 0.2), transparent 30%),
+    linear-gradient(145deg, #020617 0%, #020617 45%, #0f172a 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Segoe UI", "Karla", sans-serif;
+  background: var(--page-background);
+  color: var(--slate);
+  transition: background 220ms ease, color 220ms ease;
+}
+
+body {
+  min-width: 320px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.kiju-page,
+.kiju-login-shell {
+  min-height: 100vh;
+  padding: 4.75rem 2rem 2rem;
+}
+
+.kiju-login-shell {
+  display: grid;
+  place-items: center;
+}
+
+.kiju-login-hero {
+  width: min(1280px, 100%);
+  display: grid;
+  grid-template-columns: 1.25fr 0.9fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.kiju-login-hero--compact {
+  grid-template-columns: 1.05fr 0.95fr;
+}
+
+.kiju-login-copy,
+.kiju-card,
+.kiju-metric-card,
+.kiju-inline-panel,
+.kiju-product-card,
+.kiju-kitchen-column,
+.kiju-kitchen-cell,
+.kiju-admin-product,
+.kiju-admin-table,
+.kiju-notification-row,
+.kiju-empty-state {
+  backdrop-filter: blur(14px);
+  background: var(--surface);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  transition:
+    background 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.kiju-theme-toggle {
+  position: fixed;
+  top: 1.15rem;
+  right: 1.15rem;
+  z-index: 30;
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(14px);
+}
+
+.kiju-theme-toggle__button {
+  min-height: 40px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 999px;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.kiju-theme-toggle__button.is-active {
+  background: linear-gradient(135deg, var(--deep-navy), rgba(59, 130, 246, 0.85));
+  color: white;
+}
+
+.kiju-accordion {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kiju-accordion__summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.kiju-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.kiju-accordion__summary-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kiju-accordion__summary-copy h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.kiju-accordion__summary-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kiju-accordion__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.kiju-accordion[open] .kiju-accordion__chevron {
+  transform: rotate(180deg);
+}
+
+.kiju-accordion__content {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-login-copy {
+  padding: 2rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.kiju-login-copy h1,
+.kiju-topbar h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  line-height: 1;
+}
+
+.kiju-login-copy p,
+.kiju-topbar p,
+.kiju-product-card p,
+.kiju-seat-summary p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.kiju-feature-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kiju-quickstart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kiju-quickstart-card {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  background: var(--surface-strong);
+  display: grid;
+  gap: 0.8rem;
+  text-align: left;
+  min-height: 180px;
+  box-shadow: var(--shadow-card);
+}
+
+.kiju-quickstart-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kiju-quickstart-card strong {
+  font-size: 1.05rem;
+}
+
+.kiju-quickstart-card span {
+  color: var(--muted);
+}
+
+.kiju-quickstart-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--deep-navy) !important;
+  font-weight: 700;
+}
+
+.kiju-feature-list article {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 72px;
+}
+
+.kiju-card {
+  padding: 1.5rem;
+}
+
+.kiju-card--info {
+  background: rgba(219, 234, 254, 0.72);
+}
+
+.kiju-card--alert {
+  background: rgba(254, 242, 242, 0.72);
+}
+
+.kiju-card--success {
+  background: rgba(220, 252, 231, 0.72);
+}
+
+.kiju-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.kiju-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-form label,
+.kiju-inline-field,
+.kiju-admin-product label,
+.kiju-admin-panel label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.kiju-form input,
+.kiju-inline-field input,
+.kiju-inline-field select,
+.kiju-inline-field textarea,
+.kiju-admin-product input,
+.kiju-admin-product select,
+.kiju-admin-product textarea,
+.kiju-admin-panel input,
+.kiju-admin-panel select,
+.kiju-admin-panel textarea {
+  width: 100%;
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  padding: 0.8rem 0.95rem;
+  color: var(--slate);
+}
+
+.kiju-admin-product textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.kiju-error {
+  color: var(--service-red);
+  margin: 0;
+}
+
+.kiju-login-shortcuts,
+.kiju-login-links,
+.kiju-topbar-actions,
+.kiju-step-actions,
+.kiju-seat-row,
+.kiju-step-tabs,
+.kiju-admin-users,
+.kiju-admin-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.kiju-login-credentials {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kiju-button {
+  min-height: 46px;
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.kiju-button:hover {
+  transform: translateY(-1px);
+}
+
+.kiju-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kiju-button--primary {
+  background: linear-gradient(135deg, var(--deep-navy), #3b82f6);
+  color: white;
+}
+
+.kiju-button--secondary {
+  background: var(--surface-strong);
+  color: var(--slate);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+}
+
+.kiju-button--danger {
+  background: linear-gradient(135deg, var(--service-red), #ef4444);
+  color: white;
+}
+
+.kiju-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.kiju-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.kiju-metric-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kiju-metric-card {
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kiju-workspace,
+.kiju-admin-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.15fr 0.9fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.kiju-admin-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kiju-workspace--waiter {
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+}
+
+.kiju-floorplan-stage,
+.kiju-service-section {
+  display: grid;
+}
+
+.kiju-floorplan-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1241 / 600;
+  container-type: inline-size;
+  --kiju-seat-hotspot-size: clamp(1.45rem, 4.4cqw, 3.3rem);
+  --kiju-seat-hotspot-font-size: clamp(0.55rem, 1.55cqw, 1.05rem);
+  overflow: hidden;
+  border-radius: 32px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  box-shadow: var(--shadow-stage);
+  background: #0f3d75;
+}
+
+.kiju-floorplan-hero__image {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+}
+
+.kiju-floorplan-hero__overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.kiju-floorplan-hotspot {
+  position: absolute;
+  z-index: 1;
+  border-radius: 22px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.kiju-floorplan-hotspot:hover {
+  transform: scale(1.02);
+  border-color: rgba(248, 250, 252, 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.kiju-floorplan-hotspot.is-selected {
+  border-color: rgba(202, 138, 4, 0.96);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 24px 44px rgba(202, 138, 4, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.kiju-floorplan-seat-hotspot {
+  position: absolute;
+  z-index: 2;
+  width: var(--kiju-seat-hotspot-size);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 1px solid rgba(241, 245, 249, 0.92);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(34, 211, 238, 0.55), rgba(15, 23, 42, 0.94)),
+    rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-size: var(--kiju-seat-hotspot-font-size);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow:
+    0 12px 26px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.kiju-floorplan-seat-hotspot span {
+  pointer-events: none;
+}
+
+.kiju-floorplan-seat-hotspot:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  border-color: rgba(248, 250, 252, 1);
+  box-shadow:
+    0 16px 32px rgba(15, 23, 42, 0.34),
+    0 0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+.kiju-floorplan-seat-hotspot.is-selected {
+  border-color: rgba(250, 204, 21, 1);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(250, 204, 21, 0.62), rgba(161, 98, 7, 0.94)),
+    rgba(120, 53, 15, 0.92);
+  box-shadow:
+    0 18px 34px rgba(161, 98, 7, 0.34),
+    0 0 0 5px rgba(250, 204, 21, 0.18);
+}
+
+.kiju-service-section {
+  align-self: stretch;
+}
+
+.kiju-table-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
+  gap: 0.75rem;
+}
+
+.kiju-table-menu__button {
+  min-height: 78px;
+  padding: 0.9rem 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: var(--surface-strong);
+  text-align: left;
+  display: grid;
+  gap: 0.2rem;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.kiju-table-menu__button small {
+  color: var(--muted);
+}
+
+.kiju-table-menu__button:hover {
+  transform: translateY(-2px);
+}
+
+.kiju-table-menu__button.is-selected {
+  border-color: rgba(202, 138, 4, 0.9);
+  background: rgba(255, 251, 235, 0.95);
+  box-shadow: 0 18px 34px rgba(202, 138, 4, 0.16);
+}
+
+.kiju-floorplan {
+  position: relative;
+  min-height: 540px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(30, 58, 138, 0.08), rgba(248, 250, 252, 0.74)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(30, 58, 138, 0.06),
+      rgba(30, 58, 138, 0.06) 1px,
+      transparent 1px,
+      transparent 48px
+    );
+  box-shadow: var(--shadow-stage);
+}
+
+.kiju-table-tile {
+  position: absolute;
+  border-radius: 22px;
+  border: 1px solid rgba(30, 58, 138, 0.18);
+  background: linear-gradient(180deg, var(--surface-strong), rgba(148, 163, 184, 0.18));
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.16);
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  transform: perspective(1200px) rotateX(22deg);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.kiju-table-tile.is-selected {
+  border-color: rgba(202, 138, 4, 0.82);
+  box-shadow: 0 22px 42px rgba(202, 138, 4, 0.28);
+  transform: perspective(1200px) rotateX(12deg) scale(1.05);
+}
+
+.kiju-table-tile__name {
+  font-weight: 700;
+}
+
+.kiju-floorplan-caption {
+  position: absolute;
+  inset: auto 1rem 1rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface-strong);
+  border-radius: 18px;
+}
+
+.kiju-floorplan-empty {
+  position: absolute;
+  inset: 1rem 1rem 5rem 1rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.45rem;
+  padding: 1.5rem;
+  border-radius: 24px;
+  border: 1px dashed rgba(71, 85, 105, 0.35);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.kiju-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.kiju-pill--navy {
+  background: rgba(30, 58, 138, 0.12);
+  color: var(--deep-navy);
+}
+
+.kiju-pill--amber {
+  background: rgba(202, 138, 4, 0.15);
+  color: #854d0e;
+}
+
+.kiju-pill--red {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--service-red);
+}
+
+.kiju-pill--green {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--ready-green);
+}
+
+.kiju-pill--slate {
+  background: rgba(71, 85, 105, 0.12);
+  color: var(--muted);
+}
+
+.kiju-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kiju-step {
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.kiju-step span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(30, 58, 138, 0.08);
+  font-weight: 700;
+}
+
+.kiju-step--active {
+  background: rgba(219, 234, 254, 0.9);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.kiju-step--done span {
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.kiju-seat-chip,
+.kiju-step-tab {
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background: var(--surface-strong);
+}
+
+.kiju-seat-chip.is-selected,
+.kiju-step-tab.is-selected {
+  background: var(--deep-navy);
+  color: white;
+}
+
+.kiju-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kiju-product-card {
+  padding: 1rem;
+  min-height: 164px;
+  display: grid;
+  align-content: space-between;
+  gap: 1rem;
+  text-align: left;
+}
+
+.kiju-product-card strong {
+  font-size: 1.1rem;
+}
+
+.kiju-product-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kiju-seat-summary,
+.kiju-inline-panel {
+  padding: 0.95rem 1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.kiju-seat-summary header,
+.kiju-line-item,
+.kiju-admin-product__header,
+.kiju-admin-product__fields {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.kiju-line-item {
+  color: var(--muted);
+}
+
+.kiju-seat-summary__items {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.kiju-review-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.95fr;
+  gap: 1rem;
+}
+
+.kiju-review-list,
+.kiju-review-actions,
+.kiju-admin-products {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-danger-zone,
+.kiju-danger-block,
+.kiju-danger-actions {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-danger-block {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  background: var(--surface);
+}
+
+.kiju-danger-copy {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.kiju-danger-copy p,
+.kiju-danger-copy small {
+  margin: 0;
+  color: var(--muted);
+}
+
+.kiju-admin-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.kiju-admin-feedback.is-success {
+  border-color: rgba(22, 163, 74, 0.35);
+}
+
+.kiju-admin-feedback.is-alert {
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.kiju-admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.kiju-admin-nav__item {
+  min-height: 42px;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background: var(--surface-strong);
+  font-weight: 700;
+}
+
+.kiju-admin-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-admin-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.kiju-admin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-admin-category-group {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-admin-category-group + .kiju-admin-category-group {
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--line);
+}
+
+.kiju-admin-category-group__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.kiju-admin-product-accordion {
+  gap: 0.55rem;
+}
+
+.kiju-admin-product-accordion .kiju-accordion__summary {
+  padding: 1rem 1.05rem;
+}
+
+.kiju-admin-product-accordion .kiju-accordion__summary-copy {
+  gap: 0.2rem;
+}
+
+.kiju-admin-product-accordion .kiju-accordion__summary-copy h2 {
+  font-size: 1.02rem;
+}
+
+.kiju-admin-product-accordion .kiju-accordion__summary-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.kiju-admin-product-accordion__content {
+  gap: 0.95rem;
+}
+
+.kiju-admin-panel,
+.kiju-order-item-card {
+  backdrop-filter: blur(14px);
+  background: var(--surface);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.kiju-admin-row,
+.kiju-order-item-card__header,
+.kiju-order-item-card__fields {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.kiju-admin-row > * {
+  flex: 1;
+}
+
+.kiju-admin-row--top {
+  justify-content: space-between;
+}
+
+.kiju-admin-row--top > *:last-child {
+  flex: 0 0 auto;
+}
+
+.kiju-admin-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.kiju-admin-subsection {
+  padding-top: 0.1rem;
+  border-top: 1px solid rgba(203, 213, 225, 0.7);
+}
+
+.kiju-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 48px;
+  padding: 0.8rem 0.95rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.kiju-checkbox-row input {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+}
+
+.kiju-order-editor {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-order-editor__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.kiju-order-editor__header span {
+  color: var(--muted);
+}
+
+.kiju-order-editor__list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.kiju-order-item-card__header small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+}
+
+.kiju-quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.kiju-quantity-control .kiju-button {
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+.kiju-kitchen-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(210px, 1fr));
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.kiju-kitchen-column {
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  min-width: 210px;
+}
+
+.kiju-kitchen-column__header,
+.kiju-kitchen-cell__header,
+.kiju-inline-flag {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.kiju-kitchen-cell {
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.kiju-kitchen-cell p {
+  margin: 0;
+  min-height: 3.3em;
+}
+
+.kiju-kitchen-cell__actions {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.kiju-notification-row {
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  width: 100%;
+  text-align: left;
+}
+
+.kiju-notification-row div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.kiju-admin-product,
+.kiju-admin-table {
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  text-align: left;
+}
+
+.kiju-admin-table.is-active {
+  background: rgba(220, 252, 231, 0.7);
+}
+
+.kiju-empty-state,
+.kiju-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.kiju-empty-state--compact {
+  min-height: 240px;
+}
+
+.kiju-notification-popover,
+.kiju-role-switch-popover {
+  position: relative;
+}
+
+.kiju-notification-popover[open],
+.kiju-role-switch-popover[open] {
+  z-index: 20;
+}
+
+.kiju-notification-popover__trigger {
+  list-style: none;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+}
+
+.kiju-notification-popover__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.kiju-notification-popover__trigger strong {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--deep-navy);
+  color: white;
+  font-size: 0.82rem;
+}
+
+.kiju-notification-popover__panel {
+  position: absolute;
+  top: calc(100% + 0.9rem);
+  right: 0;
+  width: min(420px, calc(100vw - 2rem));
+  padding: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: var(--surface-strong);
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.kiju-notification-popover__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.kiju-notification-popover__header span {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.kiju-notification-popover__panel .kiju-notification-row {
+  border-radius: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.kiju-role-switch-popover__trigger {
+  list-style: none;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+}
+
+.kiju-role-switch-popover__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.kiju-role-switch-popover__trigger small {
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(30, 58, 138, 0.1);
+  color: var(--deep-navy);
+  font-size: 0.78rem;
+}
+
+.kiju-role-switch-popover__panel {
+  position: absolute;
+  top: calc(100% + 0.9rem);
+  right: 0;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: var(--surface-strong);
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-role-switch-popover__header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kiju-role-switch-popover__header span {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.kiju-role-switch-popover__list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kiju-role-switch-option {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  align-items: start;
+  text-align: left;
+  box-shadow: none;
+}
+
+.kiju-role-switch-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.kiju-role-switch-option.is-current {
+  border-color: rgba(30, 58, 138, 0.35);
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.08), rgba(59, 130, 246, 0.04));
+}
+
+.kiju-role-switch-option__icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(30, 58, 138, 0.12);
+  color: var(--deep-navy);
+}
+
+.kiju-role-switch-option__copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.kiju-role-switch-option__copy strong {
+  font-size: 0.98rem;
+}
+
+.kiju-role-switch-option__copy small {
+  color: var(--muted);
+}
+
+.kiju-role-switch-popover__error {
+  margin: 0;
+  color: var(--service-red);
+  font-size: 0.94rem;
+}
+
+.kiju-role-switch-popover__logout {
+  width: 100%;
+}
+
+.kiju-admin-shell {
+  --kiju-admin-panel-border: rgba(148, 163, 184, 0.28);
+  --kiju-admin-panel-background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.9)),
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 42%);
+  --kiju-admin-panel-shadow: 0 24px 60px rgba(30, 58, 138, 0.14);
+  --kiju-admin-field-border: rgba(148, 163, 184, 0.46);
+  --kiju-admin-field-background: rgba(255, 255, 255, 0.96);
+  --kiju-admin-subtle-text: var(--muted);
+  --kiju-admin-line-background: rgba(248, 250, 252, 0.96);
+  --kiju-admin-line-border: rgba(148, 163, 184, 0.3);
+  --kiju-admin-secondary-border: rgba(148, 163, 184, 0.46);
+  --kiju-admin-secondary-background: rgba(255, 255, 255, 0.95);
+  --kiju-admin-secondary-color: var(--slate);
+  --kiju-admin-danger-border: rgba(248, 113, 113, 0.28);
+  --kiju-admin-danger-background: rgba(254, 242, 242, 0.96);
+  --kiju-admin-danger-color: #b91c1c;
+  --kiju-admin-primary-shadow: 0 14px 30px rgba(59, 130, 246, 0.24);
+  --kiju-admin-hero-border: rgba(96, 165, 250, 0.22);
+  --kiju-admin-hero-background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(239, 246, 255, 0.92) 52%,
+      rgba(255, 247, 237, 0.9) 100%
+    ),
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.24), transparent 38%);
+  --kiju-admin-hero-shadow: 0 26px 70px rgba(30, 58, 138, 0.18);
+  --kiju-admin-pill-border: rgba(148, 163, 184, 0.44);
+  --kiju-admin-pill-background: rgba(255, 255, 255, 0.94);
+  --kiju-admin-pill-color: var(--slate);
+  --kiju-admin-feedback-border: rgba(59, 130, 246, 0.18);
+  --kiju-admin-feedback-background: rgba(255, 255, 255, 0.96);
+  --kiju-admin-feedback-color: var(--slate);
+  --kiju-admin-kpi-border: rgba(96, 165, 250, 0.22);
+  --kiju-admin-kpi-background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.9)),
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 40%);
+  --kiju-admin-kpi-shadow: 0 18px 44px rgba(30, 58, 138, 0.14);
+  --kiju-admin-kpi-label: #1d4ed8;
+  --kiju-admin-focus-border: rgba(148, 163, 184, 0.28);
+  --kiju-admin-focus-background: rgba(248, 250, 252, 0.94);
+  --kiju-admin-accordion-border: rgba(96, 165, 250, 0.18);
+  --kiju-admin-accordion-background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.9)),
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.1), transparent 42%);
+  display: grid;
+  gap: 1.25rem;
+  padding-top: 5.2rem;
+}
+
+html[data-theme="dark"] .kiju-admin-shell {
+  --kiju-admin-panel-border: rgba(56, 189, 248, 0.14);
+  --kiju-admin-panel-background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9)),
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 42%);
+  --kiju-admin-panel-shadow: 0 24px 60px rgba(2, 6, 23, 0.42);
+  --kiju-admin-field-border: rgba(71, 85, 105, 0.92);
+  --kiju-admin-field-background: rgba(15, 23, 42, 0.9);
+  --kiju-admin-subtle-text: #94a3b8;
+  --kiju-admin-line-background: rgba(15, 23, 42, 0.72);
+  --kiju-admin-line-border: rgba(71, 85, 105, 0.6);
+  --kiju-admin-secondary-border: rgba(71, 85, 105, 0.9);
+  --kiju-admin-secondary-background: rgba(15, 23, 42, 0.82);
+  --kiju-admin-secondary-color: #e2e8f0;
+  --kiju-admin-danger-border: rgba(248, 113, 113, 0.35);
+  --kiju-admin-danger-background: rgba(127, 29, 29, 0.18);
+  --kiju-admin-danger-color: #fecaca;
+  --kiju-admin-primary-shadow: 0 14px 30px rgba(8, 145, 178, 0.22);
+  --kiju-admin-hero-border: rgba(34, 211, 238, 0.18);
+  --kiju-admin-hero-background:
+    linear-gradient(135deg, rgba(8, 47, 73, 0.88), rgba(15, 23, 42, 0.96) 52%),
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 38%);
+  --kiju-admin-hero-shadow: 0 26px 70px rgba(2, 6, 23, 0.42);
+  --kiju-admin-pill-border: rgba(71, 85, 105, 0.88);
+  --kiju-admin-pill-background: rgba(15, 23, 42, 0.8);
+  --kiju-admin-pill-color: #e2e8f0;
+  --kiju-admin-feedback-border: rgba(34, 211, 238, 0.2);
+  --kiju-admin-feedback-background: rgba(15, 23, 42, 0.92);
+  --kiju-admin-feedback-color: #e2e8f0;
+  --kiju-admin-kpi-border: rgba(34, 211, 238, 0.16);
+  --kiju-admin-kpi-background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.97), rgba(15, 23, 42, 0.9)),
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 40%);
+  --kiju-admin-kpi-shadow: 0 18px 44px rgba(2, 6, 23, 0.34);
+  --kiju-admin-kpi-label: #67e8f9;
+  --kiju-admin-focus-border: rgba(71, 85, 105, 0.64);
+  --kiju-admin-focus-background: rgba(15, 23, 42, 0.72);
+  --kiju-admin-accordion-border: rgba(34, 211, 238, 0.16);
+  --kiju-admin-accordion-background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9)),
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.06), transparent 42%);
+}
+
+.kiju-admin-shell .kiju-card,
+.kiju-admin-shell .kiju-inline-panel,
+.kiju-admin-shell .kiju-admin-panel,
+.kiju-admin-shell .kiju-admin-session-card {
+  border-color: var(--kiju-admin-panel-border);
+  background: var(--kiju-admin-panel-background);
+  box-shadow: var(--kiju-admin-panel-shadow);
+}
+
+.kiju-admin-shell .kiju-inline-field input,
+.kiju-admin-shell .kiju-inline-field select,
+.kiju-admin-shell .kiju-inline-field textarea,
+.kiju-admin-shell .kiju-checkbox-row {
+  border-color: var(--kiju-admin-field-border);
+  background: var(--kiju-admin-field-background);
+  color: var(--slate);
+}
+
+.kiju-admin-shell .kiju-inline-field span,
+.kiju-admin-shell .kiju-admin-heading-stack span,
+.kiju-admin-shell .kiju-admin-meta,
+.kiju-admin-shell .kiju-line-item {
+  color: var(--kiju-admin-subtle-text);
+}
+
+.kiju-admin-shell .kiju-line-item {
+  padding: 0.85rem 0.95rem;
+  border-radius: 16px;
+  background: var(--kiju-admin-line-background);
+  border: 1px solid var(--kiju-admin-line-border);
+}
+
+.kiju-admin-shell .kiju-button--secondary {
+  border-color: var(--kiju-admin-secondary-border);
+  background: var(--kiju-admin-secondary-background);
+  color: var(--kiju-admin-secondary-color);
+}
+
+.kiju-admin-shell .kiju-button--danger {
+  border-color: var(--kiju-admin-danger-border);
+  background: var(--kiju-admin-danger-background);
+  color: var(--kiju-admin-danger-color);
+}
+
+.kiju-admin-shell .kiju-button--primary {
+  box-shadow: var(--kiju-admin-primary-shadow);
+}
+
+.kiju-admin-hero,
+.kiju-admin-toolbar {
+  border-radius: 28px;
+  border: 1px solid var(--kiju-admin-hero-border);
+  background: var(--kiju-admin-hero-background);
+  box-shadow: var(--kiju-admin-hero-shadow);
+}
+
+.kiju-admin-hero {
+  padding: 1.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.kiju-admin-hero__copy {
+  display: grid;
+  gap: 0.7rem;
+  max-width: 820px;
+}
+
+.kiju-admin-hero__copy h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 4vw, 3.45rem);
+  line-height: 1;
+}
+
+.kiju-admin-hero__copy p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--kiju-admin-subtle-text);
+}
+
+.kiju-admin-hero__actions,
+.kiju-admin-status-pills,
+.kiju-admin-link-pills,
+.kiju-admin-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.kiju-admin-hero__actions {
+  justify-content: flex-end;
+}
+
+.kiju-admin-toolbar {
+  padding: 1rem 1.15rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.kiju-admin-link-pill,
+.kiju-admin-mini-pill {
+  min-height: 42px;
+  padding: 0.72rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--kiju-admin-pill-border);
+  background: var(--kiju-admin-pill-background);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--kiju-admin-pill-color);
+  font-weight: 700;
+}
+
+.kiju-admin-mini-pill {
+  color: var(--kiju-admin-subtle-text);
+}
+
+.kiju-admin-feedback {
+  border-color: var(--kiju-admin-feedback-border);
+  background: var(--kiju-admin-feedback-background);
+  color: var(--kiju-admin-feedback-color);
+}
+
+.kiju-admin-feedback.is-success {
+  border-color: rgba(34, 197, 94, 0.32);
+}
+
+.kiju-admin-feedback.is-alert {
+  border-color: rgba(248, 113, 113, 0.32);
+}
+
+.kiju-admin-kpi-grid,
+.kiju-admin-focus-grid,
+.kiju-admin-session-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-admin-kpi-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.kiju-admin-kpi-card {
+  padding: 1.15rem;
+  border-radius: 22px;
+  border: 1px solid var(--kiju-admin-kpi-border);
+  background: var(--kiju-admin-kpi-background);
+  box-shadow: var(--kiju-admin-kpi-shadow);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.kiju-admin-kpi-card strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.kiju-admin-kpi-card small {
+  color: var(--kiju-admin-subtle-text);
+}
+
+.kiju-admin-kpi-card__label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  color: var(--kiju-admin-kpi-label);
+  font-weight: 700;
+}
+
+.kiju-admin-section-card {
+  gap: 1.25rem !important;
+}
+
+.kiju-admin-focus-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kiju-admin-focus-list,
+.kiju-admin-session-card,
+.kiju-admin-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-admin-focus-item {
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--kiju-admin-focus-border);
+  background: var(--kiju-admin-focus-background);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kiju-admin-focus-item span {
+  color: var(--kiju-admin-subtle-text);
+}
+
+.kiju-admin-accordion .kiju-accordion__summary,
+.kiju-admin-accordion .kiju-accordion__content {
+  border-color: var(--kiju-admin-accordion-border);
+  background: var(--kiju-admin-accordion-background);
+}
+
+.kiju-admin-accordion .kiju-accordion__summary {
+  padding: 1.1rem 1.25rem;
+}
+
+.kiju-admin-accordion .kiju-accordion__content {
+  padding: 1.2rem;
+}
+
+.kiju-admin-heading-stack {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.kiju-admin-session-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kiju-admin-session-card__header,
+.kiju-admin-session-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.kiju-admin-session-card__meta {
+  color: var(--kiju-admin-subtle-text);
+}
+
+.kiju-admin-session-card__items {
+  display: grid;
+  gap: 0.7rem;
+}
+
+@media (max-width: 1100px) {
+  .kiju-login-hero,
+  .kiju-workspace,
+  .kiju-admin-grid,
+  .kiju-admin-layout,
+  .kiju-review-grid,
+  .kiju-metric-grid,
+  .kiju-admin-kpi-grid,
+  .kiju-admin-focus-grid,
+  .kiju-admin-session-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-topbar,
+  .kiju-admin-hero,
+  .kiju-admin-toolbar {
+    flex-direction: column;
+  }
+
+  .kiju-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kiju-quickstart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-admin-row,
+  .kiju-order-item-card__fields {
+    flex-direction: column;
+  }
+
+  .kiju-floorplan-hero {
+    --kiju-seat-hotspot-size: clamp(1.3rem, 5.2cqw, 2.4rem);
+    --kiju-seat-hotspot-font-size: clamp(0.5rem, 1.7cqw, 0.82rem);
+    border-radius: 24px;
+  }
+
+  .kiju-floorplan-hotspot {
+    border-radius: 16px;
+  }
+
+  .kiju-notification-popover__panel,
+  .kiju-role-switch-popover__panel {
+    left: 0;
+    right: auto;
+  }
+}
