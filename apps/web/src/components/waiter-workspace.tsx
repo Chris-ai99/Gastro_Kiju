@@ -25,6 +25,7 @@ import {
   courseLabels,
   getOrderableProducts,
   getSessionForTable,
+  resolveCourseStatus,
   resolveProductName,
   useDemoApp
 } from "../lib/app-state";
@@ -127,8 +128,26 @@ const toneByStatus: Record<string, "navy" | "amber" | "red" | "green" | "slate">
   planned: "slate"
 };
 
+const courseTicketStatusLabels: Record<string, string> = {
+  "not-recorded": "Noch nicht gesendet",
+  blocked: "Blockiert in der Küche",
+  countdown: "In Warteschlange",
+  ready: "Servierbereit",
+  completed: "Abgeschlossen",
+  skipped: "Übersprungen"
+};
+
+const courseTicketStatusTones: Record<string, "navy" | "amber" | "red" | "green" | "slate"> = {
+  "not-recorded": "slate",
+  blocked: "red",
+  countdown: "amber",
+  ready: "green",
+  completed: "navy",
+  skipped: "slate"
+};
+
 export const WaiterWorkspace = () => {
-  const { state, currentUser, unreadNotifications, actions } = useDemoApp();
+  const { state, currentUser, unreadNotifications, sharedSync, actions } = useDemoApp();
   const serviceSectionRef = useRef<HTMLElement | null>(null);
   const dashboard = buildDashboardSummary(state);
   const defaultTableId =
@@ -137,6 +156,11 @@ export const WaiterWorkspace = () => {
   const [selectedSeatId, setSelectedSeatId] = useState("");
   const [activeCourse, setActiveCourse] = useState<CourseKey | "review">("drinks");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
+  const [serviceFeedback, setServiceFeedback] = useState<{
+    tone: "success" | "alert" | "info";
+    title: string;
+    detail: string;
+  } | null>(null);
 
   const isWaiterView = currentUser?.role === "waiter";
   const selectedTable = state.tables.find((table) => table.id === selectedTableId) ?? null;
@@ -187,6 +211,22 @@ export const WaiterWorkspace = () => {
   ).length;
   const selectedSeatLabel =
     selectedTable?.seats.find((seat) => seat.id === selectedSeatId)?.label ?? "Sitzplatz";
+  const activeCourseTicketState =
+    activeCourse === "review" || !selectedSession
+      ? null
+      : resolveCourseStatus(selectedSession, activeCourse);
+  const syncStatusLabel =
+    sharedSync.status === "online"
+      ? "Geräte-Sync aktiv"
+      : sharedSync.status === "connecting"
+        ? "Synchronisiere..."
+        : "Nur lokaler Stand";
+  const syncStatusTone =
+    sharedSync.status === "online"
+      ? "green"
+      : sharedSync.status === "connecting"
+        ? "amber"
+        : "red";
   const editableItems = useMemo(() => {
     if (!selectedSession || !selectedSeatId) return [];
 
@@ -198,6 +238,10 @@ export const WaiterWorkspace = () => {
   }, [activeCourse, selectedSeatId, selectedSession]);
 
   const sessionTotal = calculateSessionTotal(selectedSession, state.products);
+
+  useEffect(() => {
+    setServiceFeedback(null);
+  }, [activeCourse, selectedSeatId, selectedTableId]);
 
   const scrollToServiceSection = () => {
     window.requestAnimationFrame(() => {
@@ -230,6 +274,32 @@ export const WaiterWorkspace = () => {
     if (!scrollToService) return;
 
     scrollToServiceSection();
+  };
+
+  const handleSendCourseToKitchen = () => {
+    if (!selectedTable || activeCourse === "review") return;
+
+    const result = actions.sendCourseToKitchen(selectedTable.id, activeCourse);
+
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Noch nicht gesendet",
+        detail: result.message ?? "Die Positionen konnten nicht an die Küche gesendet werden."
+      });
+      return;
+    }
+
+    const syncHint =
+      sharedSync.status === "online"
+        ? "Der Bon ist für Küche und andere Geräte jetzt im gemeinsamen Stand."
+        : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein.";
+
+    setServiceFeedback({
+      tone: "success",
+      title: `${courseLabels[activeCourse]} gesendet`,
+      detail: `${result.message ?? "Die Positionen wurden erfolgreich an die Küche gesendet."} ${syncHint}`
+    });
   };
 
   const renderEditableItems = (items: OrderItem[], emptyMessage: string) => {
@@ -335,6 +405,7 @@ export const WaiterWorkspace = () => {
             </p>
           </div>
           <div className="kiju-topbar-actions">
+            <StatusPill label={syncStatusLabel} tone={syncStatusTone} />
             {currentUser?.role === "admin" ? (
               <>
                 <Link href={routeConfig.kitchen} className="kiju-button kiju-button--secondary">
@@ -698,6 +769,32 @@ export const WaiterWorkspace = () => {
                         </div>
                       </AccordionSection>
 
+                      <div className="kiju-service-sync-row">
+                        <StatusPill
+                          label={
+                            activeCourseTicketState
+                              ? courseTicketStatusLabels[activeCourseTicketState.status] ??
+                                activeCourseTicketState.status
+                              : "Noch nicht gesendet"
+                          }
+                          tone={
+                            activeCourseTicketState
+                              ? courseTicketStatusTones[activeCourseTicketState.status] ?? "slate"
+                              : "slate"
+                          }
+                        />
+                        <StatusPill label={syncStatusLabel} tone={syncStatusTone} />
+                      </div>
+
+                      {serviceFeedback ? (
+                        <div
+                          className={`kiju-inline-panel kiju-inline-panel--feedback is-${serviceFeedback.tone}`}
+                        >
+                          <strong>{serviceFeedback.title}</strong>
+                          <span>{serviceFeedback.detail}</span>
+                        </div>
+                      ) : null}
+
                       <div className="kiju-step-actions">
                         <button
                           className="kiju-button kiju-button--secondary"
@@ -727,7 +824,7 @@ export const WaiterWorkspace = () => {
                         </button>
                         <button
                           className="kiju-button kiju-button--primary"
-                          onClick={() => actions.sendCourseToKitchen(selectedTable.id, activeCourse)}
+                          onClick={handleSendCourseToKitchen}
                         >
                           <ChefHat size={18} />
                           {serviceLabels.sendToKitchen}

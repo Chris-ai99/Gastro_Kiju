@@ -4,10 +4,10 @@ import {
   calculateGuestCount,
   calculateSessionTotal,
   courseLabels,
-  demoProducts,
-  demoTables,
+  createDefaultOperationalState as createSeedOperationalState,
   getProductById,
   getSessionForTable,
+  normalizeOperationalState,
   type AppNotification,
   type AppState,
   type CourseKey,
@@ -36,8 +36,14 @@ import {
 
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-v2";
-const SHARED_SYNC_POLL_MS = 1500;
+const SHARED_SYNC_POLL_MS = 1000;
 const DEFAULT_API_PORT = process.env["NEXT_PUBLIC_KIJU_API_PORT"] ?? "4000";
+
+type SharedSyncState = {
+  status: "connecting" | "online" | "offline";
+  lastSyncedAt?: string;
+  usingSharedState: boolean;
+};
 
 type DemoActions = {
   login: (identifier: string, secret: string) => {
@@ -54,7 +60,10 @@ type DemoActions = {
   ) => void;
   removeItem: (tableId: string, itemId: string) => void;
   skipCourse: (tableId: string, course: CourseKey) => void;
-  sendCourseToKitchen: (tableId: string, course: CourseKey) => void;
+  sendCourseToKitchen: (
+    tableId: string,
+    course: CourseKey
+  ) => { ok: boolean; message?: string; ticketStatus?: CourseTicket["status"] | "ready" };
   releaseCourse: (tableId: string, course: CourseKey) => void;
   markCourseCompleted: (tableId: string, course: CourseKey) => void;
   setSessionStatus: (tableId: string, status: SessionStatus, holdReason?: string) => void;
@@ -102,6 +111,7 @@ type DemoContextValue = {
   state: AppState;
   currentUser?: UserAccount;
   unreadNotifications: AppNotification[];
+  sharedSync: SharedSyncState;
   actions: DemoActions;
 };
 
@@ -160,21 +170,8 @@ const createSystemUsers = (): UserAccount[] => {
   ];
 };
 
-const createFreshOperationalState = (): AppState => createDefaultOperationalState();
-const createDefaultOperationalState = (): AppState => ({
-  users: createSystemUsers(),
-  tables: structuredClone(demoTables),
-  products: structuredClone(demoProducts),
-  sessions: [],
-  notifications: [],
-  dailyStats: {
-    date: new Date().toISOString().slice(0, 10),
-    servedTables: 0,
-    servedGuests: 0,
-    revenueCents: 0,
-    closedOrderIds: []
-  }
-});
+const createFreshOperationalState = (): AppState => normalizeAppState(createSeedOperationalState());
+const createDefaultOperationalState = (): AppState => createSeedOperationalState();
 const createClientId = (prefix: string) => {
   const nativeCrypto = globalThis.crypto;
   if (nativeCrypto && typeof nativeCrypto.randomUUID === "function") {
@@ -233,6 +230,16 @@ const normalizeFloorplanTables = (appState: AppState) => {
   });
 
   return hasChanges ? { ...appState, tables } : appState;
+};
+const normalizeAppState = (appState: AppState) =>
+  normalizeFloorplanTables(normalizeOperationalState(appState));
+const normalizePublicBasePath = (value?: string) => {
+  if (!value) return "";
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "/") return "";
+
+  return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
 };
 const getNextTableNumber = (tables: TableLayout[]) =>
   tables.reduce((maxNumber, table) => {
@@ -388,6 +395,11 @@ const resolveSharedStateUrl = () => {
 
   if (typeof window === "undefined") return null;
 
+  const deployedBasePath = normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"]);
+  if (deployedBasePath) {
+    return `${window.location.origin}/api/kiju/state`;
+  }
+
   return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_API_PORT}/api/state`;
 };
 
@@ -434,11 +446,13 @@ const replaceSharedSnapshot = async (state: AppState) => {
 };
 
 export const DemoAppProvider = ({ children }: PropsWithChildren) => {
-  const [state, setState] = useState<AppState>(() =>
-    normalizeFloorplanTables(createFreshOperationalState())
-  );
+  const [state, setState] = useState<AppState>(() => createFreshOperationalState());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [sharedSync, setSharedSync] = useState<SharedSyncState>({
+    status: "connecting",
+    usingSharedState: false
+  });
   const channelRef = useRef<BroadcastChannel | null>(null);
   const sharedSyncEnabledRef = useRef(false);
   const sharedVersionRef = useRef<number | null>(null);
@@ -452,19 +466,31 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
   const commit = useCallback(
     (nextState: AppState, nextUserId: string | null = currentUserId) => {
-      const normalizedState = normalizeFloorplanTables(nextState);
+      const normalizedState = normalizeAppState(nextState);
 
       setState(normalizedState);
       setCurrentUserId(nextUserId);
       commitStorage(normalizedState, nextUserId);
       broadcast(normalizedState, nextUserId);
 
-      if (sharedSyncEnabledRef.current) {
-        void replaceSharedSnapshot(normalizedState).then((snapshot) => {
-          if (!snapshot) return;
-          sharedVersionRef.current = snapshot.version;
+      void replaceSharedSnapshot(normalizedState).then((snapshot) => {
+        if (!snapshot) {
+          setSharedSync((currentSync) => ({
+            status: "offline",
+            usingSharedState: currentSync.usingSharedState,
+            lastSyncedAt: currentSync.lastSyncedAt
+          }));
+          return;
+        }
+
+        sharedSyncEnabledRef.current = true;
+        sharedVersionRef.current = snapshot.version;
+        setSharedSync({
+          status: "online",
+          usingSharedState: true,
+          lastSyncedAt: snapshot.updatedAt
         });
-      }
+      });
     },
     [broadcast, currentUserId]
   );
@@ -476,7 +502,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const storedAuth = readStoredAuth();
 
     if (storedState) {
-      setState(normalizeFloorplanTables(storedState));
+      setState(normalizeAppState(storedState));
     }
 
     if (storedAuth) {
@@ -487,7 +513,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
       channelRef.current.onmessage = (event) => {
         const payload = event.data as { state: AppState; currentUserId: string | null };
-        setState(normalizeFloorplanTables(payload.state));
+        setState(normalizeAppState(payload.state));
         setCurrentUserId(payload.currentUserId);
       };
     }
@@ -495,7 +521,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
         try {
-          setState(normalizeFloorplanTables(JSON.parse(event.newValue) as AppState));
+          setState(normalizeAppState(JSON.parse(event.newValue) as AppState));
         } catch {
           // Ignore malformed local cache entries.
         }
@@ -521,7 +547,26 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (snapshot && isActive) {
         sharedSyncEnabledRef.current = true;
         sharedVersionRef.current = snapshot.version;
-        setState(normalizeFloorplanTables(snapshot.state));
+        const normalizedSnapshotState = normalizeAppState(snapshot.state);
+        setState(normalizedSnapshotState);
+        commitStorage(normalizedSnapshotState, storedAuth?.currentUserId ?? null);
+        setSharedSync({
+          status: "online",
+          usingSharedState: true,
+          lastSyncedAt: snapshot.updatedAt
+        });
+
+        if (JSON.stringify(normalizedSnapshotState) !== JSON.stringify(snapshot.state)) {
+          void replaceSharedSnapshot(normalizedSnapshotState).then((normalizedSnapshot) => {
+            if (!normalizedSnapshot || !isActive) return;
+            sharedVersionRef.current = normalizedSnapshot.version;
+            setSharedSync({
+              status: "online",
+              usingSharedState: true,
+              lastSyncedAt: normalizedSnapshot.updatedAt
+            });
+          });
+        }
 
         pollTimer = setInterval(async () => {
           const latestSnapshot = await fetchSharedSnapshot();
@@ -529,8 +574,22 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           if (sharedVersionRef.current === latestSnapshot.version) return;
 
           sharedVersionRef.current = latestSnapshot.version;
-          setState(normalizeFloorplanTables(latestSnapshot.state));
+          const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
+          setState(normalizedSnapshotState);
+          commitStorage(normalizedSnapshotState, storedAuth?.currentUserId ?? null);
+          setSharedSync({
+            status: "online",
+            usingSharedState: true,
+            lastSyncedAt: latestSnapshot.updatedAt
+          });
         }, SHARED_SYNC_POLL_MS);
+      }
+
+      if (!snapshot && isActive) {
+        setSharedSync({
+          status: "offline",
+          usingSharedState: false
+        });
       }
 
       if (isActive) {
@@ -553,8 +612,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (!hydrated) return;
 
-    const normalizedState = normalizeFloorplanTables(state);
-    if (normalizedState === state) return;
+    const normalizedState = normalizeAppState(state);
+    if (JSON.stringify(normalizedState) === JSON.stringify(state)) return;
 
     commit(normalizedState, currentUserId);
   }, [commit, currentUserId, hydrated, state]);
@@ -678,7 +737,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (tableId: string, course: CourseKey) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
+      if (!session) {
+        return {
+          ok: false,
+          message: "Für diesen Tisch gibt es noch keine laufende Bestellung."
+        };
+      }
 
       if (!session.skippedCourses.includes(course)) {
         session.skippedCourses.push(course);
@@ -702,13 +766,25 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (tableId: string, course: CourseKey) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
+      if (!session) {
+        return {
+          ok: false,
+          message: "Für diesen Tisch gibt es noch keine laufende Bestellung."
+        };
+      }
 
       const courseItems = session.items.filter((item) => item.category === course);
-      if (courseItems.length === 0 && !session.skippedCourses.includes(course)) return;
+      if (courseItems.length === 0 && !session.skippedCourses.includes(course)) {
+        return {
+          ok: false,
+          message: `Für ${courseLabels[course]} wurden noch keine Positionen erfasst.`
+        };
+      }
 
       const ticket = session.courseTickets[course];
       ticket.sentAt = new Date().toISOString();
+      const tableName =
+        next.tables.find((table) => table.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
 
       if (course === "drinks") {
         ticket.status = "completed";
@@ -716,13 +792,17 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         session.status = "waiting";
         withNotification(next, {
           title: "Getränke im Service",
-          body: `${tableId.replace("table-", "Tisch ")} wurde im Service vermerkt.`,
+          body: `${tableName} wurde im Service vermerkt.`,
           tone: "info",
           tableId
         });
         emitOperatorFeedback();
         commit(next);
-        return;
+        return {
+          ok: true,
+          message: "Getränke wurden gespeichert und direkt im Service verbucht.",
+          ticketStatus: ticket.status
+        };
       }
 
       const previousCourse = getPreviousKitchenCourse(course);
@@ -736,12 +816,20 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.status = "waiting";
       withNotification(next, {
         title: `${courseLabels[course]} gesendet`,
-        body: `${tableId.replace("table-", "Tisch ")} wartet auf die ${courseLabels[course].toLowerCase()}.`,
+        body: `${tableName} wartet auf die ${courseLabels[course].toLowerCase()}.`,
         tone: "info",
         tableId
       });
       emitOperatorFeedback();
       commit(next);
+      return {
+        ok: true,
+        message:
+          ticket.status === "blocked"
+            ? `${courseLabels[course]} wurde an die Küche gesendet und wartet auf die Freigabe nach dem vorherigen Gang.`
+            : `${courseLabels[course]} wurde an die Küche gesendet und läuft jetzt in der Küchenwarteschlange.`,
+        ticketStatus: ticket.status
+      };
     },
     [commit, state]
   );
@@ -1394,6 +1482,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       state,
       currentUser,
       unreadNotifications,
+      sharedSync,
       actions: {
         login,
         logout,
@@ -1446,6 +1535,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       removeTableAndServices,
       sendCourseToKitchen,
       setSessionStatus,
+      sharedSync,
       skipCourse,
       state,
       toggleTableActive,

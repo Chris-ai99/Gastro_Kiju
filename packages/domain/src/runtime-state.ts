@@ -37,17 +37,90 @@ const createSystemUsers = (): UserAccount[] => {
   ];
 };
 
-export const createDefaultOperationalState = (): AppState => ({
-  users: createSystemUsers(),
-  tables: structuredClone(demoTables),
-  products: structuredClone(demoProducts),
-  sessions: [],
-  notifications: [],
-  dailyStats: {
-    date: new Date().toISOString().slice(0, 10),
-    servedTables: 0,
-    servedGuests: 0,
-    revenueCents: 0,
-    closedOrderIds: []
-  }
+const legacySeedProductIds = new Set([
+  "starter-bruschetta",
+  "starter-salad",
+  "main-pizza-margherita",
+  "main-pasta",
+  "dessert-icecream",
+  "dessert-cake"
+]);
+
+const mergeSeededUsers = (users: AppState["users"]) => {
+  const seededUsers = createSystemUsers();
+  const existingById = new Map(users.map((user) => [user.id, user]));
+  const seededIds = new Set(seededUsers.map((user) => user.id));
+
+  return [
+    ...seededUsers.map((seededUser) => ({
+      ...seededUser,
+      ...structuredClone(existingById.get(seededUser.id) ?? {})
+    })),
+    ...users
+      .filter((user) => !seededIds.has(user.id))
+      .map((user) => structuredClone(user))
+  ];
+};
+
+const mergeSeededTables = (tables: AppState["tables"]) => {
+  const existingById = new Map(tables.map((table) => [table.id, table]));
+  const seededIds = new Set(demoTables.map((table) => table.id));
+
+  return [
+    ...demoTables.map((seededTable) => ({
+      ...structuredClone(seededTable),
+      ...structuredClone(existingById.get(seededTable.id) ?? {})
+    })),
+    ...tables
+      .filter((table) => !seededIds.has(table.id))
+      .map((table) => structuredClone(table))
+  ];
+};
+
+const mergeSeededProducts = (products: AppState["products"], sessions: AppState["sessions"]) => {
+  const canonicalProductIds = new Set(demoProducts.map((product) => product.id));
+  const managedProductIds = new Set([...canonicalProductIds, ...legacySeedProductIds]);
+  const referencedProductIds = new Set(
+    sessions.flatMap((session) => session.items.map((item) => item.productId))
+  );
+  const existingById = new Map(products.map((product) => [product.id, product]));
+
+  return [
+    ...demoProducts.map((seededProduct) => ({
+      ...structuredClone(seededProduct),
+      ...structuredClone(existingById.get(seededProduct.id) ?? {})
+    })),
+    ...products
+      .filter((product) => {
+        if (!managedProductIds.has(product.id)) {
+          return true;
+        }
+
+        return !canonicalProductIds.has(product.id) && referencedProductIds.has(product.id);
+      })
+      .map((product) => structuredClone(product))
+  ];
+};
+
+export const normalizeOperationalState = (state: AppState): AppState => ({
+  ...state,
+  users: mergeSeededUsers(state.users),
+  tables: mergeSeededTables(state.tables),
+  products: mergeSeededProducts(state.products, state.sessions)
 });
+
+export const createDefaultOperationalState = (): AppState =>
+  normalizeOperationalState({
+    users: createSystemUsers(),
+    tables: structuredClone(demoTables),
+    products: structuredClone(demoProducts),
+    sessions: [],
+    notifications: [],
+    dailyStats: {
+      date: new Date().toISOString().slice(0, 10),
+      servedTables: 0,
+      servedGuests: 0,
+      revenueCents: 0,
+      closedOrderIds: []
+    }
+  });

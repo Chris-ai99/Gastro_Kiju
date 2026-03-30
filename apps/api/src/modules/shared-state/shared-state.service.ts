@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { createDefaultOperationalState, type AppState } from "@kiju/domain";
+import {
+  createDefaultOperationalState,
+  normalizeOperationalState,
+  type AppState
+} from "@kiju/domain";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
@@ -30,7 +34,7 @@ export class SharedStateService {
     this.snapshot = {
       version: this.snapshot.version + 1,
       updatedAt: new Date().toISOString(),
-      state: structuredClone(state)
+      state: normalizeOperationalState(structuredClone(state))
     };
 
     this.persistSnapshot();
@@ -70,7 +74,10 @@ export class SharedStateService {
         typeof parsed.updatedAt === "string" &&
         parsed.state
       ) {
-        return parsed;
+        return {
+          ...parsed,
+          state: normalizeOperationalState(parsed.state)
+        };
       }
     } catch {
       // Fall back to a fresh operational state if the file is missing or malformed.

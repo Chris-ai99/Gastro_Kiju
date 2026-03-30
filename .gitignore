@@ -8,5 +8,6 @@ coverage
 .env
 .env.local
 tmp
+data/
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal

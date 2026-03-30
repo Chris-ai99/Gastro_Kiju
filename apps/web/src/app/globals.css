@@ -100,8 +100,13 @@ button {
 .kiju-metric-card,
 .kiju-inline-panel,
 .kiju-product-card,
-.kiju-kitchen-column,
-.kiju-kitchen-cell,
+.kiju-kitchen-stat-card,
+.kiju-kitchen-empty,
+.kiju-kitchen-panel,
+.kiju-kitchen-placeholder,
+.kiju-kitchen-archive-toggle,
+.kiju-kitchen-notification,
+.kiju-kitchen-archived-ticket,
 .kiju-admin-product,
 .kiju-admin-table,
 .kiju-notification-row,
@@ -784,6 +789,28 @@ button {
   gap: 0.55rem;
 }
 
+.kiju-service-sync-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.kiju-inline-panel--feedback {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.kiju-inline-panel--feedback.is-success {
+  border-color: rgba(22, 163, 74, 0.22);
+  background: rgba(220, 252, 231, 0.6);
+}
+
+.kiju-inline-panel--feedback.is-alert {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(254, 242, 242, 0.72);
+}
+
 .kiju-seat-summary header,
 .kiju-line-item,
 .kiju-admin-product__header,
@@ -1034,44 +1061,473 @@ button {
   padding: 0;
 }
 
-.kiju-kitchen-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(210px, 1fr));
-  gap: 1rem;
-  overflow-x: auto;
-  padding-bottom: 0.25rem;
+.kiju-kitchen-screen {
+  background:
+    linear-gradient(180deg, rgba(226, 232, 240, 0.92), rgba(203, 213, 225, 0.82)),
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.12), transparent 26%);
 }
 
-.kiju-kitchen-column {
-  padding: 1rem;
-  display: grid;
-  gap: 0.85rem;
-  min-width: 210px;
+html[data-theme="dark"] .kiju-kitchen-screen {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9)),
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.16), transparent 25%);
 }
 
-.kiju-kitchen-column__header,
-.kiju-kitchen-cell__header,
+.kiju-kitchen-topbar,
+.kiju-kitchen-topbar__actions,
+.kiju-kitchen-section-heading,
+.kiju-kitchen-ticket-card__meta-row,
+.kiju-ticket-card__meta-row,
+.kiju-ticket-card__title-row,
+.kiju-ticket-card__footer,
+.kiju-ticket-card__clock-group,
+.kiju-kitchen-wall__footer,
+.kiju-kitchen-summary-table__head,
+.kiju-kitchen-summary-table__row,
+.kiju-kitchen-archived-ticket,
 .kiju-inline-flag {
   display: flex;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.85rem;
   align-items: center;
 }
 
-.kiju-kitchen-cell {
-  padding: 0.85rem;
-  display: grid;
-  gap: 0.7rem;
+.kiju-kitchen-topbar {
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
 }
 
-.kiju-kitchen-cell p {
+.kiju-kitchen-topbar__copy {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 760px;
+}
+
+.kiju-kitchen-topbar__copy h1 {
   margin: 0;
-  min-height: 3.3em;
+  font-size: clamp(2rem, 3vw, 3rem);
+  letter-spacing: -0.04em;
 }
 
-.kiju-kitchen-cell__actions {
+.kiju-kitchen-topbar__copy p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+}
+
+.kiju-kitchen-topbar__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.kiju-kitchen-stats {
   display: grid;
-  gap: 0.6rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.kiju-kitchen-stat-card {
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kiju-kitchen-stat-card span,
+.kiju-kitchen-panel__empty,
+.kiju-kitchen-placeholder {
+  color: var(--muted);
+}
+
+.kiju-kitchen-stat-card strong {
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.kiju-kitchen-stat-card small {
+  color: var(--muted);
+}
+
+.kiju-kitchen-wall {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.kiju-kitchen-wall__tickets,
+.kiju-kitchen-sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
+.kiju-kitchen-wall__primary,
+.kiju-kitchen-wall__queue {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.kiju-kitchen-section-heading {
+  align-items: flex-start;
+}
+
+.kiju-kitchen-section-heading h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1.1rem;
+}
+
+.kiju-kitchen-section-heading__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kiju-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kiju-ticket-card {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  min-height: 320px;
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95)),
+    linear-gradient(180deg, rgba(226, 232, 240, 0.6), rgba(255, 255, 255, 0));
+  box-shadow:
+    0 18px 32px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+}
+
+.kiju-ticket-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.08) 0,
+    rgba(15, 23, 42, 0.08) 12px,
+    transparent 12px,
+    transparent 22px
+  );
+}
+
+.kiju-ticket-card.is-featured {
+  min-height: 380px;
+  padding: 1.2rem 1.2rem 1.15rem;
+}
+
+.kiju-ticket-card.is-ready {
+  box-shadow:
+    0 20px 38px rgba(22, 163, 74, 0.16),
+    inset 4px 0 0 rgba(22, 163, 74, 0.85);
+}
+
+.kiju-ticket-card.is-countdown {
+  box-shadow:
+    0 20px 38px rgba(202, 138, 4, 0.16),
+    inset 4px 0 0 rgba(202, 138, 4, 0.85);
+}
+
+.kiju-ticket-card.is-blocked {
+  box-shadow:
+    0 20px 38px rgba(220, 38, 38, 0.16),
+    inset 4px 0 0 rgba(220, 38, 38, 0.85);
+}
+
+html[data-theme="dark"] .kiju-ticket-card {
+  border-color: rgba(71, 85, 105, 0.8);
+  background:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.96)),
+    linear-gradient(180deg, rgba(51, 65, 85, 0.5), rgba(15, 23, 42, 0));
+  box-shadow:
+    0 20px 38px rgba(2, 6, 23, 0.4),
+    inset 0 1px 0 rgba(148, 163, 184, 0.14);
+}
+
+.kiju-ticket-card__meta-row {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.kiju-ticket-card__clock-group {
+  gap: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiju-ticket-card__clock-group span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.kiju-ticket-card__title-row {
+  align-items: flex-start;
+}
+
+.kiju-ticket-card__title-row h2 {
+  margin: 0.18rem 0 0;
+  font-size: clamp(1.05rem, 2vw, 1.4rem);
+  letter-spacing: -0.035em;
+}
+
+.kiju-ticket-card__table-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kiju-ticket-card__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.kiju-ticket-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.kiju-ticket-line__quantity {
+  min-width: 1.2rem;
+  padding-top: 0.02rem;
+  font-weight: 800;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.kiju-ticket-line__copy {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.kiju-ticket-line__copy strong {
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.kiju-ticket-line__copy span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.kiju-ticket-line__copy em {
+  font-style: normal;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2f855a;
+}
+
+html[data-theme="dark"] .kiju-ticket-line__copy em {
+  color: #86efac;
+}
+
+.kiju-ticket-card__footer {
+  align-items: flex-end;
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.55);
+}
+
+.kiju-ticket-card__footer-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.kiju-ticket-card__footer-copy span {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kiju-ticket-card__footer-copy small {
+  color: var(--muted);
+}
+
+.kiju-ticket-card__action {
+  min-height: 46px;
+  padding: 0.7rem 0.95rem;
+  border: 0;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: linear-gradient(135deg, #166534, #16a34a);
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.24);
+}
+
+.kiju-ticket-card.is-blocked .kiju-ticket-card__action {
+  background: linear-gradient(135deg, #b45309, #f97316);
+  box-shadow: 0 10px 22px rgba(249, 115, 22, 0.22);
+}
+
+.kiju-kitchen-panel {
+  padding: 1rem 1.05rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-kitchen-summary-table,
+.kiju-kitchen-notifications,
+.kiju-kitchen-archived-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.kiju-kitchen-summary-table__head,
+.kiju-kitchen-summary-table__row {
+  font-variant-numeric: tabular-nums;
+  gap: 0.75rem;
+}
+
+.kiju-kitchen-summary-table__head {
+  padding: 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kiju-kitchen-summary-table__head span:first-child,
+.kiju-kitchen-summary-table__row strong {
+  width: 3rem;
+  flex: 0 0 3rem;
+}
+
+.kiju-kitchen-summary-table__head span:last-child,
+.kiju-kitchen-summary-table__row small {
+  width: 5.75rem;
+  flex: 0 0 5.75rem;
+  text-align: right;
+}
+
+.kiju-kitchen-summary-table__row {
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.76);
+}
+
+html[data-theme="dark"] .kiju-kitchen-summary-table__row {
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.kiju-kitchen-summary-table__row span {
+  min-width: 0;
+}
+
+.kiju-kitchen-summary-table__row small {
+  color: var(--muted);
+}
+
+.kiju-kitchen-notification {
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  border: 0;
+}
+
+.kiju-kitchen-notification div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.kiju-kitchen-notification span {
+  color: var(--muted);
+}
+
+.kiju-kitchen-archived-ticket {
+  padding: 0.75rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.76);
+}
+
+html[data-theme="dark"] .kiju-kitchen-archived-ticket {
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.kiju-kitchen-archived-ticket div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.kiju-kitchen-archived-ticket span {
+  color: var(--muted);
+}
+
+.kiju-kitchen-empty,
+.kiju-kitchen-placeholder {
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.kiju-kitchen-empty {
+  min-height: 220px;
+}
+
+.kiju-kitchen-empty div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kiju-kitchen-empty p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.kiju-kitchen-wall__footer {
+  flex-wrap: wrap;
+}
+
+.kiju-kitchen-archive-toggle {
+  min-height: 48px;
+  padding: 0.85rem 1rem;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 800;
+}
+
+.kiju-kitchen-refresh-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.08);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .kiju-kitchen-refresh-indicator {
+  background: rgba(148, 163, 184, 0.12);
 }
 
 .kiju-notification-row {
@@ -1644,13 +2100,16 @@ html[data-theme="dark"] .kiju-admin-shell {
   .kiju-metric-grid,
   .kiju-admin-kpi-grid,
   .kiju-admin-focus-grid,
-  .kiju-admin-session-grid {
+  .kiju-admin-session-grid,
+  .kiju-kitchen-wall {
     grid-template-columns: 1fr;
   }
 
   .kiju-topbar,
   .kiju-admin-hero,
-  .kiju-admin-toolbar {
+  .kiju-admin-toolbar,
+  .kiju-kitchen-topbar,
+  .kiju-kitchen-wall__footer {
     flex-direction: column;
   }
 
@@ -1664,6 +2123,21 @@ html[data-theme="dark"] .kiju-admin-shell {
 
   .kiju-product-grid {
     grid-template-columns: 1fr;
+  }
+
+  .kiju-kitchen-stats,
+  .kiju-ticket-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kiju-kitchen-topbar__actions,
+  .kiju-kitchen-wall__footer {
+    justify-content: flex-start;
+  }
+
+  .kiju-ticket-card,
+  .kiju-ticket-card.is-featured {
+    min-height: auto;
   }
 
   .kiju-admin-row,
@@ -1685,5 +2159,38 @@ html[data-theme="dark"] .kiju-admin-shell {
   .kiju-role-switch-popover__panel {
     left: 0;
     right: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .kiju-kitchen-stats,
+  .kiju-ticket-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-kitchen-topbar__actions,
+  .kiju-ticket-card__meta-row,
+  .kiju-ticket-card__title-row,
+  .kiju-ticket-card__footer,
+  .kiju-kitchen-summary-table__head,
+  .kiju-kitchen-summary-table__row,
+  .kiju-kitchen-archived-ticket {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .kiju-kitchen-summary-table__head span:first-child,
+  .kiju-kitchen-summary-table__row strong,
+  .kiju-kitchen-summary-table__head span:last-child,
+  .kiju-kitchen-summary-table__row small {
+    width: auto;
+    flex: 0 1 auto;
+    text-align: left;
+  }
+
+  .kiju-ticket-card__action,
+  .kiju-kitchen-archive-toggle {
+    width: 100%;
+    justify-content: center;
   }
 }
