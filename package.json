@@ -12,6 +12,7 @@
     "dev": "concurrently -n CONFIG,DOMAIN,UI,WEB,API,PRINT -c cyan,magenta,yellow,green,blue,red \"pnpm --filter @kiju/config dev\" \"pnpm --filter @kiju/domain dev\" \"pnpm --filter @kiju/ui dev\" \"pnpm --filter @kiju/web dev\" \"pnpm --filter @kiju/api dev\" \"pnpm --filter @kiju/print-bridge dev\"",
     "dev:web": "pnpm --filter @kiju/web dev",
     "dev:api": "pnpm --filter @kiju/api dev",
+    "start:sync": "node scripts/shared-sync-server.mjs",
     "test": "pnpm --filter @kiju/domain test",
     "typecheck": "pnpm --filter @kiju/config typecheck && pnpm --filter @kiju/domain typecheck && pnpm --filter @kiju/ui typecheck && pnpm --filter @kiju/api typecheck && pnpm --filter @kiju/web typecheck"
   },

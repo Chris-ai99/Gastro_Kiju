@@ -21,6 +21,32 @@ Lokales Gastro- und Service-System für Kinder- und Jugendarbeit mit Fokus auf T
 3. `npx pnpm@10.22.0 dev:web`
 4. Optional parallel: `npx pnpm@10.22.0 dev:api`
 
+## WLAN-Betrieb mit gemeinsamem Stand
+
+Fuer den Betrieb im selben WLAN kann die Web-App jetzt einen gemeinsamen Zustand ueber die lokale API nutzen. Dadurch sehen mehrere Geraete denselben Arbeitsstand, solange sie dieselbe Host-Maschine verwenden.
+
+1. API starten:
+
+```powershell
+npx pnpm@10.22.0 --filter @kiju/api dev
+```
+
+2. Web-App fuer das Netzwerk starten:
+
+```powershell
+npx pnpm@10.22.0 --filter @kiju/web dev -- --hostname 0.0.0.0 --port 3000
+```
+
+3. Andere Geraete im WLAN rufen dann `http://<DEINE-IP>:3000` auf.
+
+Optional kann in `apps/web/.env` eine feste API-Adresse gesetzt werden:
+
+```env
+NEXT_PUBLIC_KIJU_API_BASE_URL=http://10.128.174.93:4000/api
+```
+
+Der gemeinsame Zustand wird standardmaessig in `data/kiju-shared-state.json` gespeichert.
+
 ## Demo-Zugänge
 
 - Kellner: `Kellner` / `KiJu1234` oder PIN `1234`

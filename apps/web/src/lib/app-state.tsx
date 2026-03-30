@@ -36,6 +36,8 @@ import {
 
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-v2";
+const SHARED_SYNC_POLL_MS = 1500;
+const DEFAULT_API_PORT = process.env["NEXT_PUBLIC_KIJU_API_PORT"] ?? "4000";
 
 type DemoActions = {
   login: (identifier: string, secret: string) => {
@@ -101,6 +103,12 @@ type DemoContextValue = {
   currentUser?: UserAccount;
   unreadNotifications: AppNotification[];
   actions: DemoActions;
+};
+
+type SharedStateSnapshot = {
+  version: number;
+  updatedAt: string;
+  state: AppState;
 };
 
 const DemoContext = createContext<DemoContextValue | null>(null);
@@ -346,6 +354,85 @@ const commitStorage = (state: AppState, currentUserId: string | null) => {
   localStorage.setItem(AUTH_KEY, JSON.stringify({ currentUserId }));
 };
 
+const readStoredState = () => {
+  if (typeof window === "undefined") return null;
+
+  const rawState = localStorage.getItem(STORAGE_KEY);
+  if (!rawState) return null;
+
+  try {
+    return JSON.parse(rawState) as AppState;
+  } catch {
+    return null;
+  }
+};
+
+const readStoredAuth = () => {
+  if (typeof window === "undefined") return null;
+
+  const rawAuth = localStorage.getItem(AUTH_KEY);
+  if (!rawAuth) return null;
+
+  try {
+    return JSON.parse(rawAuth) as { currentUserId: string | null };
+  } catch {
+    return null;
+  }
+};
+
+const resolveSharedStateUrl = () => {
+  const configuredBaseUrl = process.env["NEXT_PUBLIC_KIJU_API_BASE_URL"]?.trim();
+  if (configuredBaseUrl) {
+    return `${configuredBaseUrl.replace(/\/+$/, "")}/state`;
+  }
+
+  if (typeof window === "undefined") return null;
+
+  return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_API_PORT}/api/state`;
+};
+
+const fetchSharedSnapshot = async () => {
+  const sharedStateUrl = resolveSharedStateUrl();
+  if (!sharedStateUrl) return null;
+
+  try {
+    const response = await fetch(sharedStateUrl, {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as SharedStateSnapshot;
+  } catch {
+    return null;
+  }
+};
+
+const replaceSharedSnapshot = async (state: AppState) => {
+  const sharedStateUrl = resolveSharedStateUrl();
+  if (!sharedStateUrl) return null;
+
+  try {
+    const response = await fetch(sharedStateUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(state)
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as SharedStateSnapshot;
+  } catch {
+    return null;
+  }
+};
+
 export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const [state, setState] = useState<AppState>(() =>
     normalizeFloorplanTables(createFreshOperationalState())
@@ -353,6 +440,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const sharedSyncEnabledRef = useRef(false);
+  const sharedVersionRef = useRef<number | null>(null);
 
   const broadcast = useCallback((nextState: AppState, nextUserId: string | null) => {
     channelRef.current?.postMessage({
@@ -369,6 +458,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       setCurrentUserId(nextUserId);
       commitStorage(normalizedState, nextUserId);
       broadcast(normalizedState, nextUserId);
+
+      if (sharedSyncEnabledRef.current) {
+        void replaceSharedSnapshot(normalizedState).then((snapshot) => {
+          if (!snapshot) return;
+          sharedVersionRef.current = snapshot.version;
+        });
+      }
     },
     [broadcast, currentUserId]
   );
@@ -376,16 +472,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedState = localStorage.getItem(STORAGE_KEY);
-    const storedAuth = localStorage.getItem(AUTH_KEY);
+    const storedState = readStoredState();
+    const storedAuth = readStoredAuth();
 
     if (storedState) {
-      setState(normalizeFloorplanTables(JSON.parse(storedState) as AppState));
+      setState(normalizeFloorplanTables(storedState));
     }
 
     if (storedAuth) {
-      const parsedAuth = JSON.parse(storedAuth) as { currentUserId: string | null };
-      setCurrentUserId(parsedAuth.currentUserId);
+      setCurrentUserId(storedAuth.currentUserId);
     }
 
     if ("BroadcastChannel" in window) {
@@ -399,19 +494,57 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
-        setState(normalizeFloorplanTables(JSON.parse(event.newValue) as AppState));
+        try {
+          setState(normalizeFloorplanTables(JSON.parse(event.newValue) as AppState));
+        } catch {
+          // Ignore malformed local cache entries.
+        }
       }
 
       if (event.key === AUTH_KEY && event.newValue) {
-        const parsedAuth = JSON.parse(event.newValue) as { currentUserId: string | null };
-        setCurrentUserId(parsedAuth.currentUserId);
+        try {
+          const parsedAuth = JSON.parse(event.newValue) as { currentUserId: string | null };
+          setCurrentUserId(parsedAuth.currentUserId);
+        } catch {
+          // Ignore malformed local auth cache entries.
+        }
       }
     };
 
     window.addEventListener("storage", handleStorage);
-    setHydrated(true);
+    let isActive = true;
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+
+    const hydrateSharedState = async () => {
+      const snapshot = await fetchSharedSnapshot();
+
+      if (snapshot && isActive) {
+        sharedSyncEnabledRef.current = true;
+        sharedVersionRef.current = snapshot.version;
+        setState(normalizeFloorplanTables(snapshot.state));
+
+        pollTimer = setInterval(async () => {
+          const latestSnapshot = await fetchSharedSnapshot();
+          if (!latestSnapshot || !isActive) return;
+          if (sharedVersionRef.current === latestSnapshot.version) return;
+
+          sharedVersionRef.current = latestSnapshot.version;
+          setState(normalizeFloorplanTables(latestSnapshot.state));
+        }, SHARED_SYNC_POLL_MS);
+      }
+
+      if (isActive) {
+        setHydrated(true);
+      }
+    };
+
+    void hydrateSharedState();
 
     return () => {
+      isActive = false;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
       window.removeEventListener("storage", handleStorage);
       channelRef.current?.close();
     };
