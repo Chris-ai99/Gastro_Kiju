@@ -37,8 +37,15 @@ export const getSessionForTable = (sessions: OrderSession[], tableId: string) =>
 export const getItemsForCourse = (session: OrderSession | undefined, course: CourseKey) =>
   session?.items.filter((item) => item.category === course) ?? [];
 
+export const getOrderTargetKey = (item: OrderItem) =>
+  item.target.type === "table" ? "table" : item.target.seatId;
+
 export const getSeatItems = (session: OrderSession | undefined, seatId: string) =>
-  session?.items.filter((item) => item.seatId === seatId) ?? [];
+  session?.items.filter((item) => item.target.type === "seat" && item.target.seatId === seatId) ??
+  [];
+
+export const getTableTargetItems = (session: OrderSession | undefined) =>
+  session?.items.filter((item) => item.target.type === "table") ?? [];
 
 export const resolveSessionStatus = (
   table: TableLayout,
@@ -75,7 +82,7 @@ export const calculateSessionTotal = (session: OrderSession | undefined, product
   session?.items.reduce((sum, item) => sum + calculateItemTotal(item, products), 0) ?? 0;
 
 export const calculateGuestCount = (session?: OrderSession) =>
-  session ? new Set(session.items.map((item) => item.seatId)).size : 0;
+  session ? new Set(session.items.map(getOrderTargetKey)).size : 0;
 
 export const buildKitchenSummary = (
   session: OrderSession | undefined,

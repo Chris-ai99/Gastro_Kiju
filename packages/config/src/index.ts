@@ -69,7 +69,7 @@ export const routeConfig = {
 } as const;
 
 export const kitchenRules = {
-  releaseCountdownMinutes: 10,
+  releaseCountdownMinutes: 15,
   fixedColumns: 7,
   courseOrder: ["starter", "main", "dessert", "drinks"]
 } as const;

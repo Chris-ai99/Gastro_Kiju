@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "updatedAt": "2026-03-30T17:20:50.839Z",
+  "version": 236,
+  "updatedAt": "2026-04-16T18:14:22.033Z",
   "state": {
     "users": [
       {
@@ -47,23 +47,28 @@
         "seats": [
           {
             "id": "table-1-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-1-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           },
           {
             "id": "table-1-seat-3",
-            "label": "P3"
+            "label": "P3",
+            "visible": true
           },
           {
             "id": "table-1-seat-4",
-            "label": "P4"
+            "label": "P4",
+            "visible": true
           },
           {
             "id": "table-1-seat-5",
-            "label": "P5"
+            "label": "P5",
+            "visible": true
           }
         ]
       },
@@ -80,23 +85,28 @@
         "seats": [
           {
             "id": "table-2-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-2-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           },
           {
             "id": "table-2-seat-3",
-            "label": "P3"
+            "label": "P3",
+            "visible": true
           },
           {
             "id": "table-2-seat-4",
-            "label": "P4"
+            "label": "P4",
+            "visible": true
           },
           {
             "id": "table-2-seat-5",
-            "label": "P5"
+            "label": "P5",
+            "visible": true
           }
         ]
       },
@@ -113,23 +123,28 @@
         "seats": [
           {
             "id": "table-3-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-3-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           },
           {
             "id": "table-3-seat-3",
-            "label": "P3"
+            "label": "P3",
+            "visible": true
           },
           {
             "id": "table-3-seat-4",
-            "label": "P4"
+            "label": "P4",
+            "visible": true
           },
           {
             "id": "table-3-seat-5",
-            "label": "P5"
+            "label": "P5",
+            "visible": true
           }
         ]
       },
@@ -146,23 +161,28 @@
         "seats": [
           {
             "id": "table-4-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-4-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           },
           {
             "id": "table-4-seat-3",
-            "label": "P3"
+            "label": "P3",
+            "visible": true
           },
           {
             "id": "table-4-seat-4",
-            "label": "P4"
+            "label": "P4",
+            "visible": true
           },
           {
             "id": "table-4-seat-5",
-            "label": "P5"
+            "label": "P5",
+            "visible": true
           }
         ]
       },
@@ -179,19 +199,23 @@
         "seats": [
           {
             "id": "table-5-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-5-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           },
           {
             "id": "table-5-seat-3",
-            "label": "P3"
+            "label": "P3",
+            "visible": true
           },
           {
             "id": "table-5-seat-4",
-            "label": "P4"
+            "label": "P4",
+            "visible": true
           }
         ]
       },
@@ -208,23 +232,28 @@
         "seats": [
           {
             "id": "table-6-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-6-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           },
           {
             "id": "table-6-seat-3",
-            "label": "P3"
+            "label": "P3",
+            "visible": true
           },
           {
             "id": "table-6-seat-4",
-            "label": "P4"
+            "label": "P4",
+            "visible": true
           },
           {
             "id": "table-6-seat-5",
-            "label": "P5"
+            "label": "P5",
+            "visible": true
           }
         ]
       },
@@ -242,11 +271,13 @@
         "seats": [
           {
             "id": "table-7-seat-1",
-            "label": "P1"
+            "label": "P1",
+            "visible": true
           },
           {
             "id": "table-7-seat-2",
-            "label": "P2"
+            "label": "P2",
+            "visible": true
           }
         ]
       }
@@ -254,9 +285,9 @@
     "products": [
       {
         "id": "starter-greeting",
-        "name": "Gru�Y aus der Küche",
+        "name": "Gruss aus der Küche",
         "category": "starter",
-        "description": "Kleiner Gru�Y aus der Küche als Einstieg.",
+        "description": "Kleiner Gruss aus der Küche als Einstieg.",
         "priceCents": 800,
         "taxRate": 7,
         "allergens": [],
@@ -342,7 +373,7 @@
         "id": "main-pizza-speciale",
         "name": "Pizza Speziale",
         "category": "main",
-        "description": "Pizza Speziale mit herzhafter Belegung.",
+        "description": "Pizza Speziale mit herzhafter Belegung. sonder pizza mit wünschen",
         "priceCents": 800,
         "taxRate": 7,
         "allergens": [
@@ -411,7 +442,7 @@
       },
       {
         "id": "drink-wine",
-        "name": "Wein",
+        "name": "Rotwein",
         "category": "drinks",
         "description": "Hauswein im Glas.",
         "priceCents": 400,
@@ -438,10 +469,476 @@
         "showInKitchen": true,
         "productionTarget": "kitchen",
         "modifierGroups": []
+      },
+      {
+        "id": "product-d6dad1ef-7ddd-4935-a8fa-43c965ef07d9",
+        "name": "Bionade",
+        "description": "Bionade Eiskalt serviert. Holunder",
+        "category": "drinks",
+        "priceCents": 250,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-edb37013-532a-4023-a1d4-da120cd98a05",
+        "name": "Sprite",
+        "description": "Sprite Eiskalt serviert.",
+        "category": "drinks",
+        "priceCents": 250,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-2cc1384c-d881-4689-9958-7227125ce77a",
+        "name": "Fanta",
+        "description": "Fanta Eiskalt serviert.",
+        "category": "drinks",
+        "priceCents": 250,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-a48a5a12-1d92-470c-930d-28f67f768317",
+        "name": "Cola Zero",
+        "description": "Cola Zero Eiskalt serviert.",
+        "category": "drinks",
+        "priceCents": 250,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-0a4de488-dbce-42d7-9e20-ef203d1d85fe",
+        "name": "Weißwein",
+        "description": "Hauswein im Glas.",
+        "category": "drinks",
+        "priceCents": 400,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-a8276320-c5c4-4b09-98f7-04dbc236f6ae",
+        "name": "Radler",
+        "description": "Kalt serviertes Radler.",
+        "category": "drinks",
+        "priceCents": 300,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-27cc8061-864c-4d9c-8b6c-958eec181708",
+        "name": "Dessert des Tages",
+        "description": "Neu angelegtes Produkt.",
+        "category": "dessert",
+        "priceCents": 350,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-c3322151-e352-49f1-9615-2c7607950b02",
+        "name": "Rauberteller",
+        "description": "Kinder Teller zum Mitessen",
+        "category": "main",
+        "priceCents": 0,
+        "taxRate": 0,
+        "allergens": [],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
       }
     ],
-    "sessions": [],
-    "notifications": [],
+    "sessions": [
+      {
+        "id": "session-table-1-1435fc12-61b5-4964-a26c-85de349d4536",
+        "tableId": "table-1",
+        "waiterId": "user-waiter-1",
+        "status": "waiting",
+        "items": [
+          {
+            "id": "item-353bb87e-9dfb-4829-add4-7ac6d5fc5afc",
+            "productId": "drink-beer",
+            "category": "drinks",
+            "quantity": 1,
+            "modifiers": [],
+            "target": {
+              "type": "table"
+            }
+          },
+          {
+            "id": "item-a93799ed-364f-4063-9551-ea9849dd837d",
+            "productId": "drink-water",
+            "category": "drinks",
+            "quantity": 1,
+            "modifiers": [],
+            "target": {
+              "type": "table"
+            }
+          }
+        ],
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "completed",
+            "countdownMinutes": 10,
+            "manualRelease": false,
+            "sentAt": "2026-04-16T18:14:13.936Z",
+            "completedAt": "2026-04-16T18:14:13.936Z"
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 10,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "not-recorded",
+            "countdownMinutes": 10,
+            "manualRelease": false
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 10,
+            "manualRelease": false
+          }
+        },
+        "payments": [],
+        "receipt": {}
+      }
+    ],
+    "notifications": [
+      {
+        "id": "notification-bca551c5-6769-4441-b065-8e6eb07ca17d",
+        "createdAt": "2026-04-16T18:14:13.936Z",
+        "read": true,
+        "kind": "service-drinks",
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 1: 1x Bier, 1x Wasser Still.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-a6c4f528-cd81-41f2-90aa-a9b84a46370c",
+        "createdAt": "2026-04-16T18:09:57.479Z",
+        "read": false,
+        "title": "Bestellung gelöscht",
+        "body": "Tisch 2 wurde vollständig aus dem Betrieb entfernt.",
+        "tone": "alert",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-c6b056c5-1577-4195-a053-19bac1d403df",
+        "createdAt": "2026-04-16T18:09:56.488Z",
+        "read": false,
+        "title": "Bestellung gelöscht",
+        "body": "Tisch 1 wurde vollständig aus dem Betrieb entfernt.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-8f87dad6-cae5-4366-a79c-5e6c466c7aa3",
+        "createdAt": "2026-04-16T18:04:44.339Z",
+        "read": true,
+        "kind": "service-drinks",
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 1: 2x Bier, 1x Rotwein, 1x Cola.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-4ffb46e7-c293-409d-9fcc-5cce9394f054",
+        "createdAt": "2026-04-16T18:02:03.118Z",
+        "read": true,
+        "title": "Getränke im Service",
+        "body": "Tisch 1 wurde im Service vermerkt.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-4712762d-1a96-4297-91d2-2bc42aec063f",
+        "createdAt": "2026-04-16T18:00:03.253Z",
+        "read": true,
+        "title": "Getränke im Service",
+        "body": "Tisch 1 wurde im Service vermerkt.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-059f44e4-7cca-4670-9f4e-25582236d25b",
+        "createdAt": "2026-04-16T14:46:33.169Z",
+        "read": true,
+        "title": "Vorspeise fertig",
+        "body": "Tisch 1 kann jetzt serviert werden.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-bc1529ad-d373-4c11-803f-de738f5b5dab",
+        "createdAt": "2026-04-16T14:46:11.947Z",
+        "read": true,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf die vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-e2591029-0b26-40aa-9cb6-2603c16e9a87",
+        "createdAt": "2026-04-16T14:43:57.983Z",
+        "read": true,
+        "title": "Hauptspeise fertig",
+        "body": "Tisch 1 kann jetzt serviert werden.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-13afa548-3af1-4828-81a1-298c65350335",
+        "createdAt": "2026-04-16T14:43:57.298Z",
+        "read": true,
+        "title": "Vorspeise fertig",
+        "body": "Tisch 1 kann jetzt serviert werden.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-6e378219-7cc8-438a-a4e5-5332d542e142",
+        "createdAt": "2026-04-16T14:43:56.179Z",
+        "read": true,
+        "title": "Vorspeise freigegeben",
+        "body": "Tisch 1 wurde für die Küche freigegeben.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-54c299b5-aa2a-49a7-b777-bf4b3bdbf460",
+        "createdAt": "2026-04-16T14:43:53.927Z",
+        "read": true,
+        "title": "Hauptspeise freigegeben",
+        "body": "Tisch 1 wurde für die Küche freigegeben.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-015c18e8-f95c-4f0e-9137-305bd10c74ac",
+        "createdAt": "2026-04-16T14:43:34.852Z",
+        "read": true,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 1 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-6727e8ee-d1d2-40fd-9532-5fe0fbf7c98a",
+        "createdAt": "2026-04-16T14:20:21.623Z",
+        "read": true,
+        "title": "Hauptspeise fertig",
+        "body": "Tisch 1 kann jetzt serviert werden.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-ed69e335-25f7-4108-b9ec-846c4335e4cd",
+        "createdAt": "2026-04-16T14:19:46.188Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Bionade wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-f7f731c0-03e7-46ea-b039-a4a34da54b27",
+        "createdAt": "2026-04-16T14:19:19.120Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Sprite wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-2f6ef5af-6196-4b50-81c6-569bb1661996",
+        "createdAt": "2026-04-16T14:18:59.481Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Fanta wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-4ac62cc5-26d6-4c74-89ea-d4af99a2ebf2",
+        "createdAt": "2026-04-16T14:18:43.671Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Cola Zero wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-92364b11-c927-4646-9464-1222556c75cf",
+        "createdAt": "2026-04-16T14:18:08.697Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Weißwein wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-790dc2ca-2613-4594-8536-430fcba3c2cc",
+        "createdAt": "2026-04-16T14:17:07.191Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Radler wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-ba76b435-8f96-4c95-ab16-24fcc124724c",
+        "createdAt": "2026-04-16T14:16:32.403Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Dessert des Tages wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-3f5f88bb-a808-4e4a-8149-f9196b8ae81a",
+        "createdAt": "2026-04-16T14:15:54.783Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Rauberteller wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-90b08529-527c-45ed-9046-a11e288cac00",
+        "createdAt": "2026-04-16T14:13:21.063Z",
+        "read": true,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 1 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-82a0ac94-cfd9-45ae-b623-ddc493ae2d74",
+        "createdAt": "2026-04-16T14:06:49.203Z",
+        "read": true,
+        "title": "Vorspeise fertig",
+        "body": "Tisch 1 kann jetzt serviert werden.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-3a63b808-542d-44ef-80ef-c91e5b6435d0",
+        "createdAt": "2026-04-16T14:06:47.707Z",
+        "read": true,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf die vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-4e3f8b0c-e4f4-4d0b-adf4-26bcfe67badf",
+        "createdAt": "2026-04-16T14:06:45.347Z",
+        "read": true,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf die vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-62b582bf-61c1-4f56-8855-ce9b2658d6d9",
+        "createdAt": "2026-04-16T14:06:42.317Z",
+        "read": true,
+        "title": "Vorspeise freigegeben",
+        "body": "Tisch 1 wurde für die Küche freigegeben.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-c7b7c980-82c8-4f25-8336-ac3a809711a3",
+        "createdAt": "2026-04-16T14:06:27.502Z",
+        "read": true,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf die vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-3cfd21b8-41cf-4a7e-90ee-850d2d1a24a8",
+        "createdAt": "2026-04-15T18:37:35.273Z",
+        "read": true,
+        "title": "Getränke im Service",
+        "body": "Tisch 1 wurde im Service vermerkt.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-e2944a57-3875-49fd-9a27-3c14ff87f636",
+        "createdAt": "2026-04-15T18:37:24.387Z",
+        "read": true,
+        "title": "Getränke fertig",
+        "body": "Tisch 2 kann jetzt serviert werden.",
+        "tone": "success",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-c48c8fbd-640a-42ca-a8e2-0ea9905e435d",
+        "createdAt": "2026-04-15T18:37:21.601Z",
+        "read": true,
+        "title": "Getränke freigegeben",
+        "body": "Tisch 2 wurde für die Küche freigegeben.",
+        "tone": "alert",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-e6f9920d-8098-4282-9a35-5a0aeb48d23b",
+        "createdAt": "2026-04-15T18:36:55.979Z",
+        "read": true,
+        "title": "Getränke im Service",
+        "body": "Tisch 1 wurde im Service vermerkt.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-72bb6994-858b-48e5-929d-c0a0e9acc814",
+        "createdAt": "2026-04-15T18:28:35.062Z",
+        "read": true,
+        "title": "Bestellung gelöscht",
+        "body": "Tisch 3 wurde vollständig aus dem Betrieb entfernt.",
+        "tone": "alert",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-293d17bc-9cd9-47b7-b5e0-0322903ded45",
+        "createdAt": "2026-04-15T18:28:34.355Z",
+        "read": true,
+        "title": "Bestellung gelöscht",
+        "body": "Tisch 1 wurde vollständig aus dem Betrieb entfernt.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-ebe9fe1c-a87d-4755-94ca-07d97db2c428",
+        "createdAt": "2026-04-15T18:25:06.269Z",
+        "read": true,
+        "title": "Getränke im Service",
+        "body": "Tisch 1 wurde im Service vermerkt.",
+        "tone": "info",
+        "tableId": "table-1"
+      }
+    ],
     "dailyStats": {
       "date": "2026-03-30",
       "servedTables": 0,
@@ -449,6 +946,7 @@
       "revenueCents": 0,
       "closedOrderIds": []
     },
-    "catalogVersion": 1
+    "catalogVersion": 1,
+    "serviceOrderMode": "table"
   }
 }

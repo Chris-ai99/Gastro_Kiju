@@ -24,7 +24,8 @@ import {
   type NotificationTone,
   type ProductCategory,
   type ProductionTarget,
-  type Role
+  type Role,
+  type ServiceOrderMode
 } from "@kiju/domain";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
@@ -469,6 +470,27 @@ export const AdminPanel = () => {
   const handleDeleteTable = (tableId: string) => {
     actions.removeTableAndServices(tableId);
     setFeedback({ tone: "success", message: "Tisch samt Leistungen wurde gelöscht." });
+  };
+
+  const handleServiceOrderModeChange = (mode: ServiceOrderMode) => {
+    actions.setServiceOrderMode(mode);
+    setFeedback({
+      tone: "success",
+      message:
+        mode === "table"
+          ? "Bestellmodus auf ganzen Tisch umgestellt."
+          : "Bestellmodus auf Sitzplätze umgestellt."
+    });
+  };
+
+  const handleSeatVisibleChange = (tableId: string, seatId: string, visible: boolean) => {
+    actions.setSeatVisible(tableId, seatId, visible);
+    setFeedback({
+      tone: "success",
+      message: visible
+        ? "Sitzplatz ist wieder im Service sichtbar."
+        : "Sitzplatz ausgeblendet; offene Positionen wurden auf den Tisch verschoben."
+    });
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -1210,6 +1232,42 @@ export const AdminPanel = () => {
               className="kiju-admin-accordion"
               action={<StatusPill label={`${state.tables.length} Tische`} tone="navy" />}
             >
+              <article className="kiju-admin-panel kiju-admin-mode-panel">
+                <div className="kiju-admin-row kiju-admin-row--top">
+                  <div className="kiju-admin-heading-stack">
+                    <strong>Bestellmodus im Service</strong>
+                    <span>Standard ist ganzer Tisch, Sitzplätze können bei Bedarf aktiviert werden.</span>
+                  </div>
+                  <StatusPill
+                    label={state.serviceOrderMode === "seat" ? "Sitzplätze" : "Ganzer Tisch"}
+                    tone={state.serviceOrderMode === "seat" ? "amber" : "green"}
+                  />
+                </div>
+                <div className="kiju-admin-action-row">
+                  <button
+                    type="button"
+                    className={`kiju-button ${
+                      state.serviceOrderMode === "table"
+                        ? "kiju-button--primary"
+                        : "kiju-button--secondary"
+                    }`}
+                    onClick={() => handleServiceOrderModeChange("table")}
+                  >
+                    Ganzer Tisch
+                  </button>
+                  <button
+                    type="button"
+                    className={`kiju-button ${
+                      state.serviceOrderMode === "seat"
+                        ? "kiju-button--primary"
+                        : "kiju-button--secondary"
+                    }`}
+                    onClick={() => handleServiceOrderModeChange("seat")}
+                  >
+                    Sitzplätze verwenden
+                  </button>
+                </div>
+              </article>
               <div className="kiju-admin-layout">
                 <form className="kiju-admin-panel" onSubmit={handleCreateTable}>
                   <strong>Neuen Tisch anlegen</strong>
@@ -1328,6 +1386,31 @@ export const AdminPanel = () => {
                           />
                         </label>
 
+                        <div className="kiju-admin-seat-list">
+                          <div className="kiju-admin-heading-stack">
+                            <strong>Sitzplätze im Service</strong>
+                            <span>Ausgeblendete Plätze werden nicht mehr für neue Bestellungen angeboten.</span>
+                          </div>
+                          <div className="kiju-admin-seat-grid">
+                            {table.seats.map((seat) => (
+                              <label key={seat.id} className="kiju-checkbox-row">
+                                <input
+                                  type="checkbox"
+                                  checked={seat.visible !== false}
+                                  onChange={(event) =>
+                                    handleSeatVisibleChange(
+                                      table.id,
+                                      seat.id,
+                                      event.target.checked
+                                    )
+                                  }
+                                />
+                                <span>{seat.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="kiju-admin-meta">
                           <span>{usage.sessions} Sessions gesamt</span>
                           <span>{usage.closed} Abschlüsse</span>
@@ -1397,9 +1480,14 @@ export const AdminPanel = () => {
                             </div>
                           ) : (
                             session.items.map((item) => {
-                              const seatLabel =
-                                table?.seats.find((seat) => seat.id === item.seatId)?.label ??
-                                item.seatId;
+                              const targetLabel = (() => {
+                                if (item.target.type === "table") {
+                                  return "Tisch";
+                                }
+
+                                const seatId = item.target.seatId;
+                                return table?.seats.find((seat) => seat.id === seatId)?.label ?? seatId;
+                              })();
 
                               return (
                                 <div key={item.id} className="kiju-line-item">
@@ -1407,7 +1495,7 @@ export const AdminPanel = () => {
                                     {item.quantity}× {resolveProductName(state.products, item.productId)}
                                   </span>
                                   <span>
-                                    {seatLabel} · {courseLabels[item.category]}
+                                    {targetLabel} · {courseLabels[item.category]}
                                   </span>
                                 </div>
                               );

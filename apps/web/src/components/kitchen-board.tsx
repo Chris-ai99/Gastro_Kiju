@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -8,7 +8,7 @@ import {
   ChefHat,
   Clock3,
   ListOrdered,
-  TimerReset
+  RefreshCw
 } from "lucide-react";
 
 import { routeConfig } from "@kiju/config";
@@ -21,30 +21,27 @@ import {
   type OrderItem,
   type Product
 } from "@kiju/domain";
-import { StatusPill } from "@kiju/ui";
 
 import { resolveCourseStatus, useDemoApp } from "../lib/app-state";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
 
-const ticketCourses: CourseKey[] = ["starter", "main", "dessert", "drinks"];
+const ticketCourses: CourseKey[] = ["starter", "main", "dessert"];
+const MAX_VISIBLE_TICKETS = 7;
 
 const ticketStatusLabels = {
-  blocked: "Blockiert",
-  countdown: "Countdown",
-  ready: "Sofort",
+  blocked: "Noch nicht zubereiten",
+  countdown: "Wartezeit läuft",
+  ready: "Frei zur Zubereitung",
   completed: "Fertig"
 } as const;
 
-const ticketStatusTones: Record<
-  keyof typeof ticketStatusLabels,
-  "navy" | "amber" | "red" | "green" | "slate"
-> = {
-  blocked: "red",
-  countdown: "amber",
-  ready: "green",
-  completed: "navy"
-};
+const ticketStatusShortLabels = {
+  blocked: "Gesperrt",
+  countdown: "Timer",
+  ready: "Frei",
+  completed: "Fertig"
+} as const;
 
 const ticketStatusRank: Record<keyof typeof ticketStatusLabels, number> = {
   ready: 0,
@@ -58,7 +55,7 @@ type TicketStatus = keyof typeof ticketStatusLabels;
 type KitchenTicketLine = {
   id: string;
   quantity: number;
-  seatLabel: string;
+  targetLabel: string;
   productName: string;
   modifiers: string[];
   note?: string;
@@ -72,12 +69,11 @@ type KitchenTicket = {
   course: CourseKey;
   courseLabel: string;
   sentAt?: string;
-  releasedAt?: string;
   completedAt?: string;
   minutesLeft: number;
   status: TicketStatus;
   itemCount: number;
-  seatCount: number;
+  targetSummary: string;
   lines: KitchenTicketLine[];
 };
 
@@ -111,10 +107,39 @@ const buildModifierLabels = (item: OrderItem, product: Product | undefined) =>
     });
   });
 
+const resolveTargetLabel = (
+  item: OrderItem,
+  table: { id: string; seats: { id: string; label: string }[] }
+) => {
+  if (item.target.type === "table") {
+    return "Tisch";
+  }
+
+  const seatId = item.target.seatId;
+  return (
+    table.seats.find((seat) => seat.id === seatId)?.label ??
+    seatId.replace(`${table.id}-seat-`, "P")
+  );
+};
+
+const buildTargetSummary = (items: OrderItem[]) => {
+  const hasTableTarget = items.some((item) => item.target.type === "table");
+  const seatCount = new Set(
+    items
+      .filter((item) => item.target.type === "seat")
+      .map((item) => (item.target.type === "seat" ? item.target.seatId : ""))
+  ).size;
+
+  if (hasTableTarget && seatCount === 0) return "Tisch";
+  if (hasTableTarget) return `Tisch + ${seatCount} ${seatCount === 1 ? "Platz" : "Plätze"}`;
+  return `${seatCount} ${seatCount === 1 ? "Platz" : "Plätze"}`;
+};
+
 export const KitchenBoard = () => {
   const { state, unreadNotifications, actions, currentUser } = useDemoApp();
   const [clock, setClock] = useState(() => Date.now());
   const [showArchived, setShowArchived] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -133,36 +158,36 @@ export const KitchenBoard = () => {
 
       return ticketCourses.flatMap((course) => {
         const courseTicket = session.courseTickets[course];
-        const items = getItemsForCourse(session, course);
-        const resolved = resolveCourseStatus(session, course);
-        const status =
-          courseTicket.status === "countdown"
-            ? resolved.status
-            : (courseTicket.status as TicketStatus | "not-recorded" | "skipped");
-
-        if ((status === "not-recorded" || status === "skipped") && items.length === 0) {
+        if (!courseTicket.sentAt) {
           return [];
         }
 
-        if (!courseTicket.sentAt && items.length === 0) {
+        const items = getItemsForCourse(session, course);
+        const resolved = resolveCourseStatus(session, course);
+        if (resolved.status === "not-recorded" || resolved.status === "skipped") {
           return [];
         }
 
         const lines = items.map((item) => {
           const product = getProductById(state.products, item.productId);
-          const seatLabel =
-            table.seats.find((seat) => seat.id === item.seatId)?.label ??
-            item.seatId.replace(`${table.id}-seat-`, "P");
 
           return {
             id: item.id,
             quantity: item.quantity,
-            seatLabel,
+            targetLabel: resolveTargetLabel(item, table),
             productName: product?.name ?? "Unbekannt",
             modifiers: buildModifierLabels(item, product),
             note: item.note
           };
         });
+
+        const ticketStatus =
+          resolved.status === "completed" ||
+          resolved.status === "ready" ||
+          resolved.status === "countdown" ||
+          resolved.status === "blocked"
+            ? resolved.status
+            : "blocked";
 
         const ticket: KitchenTicket = {
           id: `${table.id}-${course}`,
@@ -171,16 +196,12 @@ export const KitchenBoard = () => {
           tableName: table.name,
           course,
           courseLabel: courseLabels[course],
-          sentAt: courseTicket.sentAt ?? items.find((item) => item.sentAt)?.sentAt,
-          releasedAt: courseTicket.releasedAt,
+          sentAt: courseTicket.sentAt,
           completedAt: courseTicket.completedAt,
           minutesLeft: resolved.minutesLeft,
-          status:
-            status === "completed" || status === "ready" || status === "countdown"
-              ? status
-              : "blocked",
+          status: ticketStatus,
           itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
-          seatCount: new Set(items.map((item) => item.seatId)).size,
+          targetSummary: buildTargetSummary(items),
           lines
         };
 
@@ -196,9 +217,12 @@ export const KitchenBoard = () => {
         const rankDelta = ticketStatusRank[left.status] - ticketStatusRank[right.status];
         if (rankDelta !== 0) return rankDelta;
 
-        if (left.status === "countdown" && right.status === "countdown") {
-          const countdownDelta = left.minutesLeft - right.minutesLeft;
-          if (countdownDelta !== 0) return countdownDelta;
+        const hasTimer =
+          (left.status === "blocked" || left.status === "countdown") &&
+          (right.status === "blocked" || right.status === "countdown");
+        if (hasTimer) {
+          const timerDelta = left.minutesLeft - right.minutesLeft;
+          if (timerDelta !== 0) return timerDelta;
         }
 
         const leftSentAt = left.sentAt ? new Date(left.sentAt).getTime() : Number.MAX_SAFE_INTEGER;
@@ -220,16 +244,16 @@ export const KitchenBoard = () => {
     })
     .slice(0, 8);
 
-  const primaryTicket = activeTickets[0];
-  const queueTickets = activeTickets.slice(1, 7);
-  const blockedCount = activeTickets.filter((ticket) => ticket.status === "blocked").length;
+  const visibleTickets = activeTickets.slice(0, MAX_VISIBLE_TICKETS);
+  const hiddenTicketCount = Math.max(0, activeTickets.length - MAX_VISIBLE_TICKETS);
+  const emptySlotCount = Math.max(0, MAX_VISIBLE_TICKETS - visibleTickets.length);
+  const lockedCount = activeTickets.filter(
+    (ticket) => ticket.status === "blocked" || ticket.status === "countdown"
+  ).length;
   const readyCount = activeTickets.filter((ticket) => ticket.status === "ready").length;
 
   const allOpenItems = useMemo(() => {
-    const grouped = new Map<
-      string,
-      { id: string; label: string; quantity: number; courseLabel: string; ticketCount: number }
-    >();
+    const grouped = new Map<string, { id: string; label: string; quantity: number }>();
 
     for (const ticket of activeTickets) {
       for (const line of ticket.lines) {
@@ -237,16 +261,13 @@ export const KitchenBoard = () => {
         const existing = grouped.get(key);
         if (existing) {
           existing.quantity += line.quantity;
-          existing.ticketCount += 1;
           continue;
         }
 
         grouped.set(key, {
           id: key,
           label: line.productName,
-          quantity: line.quantity,
-          courseLabel: ticket.courseLabel,
-          ticketCount: 1
+          quantity: line.quantity
         });
       }
     }
@@ -257,77 +278,76 @@ export const KitchenBoard = () => {
     });
   }, [activeTickets]);
 
-  const renderTicketCard = (ticket: KitchenTicket, featured = false) => {
-    const cardClassName = [
-      "kiju-ticket-card",
-      featured ? "is-featured" : "",
-      `is-${ticket.status}`
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    const actionLabel = ticket.status === "blocked" ? "Jetzt freigeben" : "Ticket abschließen";
-    const actionIcon = ticket.status === "blocked" ? <TimerReset size={18} /> : <CheckCheck size={18} />;
-    const actionHandler = () =>
-      ticket.status === "blocked"
-        ? actions.releaseCourse(ticket.tableId, ticket.course)
-        : actions.markCourseCompleted(ticket.tableId, ticket.course);
+  const renderTicketCard = (ticket: KitchenTicket) => {
+    const canMarkCompleted = ticket.status === "ready";
+    const timerVisible =
+      (ticket.status === "blocked" || ticket.status === "countdown") && ticket.minutesLeft > 0;
+    const stateBadge = timerVisible
+      ? `${ticket.minutesLeft} Min.`
+      : ticketStatusShortLabels[ticket.status];
 
     return (
-      <article key={ticket.id} className={cardClassName}>
-        <div className="kiju-ticket-card__meta-row">
+      <article key={ticket.id} className={`kiju-pass-ticket is-${ticket.status}`}>
+        <header className="kiju-pass-ticket__header">
           <strong>Ticket {ticket.ticketNumber}</strong>
-          <div className="kiju-ticket-card__clock-group">
+          <div className="kiju-pass-ticket__times">
             <span>
-              <Clock3 size={13} />
+              <Clock3 size={12} />
               {formatClock(ticket.sentAt)}
             </span>
             <span>{formatDuration(ticket.sentAt, clock)}</span>
           </div>
-        </div>
+        </header>
 
-        <div className="kiju-ticket-card__title-row">
+        <div className="kiju-pass-ticket__headline">
           <div>
-            <span className="kiju-ticket-card__table-label">{ticket.tableName}</span>
-            <h2>{ticket.courseLabel}</h2>
+            <h2>{ticket.tableName}</h2>
+            <span>
+              {ticket.courseLabel} · {ticket.targetSummary}
+            </span>
           </div>
-          <StatusPill
-            label={
-              ticket.status === "countdown"
-                ? `${ticket.minutesLeft} Min.`
-                : ticketStatusLabels[ticket.status]
-            }
-            tone={ticketStatusTones[ticket.status]}
-          />
+          <div className={`kiju-pass-ticket__state is-${ticket.status}`}>
+            <strong>{stateBadge}</strong>
+            <span>{ticketStatusLabels[ticket.status]}</span>
+          </div>
         </div>
 
-        <ol className="kiju-ticket-card__list">
+        <ol className="kiju-pass-ticket__lines">
           {ticket.lines.map((line) => (
-            <li key={line.id} className="kiju-ticket-line">
-              <span className="kiju-ticket-line__quantity">{line.quantity}</span>
-              <div className="kiju-ticket-line__copy">
+            <li key={line.id} className="kiju-pass-ticket__line">
+              <span className="kiju-pass-ticket__quantity">{line.quantity}</span>
+              <div className="kiju-pass-ticket__line-copy">
                 <strong>{line.productName}</strong>
-                <span>{line.seatLabel}</span>
+                <small>{line.targetLabel}</small>
                 {line.modifiers.length > 0 ? (
-                  <em>+ {line.modifiers.join(" · ")}</em>
+                  <em className="kiju-pass-ticket__modifier">{line.modifiers.join(" · ")}</em>
                 ) : null}
-                {line.note ? <em>Hinweis: {line.note}</em> : null}
+                {line.note ? <em className="kiju-pass-ticket__note">{line.note}</em> : null}
               </div>
             </li>
           ))}
         </ol>
 
-        <footer className="kiju-ticket-card__footer">
-          <div className="kiju-ticket-card__footer-copy">
-            <span>{ticket.tableName}</span>
+        <footer className="kiju-pass-ticket__footer">
+          <div className="kiju-pass-ticket__footer-copy">
+            <span>Arbeitsplatz</span>
+            <strong>KiJu Pass</strong>
             <small>
-              {ticket.seatCount} {ticket.seatCount === 1 ? "Platz" : "Plätze"} · {ticket.itemCount}{" "}
-              {ticket.itemCount === 1 ? "Posten" : "Posten"}
+              {ticket.tableName} · {ticket.itemCount} {ticket.itemCount === 1 ? "Posten" : "Posten"}
             </small>
           </div>
-          <button className="kiju-ticket-card__action" onClick={actionHandler}>
-            {actionIcon}
-            {actionLabel}
+          <button
+            type="button"
+            className="kiju-pass-ticket__action"
+            onClick={() => actions.markCourseCompleted(ticket.tableId, ticket.course)}
+            disabled={!canMarkCompleted}
+            aria-label={
+              canMarkCompleted
+                ? `${ticket.courseLabel} für ${ticket.tableName} als fertig markieren`
+                : `${ticket.courseLabel} für ${ticket.tableName} ist noch gesperrt`
+            }
+          >
+            <CheckCheck size={18} />
           </button>
         </footer>
       </article>
@@ -336,203 +356,138 @@ export const KitchenBoard = () => {
 
   return (
     <RouteGuard allowedRoles={["kitchen", "admin"]}>
-      <main className="kiju-page kiju-kitchen-screen">
-        <header className="kiju-kitchen-topbar">
-          <div className="kiju-kitchen-topbar__copy">
-            <span className="kiju-eyebrow">Küchenpass</span>
-            <h1>Bon-Wand für die laufende Produktion</h1>
-            <p>
-              Der nächste Bon liegt links im Fokus. Dahinter laufen alle offenen Tickets in
-              Reihenfolge, rechts stehen Sammelposten und Live-Hinweise für den Pass.
-            </p>
+      <main className="kiju-page kiju-kitchen-wallboard">
+        <section className="kiju-kitchen-wallboard__grid">
+          {visibleTickets.map((ticket) => renderTicketCard(ticket))}
+          {Array.from({ length: emptySlotCount }, (_, index) => (
+            <article key={`empty-${index}`} className="kiju-pass-ticket kiju-pass-ticket--empty">
+              <div>
+                <ChefHat size={22} />
+                <span>Freier Platz</span>
+              </div>
+            </article>
+          ))}
+
+          <aside className="kiju-kitchen-summary-card">
+            <header className="kiju-kitchen-summary-card__header">
+              <strong>Alle Posten</strong>
+              <small>{allOpenItems.length} offen</small>
+            </header>
+            <div className="kiju-kitchen-summary-card__table">
+              <div className="kiju-kitchen-summary-card__head">
+                <span>Stück</span>
+                <span>Bezeichnung</span>
+              </div>
+              {allOpenItems.length === 0 ? (
+                <p className="kiju-kitchen-summary-card__empty">Keine offenen Posten.</p>
+              ) : (
+                allOpenItems.map((item) => (
+                  <div key={item.id} className="kiju-kitchen-summary-card__row">
+                    <strong>{item.quantity}</strong>
+                    <span>{item.label}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </section>
+
+        {showArchived ? (
+          <section className="kiju-kitchen-wallboard__archive">
+            <div className="kiju-kitchen-wallboard__archive-head">
+              <strong>Alte Bons</strong>
+              <small>{archivedTickets.length} zuletzt</small>
+            </div>
+            {archivedTickets.length === 0 ? (
+              <p className="kiju-kitchen-wallboard__archive-empty">
+                Noch keine abgeschlossenen Bons in diesem Durchlauf.
+              </p>
+            ) : (
+              <div className="kiju-kitchen-wallboard__archive-list">
+                {archivedTickets.map((ticket) => (
+                  <article key={ticket.id} className="kiju-kitchen-wallboard__archive-item">
+                    <strong>
+                      {ticket.tableName} · {ticket.courseLabel}
+                    </strong>
+                    <span>{formatClock(ticket.completedAt)}</span>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {showNotifications ? (
+          <section className="kiju-kitchen-wallboard__notifications">
+            <div className="kiju-kitchen-wallboard__archive-head">
+              <strong>Hinweise</strong>
+              <small>{unreadNotifications.length} offen</small>
+            </div>
+            {unreadNotifications.length === 0 ? (
+              <p className="kiju-kitchen-wallboard__archive-empty">
+                Keine offenen Hinweise aus Service oder Abrechnung.
+              </p>
+            ) : (
+              <div className="kiju-pass-notifications">
+                {unreadNotifications.slice(0, 8).map((notification) => (
+                  <button
+                    key={notification.id}
+                    type="button"
+                    className="kiju-pass-notification"
+                    onClick={() => actions.markNotificationRead(notification.id)}
+                  >
+                    <BellRing size={16} />
+                    <div>
+                      <strong>{notification.title}</strong>
+                      <span>{notification.body}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        <footer className="kiju-kitchen-wallboard__footer">
+          <div className="kiju-kitchen-wallboard__footer-left">
+            <button
+              type="button"
+              className="kiju-kitchen-wallboard__footer-button is-icon"
+              onClick={() => setShowNotifications((value) => !value)}
+            >
+              <BellRing size={18} />
+            </button>
+            <button
+              type="button"
+              className="kiju-kitchen-wallboard__footer-button"
+              onClick={() => setShowArchived((value) => !value)}
+            >
+              <ListOrdered size={18} />
+              {showArchived ? "Alte Bons aus" : "Alte Bons"}
+            </button>
           </div>
 
-          <div className="kiju-kitchen-topbar__actions">
-            <StatusPill label={`${activeTickets.length} offene Bons`} tone="navy" />
-            <StatusPill label={`${readyCount} sofort fällig`} tone={readyCount > 0 ? "green" : "slate"} />
-            <StatusPill
-              label={`${blockedCount} blockiert`}
-              tone={blockedCount > 0 ? "red" : "slate"}
-            />
+          <div className="kiju-kitchen-wallboard__footer-center">
+            {hiddenTicketCount > 0 ? <span>+{hiddenTicketCount} weitere Bons</span> : null}
+            <span>{lockedCount} mit Timer</span>
+            <span>{readyCount} frei</span>
+          </div>
+
+          <div className="kiju-kitchen-wallboard__footer-right">
+            <span className="kiju-kitchen-wallboard__refresh">
+              <RefreshCw size={16} />
+              5 Sek
+            </span>
             {currentUser?.role === "admin" ? (
-              <Link href={routeConfig.waiter} className="kiju-button kiju-button--secondary">
+              <Link href={routeConfig.waiter} className="kiju-kitchen-wallboard__service-link">
                 Zum Service
               </Link>
             ) : null}
             <RoleSwitchPopover />
           </div>
-        </header>
-
-        <section className="kiju-kitchen-stats">
-          <article className="kiju-kitchen-stat-card">
-            <span>Jetzt am Pass</span>
-            <strong>{primaryTicket ? primaryTicket.tableName : "Kein Bon"}</strong>
-            <small>{primaryTicket ? primaryTicket.courseLabel : "Sobald ein Gang gesendet wird, erscheint er hier."}</small>
-          </article>
-          <article className="kiju-kitchen-stat-card">
-            <span>Reihenfolge</span>
-            <strong>{activeTickets.length}</strong>
-            <small>{activeTickets.length === 1 ? "Ticket wartet" : "Tickets warten"}</small>
-          </article>
-          <article className="kiju-kitchen-stat-card">
-            <span>Archiv</span>
-            <strong>{archivedTickets.length}</strong>
-            <small>Zuletzt abgeschlossene Bons</small>
-          </article>
-          <article className="kiju-kitchen-stat-card">
-            <span>Stand</span>
-            <strong>{formatClock(clock)}</strong>
-            <small>Automatische Aktualisierung im Sekundentakt</small>
-          </article>
-        </section>
-
-        <section className="kiju-kitchen-wall">
-          <div className="kiju-kitchen-wall__tickets">
-            {primaryTicket ? (
-              <section className="kiju-kitchen-wall__primary">{renderTicketCard(primaryTicket, true)}</section>
-            ) : (
-              <section className="kiju-kitchen-empty">
-                <ChefHat size={32} />
-                <div>
-                  <strong>Aktuell wartet kein Bon auf die Küche.</strong>
-                  <p>Sobald der Service einen Gang schickt, landet er hier ganz oben in der Queue.</p>
-                </div>
-              </section>
-            )}
-
-            <section className="kiju-kitchen-wall__queue">
-              <div className="kiju-kitchen-section-heading">
-                <div>
-                  <span className="kiju-kitchen-section-heading__eyebrow">Warteschlange</span>
-                  <h2>Nächste Tickets</h2>
-                </div>
-                <StatusPill label={`${queueTickets.length} sichtbar`} tone="amber" />
-              </div>
-
-              {queueTickets.length > 0 ? (
-                <div className="kiju-ticket-grid">
-                  {queueTickets.map((ticket) => renderTicketCard(ticket))}
-                </div>
-              ) : (
-                <div className="kiju-kitchen-placeholder">
-                  <Clock3 size={18} />
-                  Hinter dem aktuellen Bon wartet gerade nichts Weiteres.
-                </div>
-              )}
-            </section>
-
-            <footer className="kiju-kitchen-wall__footer">
-              <button
-                className="kiju-kitchen-archive-toggle"
-                onClick={() => setShowArchived((value) => !value)}
-              >
-                <ListOrdered size={18} />
-                {showArchived ? "Alte Bons ausblenden" : "Alte Bons anzeigen"}
-              </button>
-              <div className="kiju-kitchen-refresh-indicator">
-                <Clock3 size={16} />
-                1 Sek
-              </div>
-            </footer>
-          </div>
-
-          <aside className="kiju-kitchen-sidebar">
-            <section className="kiju-kitchen-panel">
-              <div className="kiju-kitchen-section-heading">
-                <div>
-                  <span className="kiju-kitchen-section-heading__eyebrow">Sammelliste</span>
-                  <h2>Alle Posten</h2>
-                </div>
-                <StatusPill label={`${allOpenItems.length} Positionen`} tone="navy" />
-              </div>
-
-              {allOpenItems.length > 0 ? (
-                <div className="kiju-kitchen-summary-table">
-                  <div className="kiju-kitchen-summary-table__head">
-                    <span>Stück</span>
-                    <span>Bezeichnung</span>
-                    <span>Gang</span>
-                  </div>
-                  {allOpenItems.map((item) => (
-                    <div key={item.id} className="kiju-kitchen-summary-table__row">
-                      <strong>{item.quantity}</strong>
-                      <span>{item.label}</span>
-                      <small>{item.courseLabel}</small>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="kiju-kitchen-panel__empty">
-                  Noch keine offenen Positionen in der Produktionsliste.
-                </p>
-              )}
-            </section>
-
-            <section className="kiju-kitchen-panel">
-              <div className="kiju-kitchen-section-heading">
-                <div>
-                  <span className="kiju-kitchen-section-heading__eyebrow">Live</span>
-                  <h2>Hinweise</h2>
-                </div>
-                <StatusPill
-                  label={`${unreadNotifications.length} offen`}
-                  tone={unreadNotifications.length > 0 ? "amber" : "slate"}
-                />
-              </div>
-
-              {unreadNotifications.length === 0 ? (
-                <p className="kiju-kitchen-panel__empty">Keine offenen Hinweise aus Service oder Abrechnung.</p>
-              ) : (
-                <div className="kiju-kitchen-notifications">
-                  {unreadNotifications.slice(0, 5).map((notification) => (
-                    <button
-                      key={notification.id}
-                      className="kiju-kitchen-notification"
-                      onClick={() => actions.markNotificationRead(notification.id)}
-                    >
-                      <BellRing size={16} />
-                      <div>
-                        <strong>{notification.title}</strong>
-                        <span>{notification.body}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {showArchived ? (
-              <section className="kiju-kitchen-panel">
-                <div className="kiju-kitchen-section-heading">
-                  <div>
-                    <span className="kiju-kitchen-section-heading__eyebrow">Archiv</span>
-                    <h2>Alte Bons</h2>
-                  </div>
-                  <StatusPill label={`${archivedTickets.length} zuletzt`} tone="green" />
-                </div>
-
-                {archivedTickets.length > 0 ? (
-                  <div className="kiju-kitchen-archived-list">
-                    {archivedTickets.map((ticket) => (
-                      <article key={ticket.id} className="kiju-kitchen-archived-ticket">
-                        <div>
-                          <strong>
-                            {ticket.tableName} · {ticket.courseLabel}
-                          </strong>
-                          <span>{formatClock(ticket.completedAt)}</span>
-                        </div>
-                        <StatusPill label="Fertig" tone="green" />
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="kiju-kitchen-panel__empty">Noch keine abgeschlossenen Bons in diesem Durchlauf.</p>
-                )}
-              </section>
-            ) : null}
-          </aside>
-        </section>
+        </footer>
       </main>
     </RouteGuard>
   );
 };
+

@@ -4,6 +4,8 @@ export type CourseKey = "drinks" | "starter" | "main" | "dessert";
 export type ProductCategory = CourseKey;
 export type ProductionTarget = "service" | "bar" | "kitchen";
 export type PaymentMethod = "cash" | "card" | "voucher";
+export type ServiceOrderMode = "table" | "seat";
+export type OrderTarget = { type: "table" } | { type: "seat"; seatId: string };
 export type SessionStatus =
   | "planned"
   | "idle"
@@ -20,6 +22,10 @@ export type KitchenStatus =
   | "ready"
   | "completed";
 export type NotificationTone = "info" | "success" | "alert";
+export type NotificationKind =
+  | "service-drinks"
+  | "service-drinks-accepted"
+  | "service-course-ready";
 
 export interface UserAccount {
   id: string;
@@ -63,6 +69,7 @@ export interface Product {
 export interface TableSeat {
   id: string;
   label: string;
+  visible: boolean;
 }
 
 export interface TableLayout {
@@ -86,7 +93,7 @@ export interface OrderModifierSelection {
 
 export interface OrderItem {
   id: string;
-  seatId: string;
+  target: OrderTarget;
   productId: string;
   category: ProductCategory;
   quantity: number;
@@ -144,16 +151,19 @@ export interface DailyStats {
 
 export interface AppNotification {
   id: string;
+  kind?: NotificationKind;
   title: string;
   body: string;
   tone: NotificationTone;
   tableId?: string;
   createdAt: string;
+  expiresAt?: string;
   read: boolean;
 }
 
 export interface AppState {
   catalogVersion?: number;
+  serviceOrderMode: ServiceOrderMode;
   users: UserAccount[];
   tables: TableLayout[];
   products: Product[];

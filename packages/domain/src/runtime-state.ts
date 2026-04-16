@@ -1,4 +1,4 @@
-import type { AppState, UserAccount } from "./types";
+import type { AppState, OrderItem, OrderTarget, UserAccount } from "./types";
 import { demoProducts, demoTables } from "./demo-data";
 
 const SYSTEM_CATALOG_VERSION = 1;
@@ -112,20 +112,67 @@ const mergeSeededProducts = (
   ];
 };
 
+type LegacyOrderItem = Omit<OrderItem, "target"> & {
+  target?: OrderTarget;
+  seatId?: string;
+};
+
+const normalizeOrderTarget = (item: LegacyOrderItem): OrderTarget => {
+  if (item.target?.type === "table") {
+    return { type: "table" };
+  }
+
+  if (item.target?.type === "seat" && item.target.seatId.trim()) {
+    return { type: "seat", seatId: item.target.seatId };
+  }
+
+  if (item.seatId?.trim()) {
+    return { type: "seat", seatId: item.seatId };
+  }
+
+  return { type: "table" };
+};
+
+const normalizeTables = (tables: AppState["tables"]) =>
+  tables.map((table) => ({
+    ...table,
+    seats: table.seats.map((seat) => ({
+      ...seat,
+      visible: seat.visible ?? true
+    }))
+  }));
+
+const normalizeSessions = (sessions: AppState["sessions"]) =>
+  sessions.map((session) => ({
+    ...session,
+    items: session.items.map((item) => {
+      const legacyItem = item as LegacyOrderItem;
+      const { seatId: _legacySeatId, target: _legacyTarget, ...itemFields } = legacyItem;
+
+      return {
+        ...itemFields,
+        target: normalizeOrderTarget(legacyItem)
+      };
+    })
+  }));
+
 export const normalizeOperationalState = (state: AppState): AppState => {
   const forceCanonicalSeed = (state.catalogVersion ?? 0) < SYSTEM_CATALOG_VERSION;
 
   return {
     ...state,
     catalogVersion: SYSTEM_CATALOG_VERSION,
+    serviceOrderMode: state.serviceOrderMode === "seat" ? "seat" : "table",
     users: mergeSeededUsers(state.users),
-    tables: mergeSeededTables(state.tables),
-    products: mergeSeededProducts(state.products, state.sessions, forceCanonicalSeed)
+    tables: normalizeTables(mergeSeededTables(state.tables)),
+    products: mergeSeededProducts(state.products, state.sessions, forceCanonicalSeed),
+    sessions: normalizeSessions(state.sessions)
   };
 };
 
 export const createDefaultOperationalState = (): AppState =>
   normalizeOperationalState({
+    serviceOrderMode: "table",
     users: createSystemUsers(),
     tables: structuredClone(demoTables),
     products: structuredClone(demoProducts),

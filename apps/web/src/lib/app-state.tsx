@@ -12,12 +12,14 @@ import {
   type AppState,
   type CourseKey,
   type CourseTicket,
+  type OrderTarget,
   type OrderSession,
   type PaymentMethod,
   type Product,
   type ProductCategory,
   type ProductionTarget,
   type Role,
+  type ServiceOrderMode,
   type SessionStatus,
   type TableLayout,
   type UserAccount
@@ -36,8 +38,11 @@ import {
 
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-v2";
+const NOTIFICATION_READS_KEY = "kiju-notification-reads-v1";
+const NOTIFICATION_DEVICE_KEY = "kiju-notification-device-v1";
 const SHARED_SYNC_POLL_MS = 1000;
 const SHARED_SYNC_REQUEST_TIMEOUT_MS = 2500;
+const SERVICE_DRINK_ACCEPTED_NOTIFICATION_TTL_MS = 10_000;
 
 type SharedSyncState = {
   status: "connecting" | "online" | "offline";
@@ -52,11 +57,11 @@ type DemoActions = {
     message?: string;
   };
   logout: () => void;
-  addItem: (tableId: string, seatId: string, productId: string) => void;
+  addItem: (tableId: string, target: OrderTarget, productId: string) => void;
   updateItem: (
     tableId: string,
     itemId: string,
-    patch: Partial<Pick<OrderSession["items"][number], "seatId" | "quantity" | "note">>
+    patch: Partial<Pick<OrderSession["items"][number], "target" | "quantity" | "note">>
   ) => void;
   removeItem: (tableId: string, itemId: string) => void;
   skipCourse: (tableId: string, course: CourseKey) => void;
@@ -100,10 +105,12 @@ type DemoActions = {
     tableId: string,
     patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly">>
   ) => void;
+  setServiceOrderMode: (mode: ServiceOrderMode) => void;
+  setSeatVisible: (tableId: string, seatId: string, visible: boolean) => void;
   toggleTableActive: (tableId: string) => void;
   resetDemoState: () => void;
   removeTableAndServices: (tableId: string) => void;
-  markNotificationRead: (notificationId: string) => void;
+  markNotificationRead: (notificationId: string, scope?: "local" | "shared") => void;
 };
 
 type DemoContextValue = {
@@ -120,6 +127,8 @@ type SharedStateSnapshot = {
   updatedAt: string;
   state: AppState;
 };
+
+type LocalNotificationReadState = Record<string, string[]>;
 
 const DemoContext = createContext<DemoContextValue | null>(null);
 
@@ -183,7 +192,8 @@ const createClientId = (prefix: string) => {
 const createSeats = (tableId: string, seatCount: number) =>
   Array.from({ length: seatCount }, (_, index) => ({
     id: `${tableId}-seat-${index + 1}`,
-    label: `P${index + 1}`
+    label: `P${index + 1}`,
+    visible: true
   }));
 const floorplanSeatOverrides: Partial<Record<TableLayout["id"], number>> = {
   "table-1": 5,
@@ -193,6 +203,21 @@ const floorplanSeatOverrides: Partial<Record<TableLayout["id"], number>> = {
   "table-5": 4,
   "table-6": 5
 };
+const normalizeSeatList = (
+  tableId: string,
+  seatCount: number,
+  existingSeats: TableLayout["seats"]
+) =>
+  Array.from({ length: seatCount }, (_, index) => {
+    const seatId = `${tableId}-seat-${index + 1}`;
+    const existingSeat = existingSeats.find((seat) => seat.id === seatId);
+
+    return {
+      id: seatId,
+      label: existingSeat?.label ?? `P${index + 1}`,
+      visible: existingSeat?.visible ?? true
+    };
+  });
 const normalizeFloorplanTables = (appState: AppState) => {
   let hasChanges = false;
   const tables = appState.tables.map((table) => {
@@ -224,7 +249,7 @@ const normalizeFloorplanTables = (appState: AppState) => {
       seatCount: shouldNormalizeSeatCount && requiredSeatCount ? requiredSeatCount : table.seatCount,
       seats:
         shouldNormalizeSeatCount && requiredSeatCount
-          ? createSeats(table.id, requiredSeatCount)
+          ? normalizeSeatList(table.id, requiredSeatCount, table.seats)
           : table.seats
     };
   });
@@ -278,6 +303,24 @@ const createBaseTickets = (): Record<CourseKey, CourseTicket> => ({
   main: createBaseTicket("main"),
   dessert: createBaseTicket("dessert")
 });
+
+const tableOrderTarget: OrderTarget = { type: "table" };
+
+const resolveOrderTargetForTable = (
+  table: TableLayout | undefined,
+  target: OrderTarget
+): OrderTarget => {
+  if (!table || target.type === "table") {
+    return tableOrderTarget;
+  }
+
+  const seat = table.seats.find((entry) => entry.id === target.seatId);
+  if (!seat || seat.visible === false) {
+    return tableOrderTarget;
+  }
+
+  return { type: "seat", seatId: target.seatId };
+};
 
 const createSession = (tableId: string, waiterId: string): OrderSession => ({
   id: createClientId(`session-${tableId}`),
@@ -344,6 +387,91 @@ const emitOperatorFeedback = () => {
 const getClosedSessionAmount = (session: OrderSession, products: Product[]) => {
   const paymentTotal = session.payments.reduce((sum, payment) => sum + payment.amountCents, 0);
   return paymentTotal > 0 ? paymentTotal : calculateSessionTotal(session, products);
+};
+
+const summarizeServiceItems = (
+  items: OrderSession["items"],
+  products: Product[],
+  table?: TableLayout
+) => {
+  const seatLabels = new Map(table?.seats.map((seat) => [seat.id, seat.label]) ?? []);
+  const groupedItems = new Map<
+    string,
+    {
+      quantity: number;
+      productName: string;
+      note?: string;
+      targetLabel?: string;
+    }
+  >();
+
+  items.forEach((item) => {
+    const productName = resolveProductName(products, item.productId);
+    const targetLabel =
+      item.target.type === "seat" ? seatLabels.get(item.target.seatId) ?? "Sitzplatz" : undefined;
+    const key = [item.productId, item.note ?? "", targetLabel ?? "table"].join("|");
+    const current = groupedItems.get(key);
+
+    if (current) {
+      current.quantity += item.quantity;
+      return;
+    }
+
+    groupedItems.set(key, {
+      quantity: item.quantity,
+      productName,
+      note: item.note,
+      targetLabel
+    });
+  });
+
+  const labels = [...groupedItems.values()].map((item) => {
+    const drinkLabel = `${item.quantity}x ${item.productName}${item.note ? ` (${item.note})` : ""}`;
+    return item.targetLabel ? `${item.targetLabel}: ${drinkLabel}` : drinkLabel;
+  });
+
+  if (labels.length <= 4) {
+    return labels.join(", ");
+  }
+
+  return `${labels.slice(0, 4).join(", ")} und ${labels.length - 4} weitere Positionen`;
+};
+
+const summarizeCourseItems = (items: OrderSession["items"], products: Product[]) => {
+  const groupedItems = new Map<
+    string,
+    {
+      quantity: number;
+      productName: string;
+      note?: string;
+    }
+  >();
+
+  items.forEach((item) => {
+    const key = [item.productId, item.note ?? ""].join("|");
+    const current = groupedItems.get(key);
+
+    if (current) {
+      current.quantity += item.quantity;
+      return;
+    }
+
+    groupedItems.set(key, {
+      quantity: item.quantity,
+      productName: resolveProductName(products, item.productId),
+      note: item.note
+    });
+  });
+
+  const labels = [...groupedItems.values()].map(
+    (item) => `${item.quantity}x ${item.productName}${item.note ? ` (${item.note})` : ""}`
+  );
+
+  if (labels.length <= 4) {
+    return labels.join(", ");
+  }
+
+  return `${labels.slice(0, 4).join(", ")} und ${labels.length - 4} weitere Positionen`;
 };
 const normalizeSessionAfterItemRemoval = (session: OrderSession) => {
   for (const course of serviceCourseOrder) {
@@ -426,6 +554,74 @@ const requestSharedSnapshot = async (input: string, init?: RequestInit) => {
   }
 };
 
+const getNotificationReaderKey = () => {
+  if (typeof window === "undefined") return "device-server";
+
+  const existingKey = window.sessionStorage.getItem(NOTIFICATION_DEVICE_KEY);
+  if (existingKey) return existingKey;
+
+  const nextKey =
+    typeof window.crypto?.randomUUID === "function"
+      ? `device-${window.crypto.randomUUID()}`
+      : `device-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+
+  window.sessionStorage.setItem(NOTIFICATION_DEVICE_KEY, nextKey);
+  return nextKey;
+};
+
+const readStoredNotificationReads = () => {
+  if (typeof window === "undefined") return {};
+
+  const rawValue = localStorage.getItem(NOTIFICATION_READS_KEY);
+  if (!rawValue) return {};
+
+  try {
+    const parsed = JSON.parse(rawValue) as LocalNotificationReadState;
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const storeNotificationReads = (reads: LocalNotificationReadState) => {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(NOTIFICATION_READS_KEY, JSON.stringify(reads));
+};
+
+const isNotificationExpired = (notification: AppNotification, now = Date.now()) => {
+  if (!notification.expiresAt) return false;
+
+  const expiresAt = Date.parse(notification.expiresAt);
+  return Number.isFinite(expiresAt) && expiresAt <= now;
+};
+
+const pruneNotificationReads = (
+  reads: LocalNotificationReadState,
+  notifications: AppNotification[]
+) => {
+  const openNotificationIds = new Set(
+    notifications
+      .filter((notification) => !notification.read && !isNotificationExpired(notification))
+      .map((notification) => notification.id)
+  );
+  let hasChanges = false;
+  const nextEntries = Object.entries(reads).flatMap(([readerKey, notificationIds]) => {
+    const nextIds = notificationIds.filter((notificationId) => openNotificationIds.has(notificationId));
+    if (nextIds.length !== notificationIds.length) {
+      hasChanges = true;
+    }
+
+    return nextIds.length > 0 ? ([[readerKey, nextIds]] as const) : [];
+  });
+
+  if (!hasChanges && nextEntries.length === Object.keys(reads).length) {
+    return reads;
+  }
+
+  return Object.fromEntries(nextEntries);
+};
+
 const fetchSharedSnapshot = async () => {
   const sharedStateUrl = resolveSharedStateUrl();
   if (!sharedStateUrl) return null;
@@ -449,6 +645,10 @@ const replaceSharedSnapshot = async (state: AppState) => {
 export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const [state, setState] = useState<AppState>(() => createFreshOperationalState());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [localNotificationReads, setLocalNotificationReads] = useState<LocalNotificationReadState>(() =>
+    readStoredNotificationReads()
+  );
+  const [notificationClock, setNotificationClock] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
   const [sharedSync, setSharedSync] = useState<SharedSyncState>({
     status: "connecting",
@@ -460,6 +660,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const stateRef = useRef(state);
   const currentUserIdRef = useRef(currentUserId);
   const localWriteRevisionRef = useRef(0);
+  const hasActiveExpiringNotification = state.notifications.some(
+    (notification) =>
+      !notification.read &&
+      Boolean(notification.expiresAt) &&
+      !isNotificationExpired(notification, notificationClock)
+  );
 
   const broadcast = useCallback((nextState: AppState, nextUserId: string | null) => {
     channelRef.current?.postMessage({
@@ -503,10 +709,35 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   useEffect(() => {
+    setLocalNotificationReads((currentReads) => {
+      const nextReads = pruneNotificationReads(currentReads, state.notifications);
+      if (nextReads === currentReads) {
+        return currentReads;
+      }
+
+      storeNotificationReads(nextReads);
+      return nextReads;
+    });
+  }, [state.notifications]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasActiveExpiringNotification) return;
+
+    const timer = window.setInterval(() => {
+      setNotificationClock(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [hasActiveExpiringNotification]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const storedState = readStoredState();
     const storedAuth = readStoredAuth();
+    const storedNotificationReads = readStoredNotificationReads();
 
     if (storedState) {
       const normalizedStoredState = normalizeAppState(storedState);
@@ -518,6 +749,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       currentUserIdRef.current = storedAuth.currentUserId;
       setCurrentUserId(storedAuth.currentUserId);
     }
+
+    setLocalNotificationReads(storedNotificationReads);
 
     if ("BroadcastChannel" in window) {
       channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
@@ -550,6 +783,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         } catch {
           // Ignore malformed local auth cache entries.
         }
+      }
+
+      if (event.key === NOTIFICATION_READS_KEY) {
+        setLocalNotificationReads(readStoredNotificationReads());
       }
     };
 
@@ -685,11 +922,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   }, [commit, state]);
 
   const addItem = useCallback(
-    (tableId: string, seatId: string, productId: string) => {
+    (tableId: string, target: OrderTarget, productId: string) => {
       const next = structuredClone(state);
       const fallbackWaiterId = state.users.find((user) => user.role === "waiter")?.id;
       const waiterId = currentUserId ?? fallbackWaiterId;
       if (!waiterId) return;
+
+      const table = next.tables.find((entry) => entry.id === tableId);
+      if (!table) return;
 
       let session = next.sessions.find(
         (entry) => entry.tableId === tableId && entry.status !== "closed"
@@ -706,16 +946,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.status = "serving";
       session.items.push({
         id: createClientId("item"),
-        seatId,
+        target: resolveOrderTargetForTable(table, target),
         productId,
         category: product.category,
         quantity: 1,
         modifiers: []
       });
-
-      if (session.courseTickets[product.category].status === "not-recorded") {
-        session.courseTickets[product.category].status = "blocked";
-      }
 
       commit(next);
     },
@@ -726,17 +962,18 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (
       tableId: string,
       itemId: string,
-      patch: Partial<Pick<OrderSession["items"][number], "seatId" | "quantity" | "note">>
+      patch: Partial<Pick<OrderSession["items"][number], "target" | "quantity" | "note">>
     ) => {
       const next = structuredClone(state);
+      const table = next.tables.find((entry) => entry.id === tableId);
       const session = getSessionForTable(next.sessions, tableId);
-      if (!session || session.status === "closed") return;
+      if (!table || !session || session.status === "closed") return;
 
       const item = session.items.find((entry) => entry.id === itemId);
       if (!item) return;
 
-      if (patch.seatId !== undefined) {
-        item.seatId = patch.seatId;
+      if (patch.target !== undefined) {
+        item.target = resolveOrderTargetForTable(table, patch.target);
       }
 
       if (patch.quantity !== undefined) {
@@ -789,12 +1026,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.courseTickets[course].status = "skipped";
       session.courseTickets[course].completedAt = new Date().toISOString();
 
-      const nextCourse = getNextKitchenCourse(course);
-      if (nextCourse && session.courseTickets[nextCourse].status === "blocked") {
-        session.courseTickets[nextCourse].status = "countdown";
-        session.courseTickets[nextCourse].releasedAt = new Date().toISOString();
-      }
-
       commit(next);
     },
     [commit, state]
@@ -820,17 +1051,23 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       const ticket = session.courseTickets[course];
-      ticket.sentAt = new Date().toISOString();
-      const tableName =
-        next.tables.find((table) => table.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
+      const sentAt = new Date().toISOString();
+      ticket.sentAt = sentAt;
+      const table = next.tables.find((entry) => entry.id === tableId);
+      const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+
+      courseItems.forEach((item) => {
+        item.sentAt = sentAt;
+      });
 
       if (course === "drinks") {
         ticket.status = "completed";
-        ticket.completedAt = new Date().toISOString();
+        ticket.completedAt = sentAt;
         session.status = "waiting";
         withNotification(next, {
-          title: "Getränke im Service",
-          body: `${tableName} wurde im Service vermerkt.`,
+          kind: "service-drinks",
+          title: "Getränke an den Tisch",
+          body: `${tableName}: ${summarizeServiceItems(courseItems, next.products, table)}.`,
           tone: "info",
           tableId
         });
@@ -838,15 +1075,19 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         commit(next);
         return {
           ok: true,
-          message: "Getränke wurden gespeichert und direkt im Service verbucht.",
+          message: "Getränke wurden gespeichert und an alle im Service gemeldet.",
           ticketStatus: ticket.status
         };
       }
 
       const previousCourse = getPreviousKitchenCourse(course);
+      ticket.releasedAt = sentAt;
+      ticket.readyAt = undefined;
+      ticket.completedAt = undefined;
+      ticket.manualRelease = false;
+
       if (!previousCourse || isCourseResolved(session, previousCourse)) {
         ticket.status = "countdown";
-        ticket.releasedAt = new Date().toISOString();
       } else {
         ticket.status = "blocked";
       }
@@ -864,8 +1105,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         ok: true,
         message:
           ticket.status === "blocked"
-            ? `${courseLabels[course]} wurde an die Küche gesendet und wartet auf die Freigabe nach dem vorherigen Gang.`
-            : `${courseLabels[course]} wurde an die Küche gesendet und läuft jetzt in der Küchenwarteschlange.`,
+            ? `${courseLabels[course]} wurde an die Küche gesendet, erscheint als gesperrter Bon und läuft jetzt mit 15-Minuten-Timer.`
+            : `${courseLabels[course]} wurde an die Küche gesendet und läuft jetzt mit 15-Minuten-Timer.`,
         ticketStatus: ticket.status
       };
     },
@@ -879,16 +1120,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (!session) return;
 
       const ticket = session.courseTickets[course];
-      ticket.status = "countdown";
-      ticket.manualRelease = true;
-      ticket.releasedAt = new Date().toISOString();
+      if (!ticket.sentAt || ticket.status === "completed" || ticket.status === "skipped") {
+        return;
+      }
 
-      withNotification(next, {
-        title: `${courseLabels[course]} freigegeben`,
-        body: `${tableId.replace("table-", "Tisch ")} wurde für die Küche freigegeben.`,
-        tone: "alert",
-        tableId
-      });
+      ticket.status = "ready";
+      ticket.manualRelease = true;
+      ticket.readyAt = new Date().toISOString();
       emitOperatorFeedback();
       commit(next);
     },
@@ -901,28 +1139,27 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const session = getSessionForTable(next.sessions, tableId);
       if (!session) return;
 
-      session.courseTickets[course].status = "completed";
-      session.courseTickets[course].completedAt = new Date().toISOString();
+      const completedAt = new Date().toISOString();
+      const ticket = session.courseTickets[course];
+      const table = next.tables.find((entry) => entry.id === tableId);
+      const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+      const courseItems = session.items.filter((item) => item.category === course);
 
-      session.items
-        .filter((item) => item.category === course)
-        .forEach((item) => {
-          item.preparedAt = new Date().toISOString();
-        });
+      ticket.status = "completed";
+      ticket.completedAt = completedAt;
 
-      const nextCourse = getNextKitchenCourse(course);
-      if (nextCourse && session.courseTickets[nextCourse].status === "blocked") {
-        session.courseTickets[nextCourse].status = "countdown";
-        session.courseTickets[nextCourse].releasedAt = new Date().toISOString();
-      }
+      courseItems.forEach((item) => {
+        item.preparedAt = completedAt;
+      });
 
       if (course === "dessert" || course === "main") {
         session.status = "ready-to-bill";
       }
 
       withNotification(next, {
+        kind: "service-course-ready",
         title: `${courseLabels[course]} fertig`,
-        body: `${tableId.replace("table-", "Tisch ")} kann jetzt serviert werden.`,
+        body: `${summarizeCourseItems(courseItems, next.products)} für ${tableName} ist fertig.`,
         tone: "success",
         tableId
       });
@@ -1440,6 +1677,41 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, state]
   );
 
+  const setServiceOrderMode = useCallback(
+    (mode: ServiceOrderMode) => {
+      const next = structuredClone(state);
+      next.serviceOrderMode = mode;
+      commit(next);
+    },
+    [commit, state]
+  );
+
+  const setSeatVisible = useCallback(
+    (tableId: string, seatId: string, visible: boolean) => {
+      const next = structuredClone(state);
+      const table = next.tables.find((entry) => entry.id === tableId);
+      const seat = table?.seats.find((entry) => entry.id === seatId);
+      if (!table || !seat) return;
+
+      seat.visible = visible;
+
+      if (!visible) {
+        next.sessions
+          .filter((session) => session.tableId === tableId && session.status !== "closed")
+          .forEach((session) => {
+            session.items.forEach((item) => {
+              if (item.target.type === "seat" && item.target.seatId === seatId) {
+                item.target = tableOrderTarget;
+              }
+            });
+          });
+      }
+
+      commit(next);
+    },
+    [commit, state]
+  );
+
   const toggleTableActive = useCallback(
     (tableId: string) => {
       const next = structuredClone(state);
@@ -1500,19 +1772,66 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const markNotificationRead = useCallback(
-    (notificationId: string) => {
-      const next = structuredClone(state);
-      const notification = next.notifications.find((entry) => entry.id === notificationId);
-      if (!notification) return;
+    (notificationId: string, scope: "local" | "shared" = "local") => {
+      if (scope === "shared") {
+        const next = structuredClone(state);
+        const notification = next.notifications.find((entry) => entry.id === notificationId);
+        if (!notification || notification.read) return;
 
-      notification.read = true;
-      commit(next);
+        notification.read = true;
+
+        if (notification.kind === "service-drinks") {
+          const acceptedBy =
+            next.users.find((user) => user.id === currentUserId)?.name ?? "Service";
+          const taskText = notification.body.endsWith(".")
+            ? notification.body.slice(0, -1)
+            : notification.body;
+
+          withNotification(next, {
+            kind: "service-drinks-accepted",
+            title: "Getränke übernommen",
+            body: `${acceptedBy} kümmert sich um ${taskText}.`,
+            tone: "success",
+            tableId: notification.tableId,
+            expiresAt: new Date(
+              Date.now() + SERVICE_DRINK_ACCEPTED_NOTIFICATION_TTL_MS
+            ).toISOString()
+          });
+          emitOperatorFeedback();
+        }
+
+        commit(next);
+        return;
+      }
+
+      const notification = state.notifications.find((entry) => entry.id === notificationId);
+      if (!notification || notification.read) return;
+
+      const readerKey = getNotificationReaderKey();
+      const currentReads = localNotificationReads[readerKey] ?? [];
+      if (currentReads.includes(notificationId)) {
+        return;
+      }
+
+      const nextReads = {
+        ...localNotificationReads,
+        [readerKey]: [...currentReads, notificationId]
+      };
+      storeNotificationReads(nextReads);
+      setLocalNotificationReads(nextReads);
     },
-    [commit, state]
+    [commit, currentUserId, localNotificationReads, state]
   );
 
   const currentUser = state.users.find((user) => user.id === currentUserId);
-  const unreadNotifications = state.notifications.filter((notification) => !notification.read);
+  const readerKey = getNotificationReaderKey();
+  const hiddenNotificationIds = new Set(localNotificationReads[readerKey] ?? []);
+  const unreadNotifications = state.notifications.filter(
+    (notification) =>
+      !notification.read &&
+      !hiddenNotificationIds.has(notification.id) &&
+      !isNotificationExpired(notification, notificationClock)
+  );
 
   const value = useMemo<DemoContextValue>(
     () => ({
@@ -1544,6 +1863,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         deleteUser,
         createTable,
         updateTable,
+        setServiceOrderMode,
+        setSeatVisible,
         toggleTableActive,
         resetDemoState,
         removeTableAndServices,
@@ -1572,6 +1893,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
+      setSeatVisible,
+      setServiceOrderMode,
       setSessionStatus,
       sharedSync,
       skipCourse,
@@ -1599,14 +1922,21 @@ export const useDemoApp = () => {
 
 export const resolveCourseStatus = (session: OrderSession | undefined, course: CourseKey) => {
   const ticket = session?.courseTickets[course];
-  if (!ticket || ticket.status !== "countdown" || !ticket.releasedAt) {
+  if (!ticket) {
     return {
-      status: ticket?.status ?? "not-recorded",
+      status: "not-recorded" as const,
       minutesLeft: 0
     };
   }
 
-  const releaseTime = new Date(ticket.releasedAt).getTime();
+  if (ticket.status !== "blocked" && ticket.status !== "countdown") {
+    return {
+      status: ticket.status,
+      minutesLeft: 0
+    };
+  }
+
+  const releaseTime = new Date(ticket.releasedAt ?? ticket.sentAt ?? Date.now()).getTime();
   const deadline = releaseTime + ticket.countdownMinutes * 60 * 1000;
   const remaining = Math.ceil((deadline - Date.now()) / 60000);
 
@@ -1618,7 +1948,7 @@ export const resolveCourseStatus = (session: OrderSession | undefined, course: C
   }
 
   return {
-    status: "countdown" as const,
+    status: ticket.status,
     minutesLeft: remaining
   };
 };

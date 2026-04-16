@@ -81,7 +81,8 @@ export const demoUsers: UserAccount[] = [
 const createSeats = (tableId: string, count: number) =>
   Array.from({ length: count }, (_, index) => ({
     id: `${tableId}-seat-${index + 1}`,
-    label: `P${index + 1}`
+    label: `P${index + 1}`,
+    visible: true
   }));
 
 export const demoTables: TableLayout[] = [
@@ -294,7 +295,7 @@ export const demoSessions: OrderSession[] = [
     items: [
       {
         id: "item-1",
-        seatId: "table-1-seat-1",
+        target: { type: "seat", seatId: "table-1-seat-1" },
         productId: "drink-cola",
         category: "drinks",
         quantity: 1,
@@ -303,7 +304,7 @@ export const demoSessions: OrderSession[] = [
       },
       {
         id: "item-2",
-        seatId: "table-1-seat-1",
+        target: { type: "seat", seatId: "table-1-seat-1" },
         productId: "starter-bruschetta",
         category: "starter",
         quantity: 1,
@@ -314,7 +315,7 @@ export const demoSessions: OrderSession[] = [
       },
       {
         id: "item-3",
-        seatId: "table-1-seat-2",
+        target: { type: "seat", seatId: "table-1-seat-2" },
         productId: "main-pizza-margherita",
         category: "main",
         quantity: 1,
@@ -351,7 +352,7 @@ export const demoSessions: OrderSession[] = [
     items: [
       {
         id: "item-4",
-        seatId: "table-3-seat-1",
+        target: { type: "seat", seatId: "table-3-seat-1" },
         productId: "drink-water",
         category: "drinks",
         quantity: 1,
@@ -380,7 +381,7 @@ export const demoSessions: OrderSession[] = [
     items: [
       {
         id: "item-closed-1",
-        seatId: "table-5-seat-1",
+        target: { type: "seat", seatId: "table-5-seat-1" },
         productId: "drink-cola",
         category: "drinks",
         quantity: 1,
@@ -390,7 +391,7 @@ export const demoSessions: OrderSession[] = [
       },
       {
         id: "item-closed-2",
-        seatId: "table-5-seat-1",
+        target: { type: "seat", seatId: "table-5-seat-1" },
         productId: "main-pasta",
         category: "main",
         quantity: 1,
@@ -431,6 +432,7 @@ export const demoSessions: OrderSession[] = [
 ];
 
 export const demoAppState: AppState = {
+  serviceOrderMode: "table",
   users: demoUsers,
   tables: demoTables,
   products: demoProducts,
