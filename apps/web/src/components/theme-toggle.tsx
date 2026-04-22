@@ -23,7 +23,7 @@ export const ThemeToggle = () => {
         onClick={() => setTheme("dark")}
       >
         <MoonStar size={16} />
-        Schwarz
+        Dunkel
       </button>
     </div>
   );

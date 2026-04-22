@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Bell,
   ChefHat,
+  FileDown,
   LayoutGrid,
   PlusCircle,
+  Printer,
   ReceiptText,
   RotateCcw,
   Save,
@@ -21,6 +23,9 @@ import {
   calculateGuestCount,
   calculateSessionTotal,
   euro,
+  type DesignMode,
+  type OrderSession,
+  type OrderTarget,
   type NotificationTone,
   type ProductCategory,
   type ProductionTarget,
@@ -29,9 +34,10 @@ import {
 } from "@kiju/domain";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
-import { courseLabels, resolveProductName, useDemoApp } from "../lib/app-state";
+import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
+import { ThermalReceiptPaper } from "./thermal-receipt-paper";
 
 const resetSteps = [
   "Schritt 1 von 3: Standarddaten wirklich vorbereiten?",
@@ -44,6 +50,21 @@ const roleLabels: Record<Role, string> = {
   waiter: "Kellner",
   kitchen: "Küche"
 };
+
+type StaffLoginRole = Extract<Role, "waiter" | "kitchen">;
+
+const staffLoginRoleLabels: Record<StaffLoginRole, string> = {
+  waiter: "Service",
+  kitchen: "Küche"
+};
+
+const staffLoginRoleOrder: Record<StaffLoginRole, number> = {
+  waiter: 0,
+  kitchen: 1
+};
+
+const isStaffLoginRole = (role: Role): role is StaffLoginRole =>
+  role === "waiter" || role === "kitchen";
 
 const productionLabels: Record<ProductionTarget, string> = {
   service: "Service",
@@ -67,10 +88,14 @@ const notificationTonePills: Record<
 };
 
 const productCategoryOrder: ProductCategory[] = ["starter", "main", "drinks", "dessert"];
+const tableOrderTarget: OrderTarget = { type: "table" };
+const designModeOptions: { mode: DesignMode; label: string }[] = [
+  { mode: "modern", label: "Neu" },
+  { mode: "classic", label: "Alt" }
+];
 
 const sessionStatusLabels: Record<string, string> = {
   serving: "In Bedienung",
-  hold: "Hold",
   waiting: "Warten",
   "ready-to-bill": "Rechnung offen",
   closed: "Abgeschlossen"
@@ -78,7 +103,6 @@ const sessionStatusLabels: Record<string, string> = {
 
 const sessionStatusTones: Record<string, "navy" | "amber" | "red" | "green" | "slate"> = {
   serving: "navy",
-  hold: "amber",
   waiting: "red",
   "ready-to-bill": "green",
   closed: "green"
@@ -103,6 +127,168 @@ const formatAdminDateTime = (value: string) =>
     timeStyle: "short"
   });
 
+const staffLoginBlankoRowCount = 16;
+
+const createStaffLoginBlankoHtml = (createdAt: string) => {
+  const rows = Array.from({ length: staffLoginBlankoRowCount }, (_, index) => `
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>`).join("");
+
+  return `<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mitarbeiter-Logins Blanko</title>
+    <style>
+      @page { size: A4; margin: 16mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: #111827;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #ffffff;
+      }
+      .sheet {
+        width: 100%;
+      }
+      header {
+        display: grid;
+        gap: 4px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #111827;
+      }
+      header span,
+      header p,
+      footer {
+        color: #4b5563;
+        font-size: 13px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 25px;
+        letter-spacing: 0;
+      }
+      p {
+        margin: 0;
+      }
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 14px;
+      }
+      th,
+      td {
+        border: 1px solid #cbd5e1;
+        padding: 9px 10px;
+        text-align: left;
+        vertical-align: middle;
+      }
+      th {
+        background: #eef2f7;
+        font-weight: 800;
+      }
+      th:nth-child(1) { width: 36%; }
+      th:nth-child(2) { width: 46%; }
+      th:nth-child(3) { width: 18%; }
+      td {
+        height: 38px;
+      }
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 14px;
+        padding-top: 10px;
+        border-top: 1px solid #d1d5db;
+      }
+      @media print {
+        body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <header>
+        <span>KiJu Gastro Order System</span>
+        <h1>Mitarbeiter-Logins Blanko</h1>
+        <p>Name, Benutzername (Spitzname) und PIN handschriftlich eintragen · Stand ${createdAt}</p>
+      </header>
+
+      <table aria-label="Mitarbeiter-Logins Blanko">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Benutzername (Spitzname)</th>
+            <th>PIN</th>
+          </tr>
+        </thead>
+        <tbody>${rows}
+        </tbody>
+      </table>
+
+      <footer>
+        <span>Keine Passwörter eintragen.</span>
+        <span>${staffLoginBlankoRowCount} freie Zeilen</span>
+      </footer>
+    </main>
+  </body>
+</html>`;
+};
+
+const playAdminReceiptAlarm = async () => {
+  if (typeof window === "undefined") return;
+
+  navigator.vibrate?.([220, 80, 220, 80, 360]);
+
+  const AudioContextConstructor =
+    window.AudioContext ??
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextConstructor) return;
+
+  try {
+    const audioContext = new AudioContextConstructor();
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    const startTime = audioContext.currentTime;
+    const beeps = [
+      { offset: 0, frequency: 880 },
+      { offset: 0.26, frequency: 740 },
+      { offset: 0.52, frequency: 980 },
+      { offset: 0.92, frequency: 880 }
+    ];
+
+    beeps.forEach(({ offset, frequency }) => {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const beepStart = startTime + offset;
+      const beepEnd = beepStart + 0.18;
+
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(frequency, beepStart);
+      gain.gain.setValueAtTime(0.001, beepStart);
+      gain.gain.exponentialRampToValueAtTime(0.22, beepStart + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.001, beepEnd);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(beepStart);
+      oscillator.stop(beepEnd + 0.02);
+    });
+
+    window.setTimeout(() => {
+      void audioContext.close();
+    }, 1500);
+  } catch {
+    // Browser blockieren Audio manchmal ohne Nutzerinteraktion. Das Popup bleibt sichtbar.
+  }
+};
+
 export const AdminPanel = () => {
   const { state, actions, currentUser, unreadNotifications } = useDemoApp();
   const router = useRouter();
@@ -113,6 +299,7 @@ export const AdminPanel = () => {
     name: "",
     description: "",
     category: "drinks" as ProductCategory,
+    drinkSubcategory: "",
     price: "0.00",
     taxRate: "19",
     productionTarget: "service" as ProductionTarget
@@ -143,6 +330,15 @@ export const AdminPanel = () => {
     active: true,
     note: ""
   });
+  const [dashboardProductByTable, setDashboardProductByTable] = useState<Record<string, string>>({});
+  const [adminPrintMode, setAdminPrintMode] = useState<"staff-logins" | "receipt" | null>(null);
+  const [adminReceiptPrint, setAdminReceiptPrint] = useState<{
+    tableId: string;
+    sessionId: string;
+    mode: "print" | "reprint";
+    openedAt: string;
+  } | null>(null);
+  const playedReceiptAlarmIdsRef = useRef<Set<string>>(new Set());
 
   const productUsage = useMemo(() => {
     const usage = new Map<string, { open: number; closed: number }>();
@@ -203,6 +399,15 @@ export const AdminPanel = () => {
       })),
     [state.products]
   );
+  const dashboardProducts = useMemo(
+    () =>
+      productCategoryOrder.flatMap((category) =>
+        state.products
+          .filter((product) => product.category === category)
+          .sort((left, right) => left.name.localeCompare(right.name, "de"))
+      ),
+    [state.products]
+  );
 
   const adminCount = useMemo(
     () => state.users.filter((user) => user.role === "admin").length,
@@ -212,6 +417,24 @@ export const AdminPanel = () => {
     () => state.users.filter((user) => user.role === "admin" && user.active).length,
     [state.users]
   );
+  const staffLoginUsers = useMemo(
+    () =>
+      [...state.users]
+        .filter((user) => isStaffLoginRole(user.role))
+        .sort((left, right) => {
+          const roleComparison =
+            staffLoginRoleOrder[left.role as StaffLoginRole] -
+            staffLoginRoleOrder[right.role as StaffLoginRole];
+          if (roleComparison !== 0) return roleComparison;
+          if (left.active !== right.active) return left.active ? -1 : 1;
+          return left.name.localeCompare(right.name, "de");
+        }),
+    [state.users]
+  );
+  const staffLoginPrintDate = new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date());
   const openSessions = useMemo(
     () => state.sessions.filter((session) => session.status !== "closed"),
     [state.sessions]
@@ -229,7 +452,6 @@ export const AdminPanel = () => {
     () =>
       state.sessions.filter(
         (session) =>
-          session.status === "hold" ||
           session.status === "waiting" ||
           session.status === "ready-to-bill"
       ).length,
@@ -239,6 +461,37 @@ export const AdminPanel = () => {
     () => new Map(state.tables.map((table) => [table.id, table.name])),
     [state.tables]
   );
+  const receiptAlarmNotifications = useMemo(
+    () =>
+      unreadNotifications.filter(
+        (notification) => notification.kind === "admin-receipt-alarm"
+      ),
+    [unreadNotifications]
+  );
+  const activeReceiptAlarm = receiptAlarmNotifications[0] ?? null;
+  const adminReceiptSession = adminReceiptPrint
+    ? state.sessions.find((session) => session.id === adminReceiptPrint.sessionId) ??
+      getSessionForTable(state.sessions, adminReceiptPrint.tableId)
+    : undefined;
+
+  useEffect(() => {
+    if (!activeReceiptAlarm || playedReceiptAlarmIdsRef.current.has(activeReceiptAlarm.id)) {
+      return;
+    }
+
+    playedReceiptAlarmIdsRef.current.add(activeReceiptAlarm.id);
+    void playAdminReceiptAlarm();
+  }, [activeReceiptAlarm]);
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      setAdminPrintMode(null);
+      setAdminReceiptPrint(null);
+    };
+
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => window.removeEventListener("afterprint", handleAfterPrint);
+  }, []);
 
   const handleOpenWorkspace = (role: "waiter" | "kitchen") => {
     const targetUser = state.users.find((user) => user.role === role && user.active);
@@ -267,6 +520,92 @@ export const AdminPanel = () => {
     }
 
     router.push(role === "waiter" ? routeConfig.waiter : routeConfig.kitchen);
+  };
+
+  const handlePrintStaffLogins = () => {
+    if (staffLoginUsers.length === 0) {
+      setFeedback({
+        tone: "alert",
+        message: "Es gibt aktuell keine Service- oder Küchenkonten für den Ausdruck."
+      });
+      return;
+    }
+
+    setAdminReceiptPrint(null);
+    setAdminPrintMode("staff-logins");
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.print());
+    });
+  };
+
+  const handleDownloadStaffLoginBlanko = () => {
+    const html = createStaffLoginBlankoHtml(staffLoginPrintDate);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    setAdminReceiptPrint(null);
+    setAdminPrintMode(null);
+    link.href = url;
+    link.download = "mitarbeiter-logins-blanko.html";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    setFeedback({
+      tone: "success",
+      message: "Blanko-Liste wurde heruntergeladen."
+    });
+  };
+
+  const handleDashboardProductChange = (tableId: string, productId: string) => {
+    setDashboardProductByTable((current) => ({
+      ...current,
+      [tableId]: productId
+    }));
+  };
+
+  const handleDashboardAddItem = (tableId: string) => {
+    const productId = dashboardProductByTable[tableId] ?? dashboardProducts[0]?.id;
+    if (!productId) {
+      setFeedback({
+        tone: "alert",
+        message: "Es gibt aktuell keine Leistung, die gebucht werden kann."
+      });
+      return;
+    }
+
+    actions.addItem(tableId, tableOrderTarget, productId);
+    setFeedback({ tone: "success", message: "Leistung wurde auf den Tisch gebucht." });
+  };
+
+  const handleDashboardPrintReceipt = (session: OrderSession) => {
+    if (session.items.length === 0) {
+      setFeedback({
+        tone: "alert",
+        message: "Für diesen Tisch sind noch keine Leistungen gebucht."
+      });
+      return;
+    }
+
+    const mode = session.receipt.printedAt ? "reprint" : "print";
+    setAdminPrintMode("receipt");
+    setAdminReceiptPrint({
+      tableId: session.tableId,
+      sessionId: session.id,
+      mode,
+      openedAt: new Date().toISOString()
+    });
+
+    if (mode === "reprint") {
+      actions.reprintReceipt(session.tableId);
+    } else {
+      actions.printReceipt(session.tableId);
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.print());
+    });
   };
 
   const handleUserDraftChange = (
@@ -353,6 +692,7 @@ export const AdminPanel = () => {
       name: productForm.name,
       description: productForm.description,
       category: productForm.category,
+      drinkSubcategory: productForm.drinkSubcategory,
       priceCents: Math.round(Number(productForm.price || "0") * 100),
       taxRate: Number(productForm.taxRate || "0"),
       productionTarget: productForm.productionTarget
@@ -370,6 +710,7 @@ export const AdminPanel = () => {
       name: "",
       description: "",
       category: "drinks",
+      drinkSubcategory: "",
       price: "0.00",
       taxRate: "19",
       productionTarget: "service"
@@ -468,7 +809,15 @@ export const AdminPanel = () => {
   };
 
   const handleDeleteTable = (tableId: string) => {
-    actions.removeTableAndServices(tableId);
+    const result = actions.removeTableAndServices(tableId);
+    if (!result.ok) {
+      setFeedback({
+        tone: "alert",
+        message: result.message ?? "Tisch konnte nicht gelöscht werden."
+      });
+      return;
+    }
+
     setFeedback({ tone: "success", message: "Tisch samt Leistungen wurde gelöscht." });
   };
 
@@ -507,8 +856,19 @@ export const AdminPanel = () => {
   };
 
   const handleDismissNotification = (notificationId: string) => {
-    actions.markNotificationRead(notificationId);
-    setFeedback({ tone: "success", message: "Hinweis wurde ausgeblendet." });
+    actions.markNotificationRead(notificationId, "shared-dismiss");
+    setFeedback({ tone: "success", message: "Hinweis wurde dauerhaft gelöscht." });
+  };
+
+  const handleDesignModeChange = (mode: DesignMode) => {
+    actions.setDesignMode(mode);
+    setFeedback({
+      tone: "success",
+      message:
+        mode === "modern"
+          ? "Neues Design ist jetzt auf allen Geräten aktiv."
+          : "Altes Design ist jetzt auf allen Geräten aktiv."
+    });
   };
 
   return (
@@ -525,6 +885,22 @@ export const AdminPanel = () => {
             </p>
           </div>
           <div className="kiju-admin-hero__actions">
+            <div className="kiju-design-switch" role="group" aria-label="Design wählen">
+              <span>Design</span>
+              {designModeOptions.map((option) => (
+                <button
+                  key={option.mode}
+                  type="button"
+                  className={`kiju-design-switch__button ${
+                    state.designMode === option.mode ? "is-active" : ""
+                  }`}
+                  aria-pressed={state.designMode === option.mode}
+                  onClick={() => handleDesignModeChange(option.mode)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               className="kiju-button kiju-button--secondary"
@@ -549,6 +925,9 @@ export const AdminPanel = () => {
           <div className="kiju-admin-link-pills">
             <a className="kiju-admin-link-pill" href="#cockpit">
               Cockpit
+            </a>
+            <a className="kiju-admin-link-pill" href="#tisch-dashboard">
+              Tisch-Dashboard
             </a>
             <a className="kiju-admin-link-pill" href="#hinweise">
               Hinweise
@@ -590,6 +969,46 @@ export const AdminPanel = () => {
             <strong>{feedback.tone === "success" ? "Erfolgreich" : "Hinweis"}</strong>
             <span>{feedback.message}</span>
           </div>
+        ) : null}
+
+        {activeReceiptAlarm ? (
+          <aside
+            className="kiju-admin-receipt-alarm"
+            role="alertdialog"
+            aria-labelledby="kiju-admin-receipt-alarm-title"
+            aria-describedby="kiju-admin-receipt-alarm-body"
+          >
+            <div className="kiju-admin-receipt-alarm__icon">
+              <AlertTriangle size={34} />
+            </div>
+            <div className="kiju-admin-receipt-alarm__body">
+              <span>Abrechnung</span>
+              <h2 id="kiju-admin-receipt-alarm-title">{activeReceiptAlarm.title}</h2>
+              <p id="kiju-admin-receipt-alarm-body">{activeReceiptAlarm.body}</p>
+              <small>Erfasst: {formatAdminDateTime(activeReceiptAlarm.createdAt)}</small>
+            </div>
+            <div className="kiju-admin-receipt-alarm__actions">
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={() =>
+                  document.getElementById("hinweise")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                  })
+                }
+              >
+                Hinweise öffnen
+              </button>
+              <button
+                type="button"
+                className="kiju-button kiju-button--primary"
+                onClick={() => handleDismissNotification(activeReceiptAlarm.id)}
+              >
+                Alarm bestätigen
+              </button>
+            </div>
+          </aside>
         ) : null}
 
         <section id="cockpit" className="kiju-admin-kpi-grid">
@@ -699,6 +1118,169 @@ export const AdminPanel = () => {
           </div>
         </SectionCard>
 
+        <div id="tisch-dashboard">
+          <AccordionSection
+            title="Tisch-Dashboard"
+            eyebrow="Buchungen, Bearbeitung und Rechnungen"
+            defaultOpen
+            className="kiju-admin-accordion"
+            action={<StatusPill label={`${state.tables.length} Tische`} tone="navy" />}
+          >
+            <div className="kiju-admin-table-dashboard">
+              {state.tables.map((table) => {
+                const session = getSessionForTable(state.sessions, table.id);
+                const bookedBy = session
+                  ? state.users.find((user) => user.id === session.waiterId)
+                  : undefined;
+                const itemCount =
+                  session?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+                const selectedProductId =
+                  dashboardProductByTable[table.id] ?? dashboardProducts[0]?.id ?? "";
+
+                return (
+                  <article key={table.id} className="kiju-admin-table-dashboard-card">
+                    <header className="kiju-admin-table-dashboard-card__header">
+                      <div className="kiju-admin-heading-stack">
+                        <strong>{table.name}</strong>
+                        <span>
+                          {session
+                            ? `Gebucht von ${bookedBy?.name ?? "Unbekannt"}`
+                            : "Keine laufende Buchung"}
+                        </span>
+                      </div>
+                      <div className="kiju-admin-action-row">
+                        <StatusPill
+                          label={session ? sessionStatusLabels[session.status] ?? "Aktiv" : "Frei"}
+                          tone={
+                            session
+                              ? sessionStatusTones[session.status] ?? "slate"
+                              : table.active
+                                ? "green"
+                                : "slate"
+                          }
+                        />
+                        <StatusPill label={euro(calculateSessionTotal(session, state.products))} tone="slate" />
+                      </div>
+                    </header>
+
+                    <div className="kiju-admin-table-dashboard-card__meta">
+                      <span>{itemCount} {itemCount === 1 ? "Position" : "Positionen"}</span>
+                      <span>{table.seatCount} Sitzplätze</span>
+                      <span>{table.active ? "Im Service sichtbar" : "Nicht aktiv"}</span>
+                    </div>
+
+                    <div className="kiju-admin-booking-list">
+                      {session && session.items.length > 0 ? (
+                        session.items.map((item) => {
+                          const product = state.products.find((entry) => entry.id === item.productId);
+                          const itemTarget = item.target;
+                          const targetLabel =
+                            itemTarget.type === "seat"
+                              ? table.seats.find((seat) => seat.id === itemTarget.seatId)?.label ??
+                                "Sitzplatz"
+                              : "Tisch";
+
+                          return (
+                            <div key={item.id} className="kiju-admin-booking-row">
+                              <div className="kiju-admin-heading-stack">
+                                <strong>{product?.name ?? resolveProductName(state.products, item.productId)}</strong>
+                                <span>
+                                  {courseLabels[item.category]} · {targetLabel}
+                                </span>
+                              </div>
+                              <label className="kiju-inline-field">
+                                <span>Menge</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="20"
+                                  step="1"
+                                  value={item.quantity}
+                                  onChange={(event) =>
+                                    actions.updateItem(table.id, item.id, {
+                                      quantity: Number(event.target.value)
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="kiju-inline-field">
+                                <span>Hinweis</span>
+                                <input
+                                  value={item.note ?? ""}
+                                  onChange={(event) =>
+                                    actions.updateItem(table.id, item.id, {
+                                      note: event.target.value
+                                    })
+                                  }
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                className="kiju-button kiju-button--danger"
+                                onClick={() => actions.removeItem(table.id, item.id)}
+                              >
+                                <Trash2 size={16} />
+                                Löschen
+                              </button>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="kiju-inline-panel">
+                          <span>Auf diesem Tisch ist aktuell nichts gebucht.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="kiju-admin-table-dashboard-card__actions">
+                      <label className="kiju-inline-field">
+                        <span>Leistung hinzufügen</span>
+                        <select
+                          value={selectedProductId}
+                          onChange={(event) =>
+                            handleDashboardProductChange(table.id, event.target.value)
+                          }
+                          disabled={dashboardProducts.length === 0}
+                        >
+                          {productCategoryOrder.map((category) => (
+                            <optgroup key={category} label={courseLabels[category]}>
+                              {dashboardProducts
+                                .filter((product) => product.category === category)
+                                .map((product) => (
+                                  <option key={product.id} value={product.id}>
+                                    {product.name} · {euro(product.priceCents)}
+                                  </option>
+                                ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => handleDashboardAddItem(table.id)}
+                        disabled={dashboardProducts.length === 0}
+                      >
+                        <PlusCircle size={16} />
+                        Hinzufügen
+                      </button>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--primary"
+                        onClick={() => session && handleDashboardPrintReceipt(session)}
+                        disabled={!session || session.items.length === 0}
+                      >
+                        <Printer size={16} />
+                        {session?.receipt.printedAt ? "Rechnung erneut drucken" : "Rechnung drucken"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </AccordionSection>
+        </div>
+
         <div className="kiju-admin-stack">
           <div id="hinweise">
             <AccordionSection
@@ -725,7 +1307,12 @@ export const AdminPanel = () => {
                       : undefined;
 
                     return (
-                      <article key={notification.id} className="kiju-admin-panel">
+                      <article
+                        key={notification.id}
+                        className={`kiju-admin-panel ${
+                          notification.kind === "admin-receipt-alarm" ? "is-receipt-alarm" : ""
+                        }`.trim()}
+                      >
                         <div className="kiju-admin-row kiju-admin-row--top">
                           <div className="kiju-admin-heading-stack">
                             <strong>{notification.title}</strong>
@@ -742,7 +1329,7 @@ export const AdminPanel = () => {
                               className="kiju-button kiju-button--secondary"
                               onClick={() => handleDismissNotification(notification.id)}
                             >
-                              Wegklicken
+                              Löschen
                             </button>
                           </div>
                         </div>
@@ -827,6 +1414,21 @@ export const AdminPanel = () => {
                       </select>
                     </label>
                   </div>
+                  {productForm.category === "drinks" ? (
+                    <label className="kiju-inline-field">
+                      <span>Getränkegruppe</span>
+                      <input
+                        value={productForm.drinkSubcategory}
+                        placeholder="z. B. Alkoholfrei"
+                        onChange={(event) =>
+                          setProductForm((current) => ({
+                            ...current,
+                            drinkSubcategory: event.target.value
+                          }))
+                        }
+                      />
+                    </label>
+                  ) : null}
                   <div className="kiju-admin-row">
                     <label className="kiju-inline-field">
                       <span>Preis EUR</span>
@@ -947,6 +1549,21 @@ export const AdminPanel = () => {
                                 </label>
                               </div>
 
+                              {product.category === "drinks" ? (
+                                <label className="kiju-inline-field">
+                                  <span>Getränkegruppe</span>
+                                  <input
+                                    value={product.drinkSubcategory ?? ""}
+                                    placeholder="z. B. Alkoholfrei"
+                                    onChange={(event) =>
+                                      actions.updateProduct(product.id, {
+                                        drinkSubcategory: event.target.value
+                                      })
+                                    }
+                                  />
+                                </label>
+                              ) : null}
+
                               <label className="kiju-inline-field">
                                 <span>Beschreibung</span>
                                 <textarea
@@ -1023,6 +1640,45 @@ export const AdminPanel = () => {
               className="kiju-admin-accordion"
               action={<StatusPill label={`${state.users.length} Konten`} tone="navy" />}
             >
+              <article className="kiju-admin-panel kiju-staff-login-export">
+                <div className="kiju-admin-row kiju-admin-row--top">
+                  <div className="kiju-admin-heading-stack">
+                    <strong>Mitarbeiter-Logins</strong>
+                    <span>
+                      {staffLoginUsers.length} Service- und Küchenkonten, Admin-Konten ausgeschlossen.
+                    </span>
+                  </div>
+                  <div className="kiju-admin-action-row">
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--secondary"
+                      onClick={handleDownloadStaffLoginBlanko}
+                    >
+                      <FileDown size={16} />
+                      Blanko herunterladen
+                    </button>
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--secondary"
+                      onClick={handlePrintStaffLogins}
+                      disabled={staffLoginUsers.length === 0}
+                    >
+                      <FileDown size={16} />
+                      PDF speichern
+                    </button>
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--secondary"
+                      onClick={handlePrintStaffLogins}
+                      disabled={staffLoginUsers.length === 0}
+                    >
+                      <Printer size={16} />
+                      Drucken
+                    </button>
+                  </div>
+                </div>
+              </article>
+
               <div className="kiju-admin-layout">
                 <form className="kiju-admin-panel" onSubmit={handleCreateUser}>
                   <strong>Neues Konto anlegen</strong>
@@ -1556,6 +2212,63 @@ export const AdminPanel = () => {
             </AccordionSection>
           </div>
         </div>
+        {adminPrintMode === "staff-logins" ? (
+        <div className="kiju-print-root kiju-print-root--staff-logins" aria-hidden="true">
+          <section className="kiju-staff-login-sheet">
+            <header className="kiju-staff-login-sheet__header">
+              <span>KiJu Gastro Order System</span>
+              <h1>Mitarbeiter-Logins</h1>
+              <p>Service und Küche ohne Admin-Konten · Stand {staffLoginPrintDate}</p>
+            </header>
+
+            <table className="kiju-staff-login-sheet__table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Bereich</th>
+                  <th>Benutzername</th>
+                  <th>Passwort</th>
+                  <th>PIN</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffLoginUsers.length > 0 ? (
+                  staffLoginUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.name}</td>
+                      <td>{staffLoginRoleLabels[user.role as StaffLoginRole]}</td>
+                      <td>{user.username}</td>
+                      <td>{user.password || "Nicht gesetzt"}</td>
+                      <td>{user.pin || "Nicht gesetzt"}</td>
+                      <td>{user.active ? "Aktiv" : "Inaktiv"}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6}>Keine Service- oder Küchenkonten vorhanden.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            <footer className="kiju-staff-login-sheet__footer">
+              <span>Admin-Konten werden aus Sicherheitsgründen nicht gedruckt.</span>
+              <span>{staffLoginUsers.length} Konten</span>
+            </footer>
+          </section>
+        </div>
+        ) : null}
+        {adminPrintMode === "receipt" && adminReceiptPrint && adminReceiptSession ? (
+          <div className="kiju-print-root kiju-print-root--admin-receipt" aria-hidden="true">
+            <ThermalReceiptPaper
+              session={adminReceiptSession}
+              products={state.products}
+              openedAt={adminReceiptPrint.openedAt}
+              className="kiju-receipt-paper--print"
+            />
+          </div>
+        ) : null}
       </main>
     </RouteGuard>
   );

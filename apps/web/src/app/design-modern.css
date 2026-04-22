@@ -1,0 +1,575 @@
+html[data-design="modern"] {
+  --deep-navy: #24527a;
+  --ivory: #f6f8f5;
+  --amber: #b7791f;
+  --sky: #247f9e;
+  --service-red: #b42318;
+  --ready-green: #167f5f;
+  --slate: #172033;
+  --muted: #5f6b7a;
+  --line: #d7dee8;
+  --surface: rgba(255, 255, 255, 0.94);
+  --surface-strong: #ffffff;
+  --shadow-card: 0 10px 28px rgba(23, 32, 51, 0.1);
+  --shadow-stage: 0 16px 42px rgba(36, 82, 122, 0.16);
+  --radius-xl: 8px;
+  --radius-lg: 8px;
+  --radius-md: 8px;
+  --page-background: linear-gradient(180deg, #f7f9fc 0%, #eef5f1 54%, #f8f6ef 100%);
+}
+
+html[data-design="modern"][data-theme="dark"] {
+  --deep-navy: #8ec5ff;
+  --ivory: #101722;
+  --amber: #f0b45d;
+  --sky: #6dc9df;
+  --service-red: #ff9a90;
+  --ready-green: #7bdcb5;
+  --slate: #edf3f8;
+  --muted: #aeb9c6;
+  --line: rgba(174, 185, 198, 0.28);
+  --surface: rgba(18, 28, 40, 0.92);
+  --surface-strong: #162230;
+  --shadow-card: 0 12px 34px rgba(0, 0, 0, 0.34);
+  --shadow-stage: 0 18px 46px rgba(0, 0, 0, 0.38);
+  --page-background: linear-gradient(180deg, #0f1722 0%, #121c28 58%, #182418 100%);
+}
+
+html[data-design="modern"] *,
+html[data-design="modern"] *::before,
+html[data-design="modern"] *::after {
+  letter-spacing: 0;
+}
+
+html[data-design="modern"] body {
+  background: var(--page-background);
+  color: var(--slate);
+}
+
+html[data-design="modern"] .kiju-page {
+  width: min(100%, 1560px);
+  margin: 0 auto;
+  padding: 4.9rem clamp(0.9rem, 2vw, 1.6rem) 1.4rem;
+  gap: 1rem;
+}
+
+html[data-design="modern"] .kiju-login-shell {
+  background:
+    linear-gradient(180deg, rgba(247, 249, 252, 0.97), rgba(238, 245, 241, 0.94)),
+    linear-gradient(90deg, rgba(36, 82, 122, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(36, 82, 122, 0.06) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-login-shell {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 34, 0.98), rgba(18, 28, 40, 0.96)),
+    linear-gradient(90deg, rgba(174, 185, 198, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(174, 185, 198, 0.06) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+html[data-design="modern"] .kiju-card,
+html[data-design="modern"] .kiju-login-copy,
+html[data-design="modern"] .kiju-metric-card,
+html[data-design="modern"] .kiju-inline-panel,
+html[data-design="modern"] .kiju-product-card,
+html[data-design="modern"] .kiju-admin-product,
+html[data-design="modern"] .kiju-admin-table,
+html[data-design="modern"] .kiju-kitchen-stat-card,
+html[data-design="modern"] .kiju-kitchen-empty,
+html[data-design="modern"] .kiju-kitchen-panel,
+html[data-design="modern"] .kiju-kitchen-placeholder,
+html[data-design="modern"] .kiju-kitchen-archive-toggle,
+html[data-design="modern"] .kiju-kitchen-notification,
+html[data-design="modern"] .kiju-kitchen-archived-ticket,
+html[data-design="modern"] .kiju-notification-row,
+html[data-design="modern"] .kiju-empty-state {
+  border-radius: 8px;
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(10px);
+}
+
+html[data-design="modern"] .kiju-card {
+  padding: clamp(1.05rem, 2vw, 1.35rem);
+}
+
+html[data-design="modern"] .kiju-login-hero--compact {
+  width: min(480px, 100%);
+}
+
+html[data-design="modern"] .kiju-login-shell .kiju-card {
+  border-radius: 8px;
+  border-color: rgba(36, 82, 122, 0.18);
+  box-shadow: 0 18px 50px rgba(23, 32, 51, 0.14);
+}
+
+html[data-design="modern"] .kiju-login-shell .kiju-card h2,
+html[data-design="modern"] .kiju-topbar h1,
+html[data-design="modern"] .kiju-admin-hero__copy h1,
+html[data-design="modern"] .kiju-kitchen-topbar__copy h1 {
+  letter-spacing: 0;
+}
+
+html[data-design="modern"] .kiju-login-shell .kiju-card h2 {
+  font-size: 1.9rem;
+  line-height: 1.1;
+}
+
+html[data-design="modern"] .kiju-login-intro,
+html[data-design="modern"] .kiju-topbar p,
+html[data-design="modern"] .kiju-admin-hero__copy p,
+html[data-design="modern"] .kiju-kitchen-topbar__copy p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+html[data-design="modern"] .kiju-login-shell .kiju-form input,
+html[data-design="modern"] .kiju-admin-shell .kiju-inline-field input,
+html[data-design="modern"] .kiju-admin-shell .kiju-inline-field select,
+html[data-design="modern"] .kiju-admin-shell .kiju-inline-field textarea,
+html[data-design="modern"] .kiju-inline-field input,
+html[data-design="modern"] .kiju-inline-field select,
+html[data-design="modern"] .kiju-inline-field textarea {
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: var(--slate);
+  box-shadow: inset 0 1px 0 rgba(23, 32, 51, 0.04);
+}
+
+html[data-design="modern"] input:focus,
+html[data-design="modern"] select:focus,
+html[data-design="modern"] textarea:focus,
+html[data-design="modern"] button:focus-visible,
+html[data-design="modern"] a:focus-visible,
+html[data-design="modern"] summary:focus-visible {
+  outline: 3px solid rgba(36, 127, 158, 0.24);
+  outline-offset: 2px;
+}
+
+html[data-design="modern"] .kiju-button {
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+html[data-design="modern"] .kiju-button--primary {
+  background: linear-gradient(135deg, #24527a, #167f5f);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(36, 82, 122, 0.2);
+}
+
+html[data-design="modern"] .kiju-button--secondary {
+  border-color: var(--line);
+  background: var(--surface-strong);
+  color: var(--slate);
+}
+
+html[data-design="modern"] .kiju-button--danger {
+  border-color: rgba(180, 35, 24, 0.28);
+  background: rgba(254, 243, 242, 0.96);
+  color: var(--service-red);
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-button--danger {
+  background: rgba(180, 35, 24, 0.16);
+}
+
+html[data-design="modern"] .kiju-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(23, 32, 51, 0.12);
+}
+
+html[data-design="modern"] .kiju-theme-toggle {
+  top: 0.85rem;
+  right: 0.85rem;
+  border-radius: 8px;
+  border-color: var(--line);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-theme-toggle__button {
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+}
+
+html[data-design="modern"] .kiju-theme-toggle__button.is-active {
+  background: #24527a;
+  color: #ffffff;
+}
+
+html[data-design="modern"] .kiju-pill {
+  min-height: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 800;
+}
+
+html[data-design="modern"] .kiju-pill--navy {
+  border-color: rgba(36, 82, 122, 0.24);
+  background: rgba(36, 82, 122, 0.1);
+  color: var(--deep-navy);
+}
+
+html[data-design="modern"] .kiju-pill--amber {
+  border-color: rgba(183, 121, 31, 0.28);
+  background: rgba(255, 248, 235, 0.95);
+  color: #8a5a11;
+}
+
+html[data-design="modern"] .kiju-pill--green {
+  border-color: rgba(22, 127, 95, 0.22);
+  background: rgba(235, 250, 244, 0.95);
+  color: var(--ready-green);
+}
+
+html[data-design="modern"] .kiju-pill--red {
+  border-color: rgba(180, 35, 24, 0.22);
+  background: rgba(254, 243, 242, 0.96);
+  color: var(--service-red);
+}
+
+html[data-design="modern"] .kiju-pill--slate {
+  border-color: rgba(95, 107, 122, 0.2);
+  background: rgba(246, 248, 250, 0.95);
+  color: var(--muted);
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-pill--amber,
+html[data-design="modern"][data-theme="dark"] .kiju-pill--green,
+html[data-design="modern"][data-theme="dark"] .kiju-pill--red,
+html[data-design="modern"][data-theme="dark"] .kiju-pill--slate,
+html[data-design="modern"][data-theme="dark"] .kiju-pill--navy {
+  background: rgba(174, 185, 198, 0.1);
+}
+
+html[data-design="modern"] .kiju-admin-shell {
+  --kiju-admin-panel-border: var(--line);
+  --kiju-admin-panel-background: var(--surface);
+  --kiju-admin-panel-shadow: var(--shadow-card);
+  --kiju-admin-field-border: var(--line);
+  --kiju-admin-field-background: var(--surface-strong);
+  --kiju-admin-subtle-text: var(--muted);
+  --kiju-admin-line-background: rgba(247, 249, 252, 0.92);
+  --kiju-admin-line-border: var(--line);
+  --kiju-admin-secondary-border: var(--line);
+  --kiju-admin-secondary-background: var(--surface-strong);
+  --kiju-admin-secondary-color: var(--slate);
+  --kiju-admin-danger-border: rgba(180, 35, 24, 0.24);
+  --kiju-admin-danger-background: rgba(254, 243, 242, 0.96);
+  --kiju-admin-danger-color: var(--service-red);
+  --kiju-admin-primary-shadow: 0 10px 24px rgba(36, 82, 122, 0.2);
+  --kiju-admin-hero-border: rgba(36, 82, 122, 0.18);
+  --kiju-admin-hero-background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 245, 241, 0.96));
+  --kiju-admin-hero-shadow: var(--shadow-card);
+  --kiju-admin-pill-border: var(--line);
+  --kiju-admin-pill-background: var(--surface-strong);
+  --kiju-admin-pill-color: var(--slate);
+  --kiju-admin-feedback-border: rgba(36, 127, 158, 0.22);
+  --kiju-admin-feedback-background: var(--surface-strong);
+  --kiju-admin-feedback-color: var(--slate);
+  --kiju-admin-kpi-border: rgba(36, 82, 122, 0.18);
+  --kiju-admin-kpi-background: var(--surface-strong);
+  --kiju-admin-kpi-shadow: var(--shadow-card);
+  --kiju-admin-kpi-label: #24527a;
+  --kiju-admin-focus-border: var(--line);
+  --kiju-admin-focus-background: rgba(247, 249, 252, 0.86);
+  --kiju-admin-accordion-border: var(--line);
+  --kiju-admin-accordion-background: var(--surface);
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-admin-shell {
+  --kiju-admin-line-background: rgba(18, 28, 40, 0.78);
+  --kiju-admin-danger-background: rgba(180, 35, 24, 0.16);
+  --kiju-admin-hero-background: linear-gradient(135deg, rgba(22, 34, 48, 0.98), rgba(18, 28, 40, 0.96));
+  --kiju-admin-kpi-label: #8ec5ff;
+  --kiju-admin-focus-background: rgba(18, 28, 40, 0.78);
+}
+
+html[data-design="modern"] .kiju-admin-hero,
+html[data-design="modern"] .kiju-admin-toolbar,
+html[data-design="modern"] .kiju-admin-kpi-card,
+html[data-design="modern"] .kiju-admin-focus-item,
+html[data-design="modern"] .kiju-admin-table-dashboard-card,
+html[data-design="modern"] .kiju-admin-session-card,
+html[data-design="modern"] .kiju-admin-panel,
+html[data-design="modern"] .kiju-accordion__summary,
+html[data-design="modern"] .kiju-accordion__content {
+  border-radius: 8px;
+}
+
+html[data-design="modern"] .kiju-admin-hero {
+  align-items: center;
+  padding: clamp(1.1rem, 2vw, 1.45rem);
+}
+
+html[data-design="modern"] .kiju-admin-hero__copy h1 {
+  font-size: 2.35rem;
+  line-height: 1.08;
+}
+
+html[data-design="modern"] .kiju-admin-toolbar {
+  align-items: flex-start;
+  padding: 0.85rem;
+}
+
+html[data-design="modern"] .kiju-admin-link-pill,
+html[data-design="modern"] .kiju-admin-mini-pill {
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+}
+
+html[data-design="modern"] .kiju-admin-kpi-grid {
+  gap: 0.85rem;
+}
+
+html[data-design="modern"] .kiju-admin-kpi-card {
+  padding: 1rem;
+  gap: 0.45rem;
+}
+
+html[data-design="modern"] .kiju-admin-kpi-card strong {
+  font-size: 1.65rem;
+}
+
+html[data-design="modern"] .kiju-design-switch {
+  min-height: 44px;
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 8px 18px rgba(23, 32, 51, 0.08);
+}
+
+html[data-design="modern"] .kiju-design-switch > span {
+  padding: 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+html[data-design="modern"] .kiju-design-switch__button {
+  min-height: 34px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+html[data-design="modern"] .kiju-design-switch__button.is-active {
+  background: #24527a;
+  color: #ffffff;
+}
+
+html[data-design="modern"] .kiju-topbar,
+html[data-design="modern"] .kiju-kitchen-topbar {
+  align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-topbar h1,
+html[data-design="modern"] .kiju-kitchen-topbar__copy h1 {
+  font-size: 2.15rem;
+  line-height: 1.08;
+}
+
+html[data-design="modern"] .kiju-floorplan-hero,
+html[data-design="modern"] .kiju-floorplan {
+  border-radius: 8px;
+  border-color: var(--line);
+  box-shadow: var(--shadow-stage);
+}
+
+html[data-design="modern"] .kiju-floorplan-hero {
+  background: #234f72;
+}
+
+html[data-design="modern"] .kiju-floorplan-hotspot {
+  border-radius: 8px;
+}
+
+html[data-design="modern"] .kiju-floorplan-hotspot:hover,
+html[data-design="modern"] .kiju-floorplan-hotspot.is-selected {
+  border-color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(36, 82, 122, 0.35);
+}
+
+html[data-design="modern"] .kiju-floorplan-hotspot.is-selected {
+  border-color: rgba(240, 180, 93, 0.98);
+}
+
+html[data-design="modern"] .kiju-floorplan-seat-hotspot {
+  border: 2px solid rgba(255, 255, 255, 0.94);
+  background: #24527a;
+  box-shadow: 0 8px 18px rgba(23, 32, 51, 0.22);
+}
+
+html[data-design="modern"] .kiju-floorplan-seat-hotspot.is-selected {
+  background: #b7791f;
+  box-shadow: 0 10px 22px rgba(183, 121, 31, 0.28);
+}
+
+html[data-design="modern"] .kiju-table-menu__button,
+html[data-design="modern"] .kiju-step,
+html[data-design="modern"] .kiju-seat-chip,
+html[data-design="modern"] .kiju-step-tab,
+html[data-design="modern"] .kiju-drink-group-tab,
+html[data-design="modern"] .kiju-order-item-card,
+html[data-design="modern"] .kiju-receipt-preview-panel,
+html[data-design="modern"] .kiju-notification-popover__trigger,
+html[data-design="modern"] .kiju-notification-popover__panel,
+html[data-design="modern"] .kiju-role-switch-popover__trigger,
+html[data-design="modern"] .kiju-role-switch-popover__panel,
+html[data-design="modern"] .kiju-role-switch-option {
+  border-radius: 8px;
+  border-color: var(--line);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-table-menu__button {
+  min-height: 72px;
+}
+
+html[data-design="modern"] .kiju-table-menu__button.is-selected,
+html[data-design="modern"] .kiju-seat-chip.is-selected,
+html[data-design="modern"] .kiju-step--active,
+html[data-design="modern"] .kiju-step-tab.is-active,
+html[data-design="modern"] .kiju-drink-group-tab.is-active {
+  border-color: rgba(36, 82, 122, 0.36);
+  background: rgba(232, 241, 247, 0.98);
+  box-shadow: 0 10px 24px rgba(36, 82, 122, 0.14);
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-table-menu__button.is-selected,
+html[data-design="modern"][data-theme="dark"] .kiju-seat-chip.is-selected,
+html[data-design="modern"][data-theme="dark"] .kiju-step--active,
+html[data-design="modern"][data-theme="dark"] .kiju-step-tab.is-active,
+html[data-design="modern"][data-theme="dark"] .kiju-drink-group-tab.is-active {
+  background: rgba(36, 82, 122, 0.28);
+}
+
+html[data-design="modern"] .kiju-service-drink-delivery,
+html[data-design="modern"] .kiju-service-drink-popup {
+  border-radius: 8px;
+  border: 1px solid rgba(183, 121, 31, 0.24);
+  background: rgba(255, 250, 240, 0.96);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-service-drink-delivery,
+html[data-design="modern"][data-theme="dark"] .kiju-service-drink-popup {
+  background: rgba(54, 39, 20, 0.82);
+}
+
+html[data-design="modern"] .kiju-kitchen-screen {
+  background: linear-gradient(180deg, rgba(247, 249, 252, 0.96), rgba(238, 245, 241, 0.92));
+}
+
+html[data-design="modern"][data-theme="dark"] .kiju-kitchen-screen {
+  background: linear-gradient(180deg, rgba(15, 23, 34, 0.98), rgba(18, 28, 40, 0.96));
+}
+
+html[data-design="modern"] .kiju-kitchen-stats,
+html[data-design="modern"] .kiju-ticket-grid,
+html[data-design="modern"] .kiju-kitchen-wall__tickets,
+html[data-design="modern"] .kiju-kitchen-sidebar {
+  gap: 0.85rem;
+}
+
+html[data-design="modern"] .kiju-ticket-card {
+  border-radius: 8px;
+  border-color: var(--line);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-ticket-card::before {
+  height: 4px;
+  background: #24527a;
+}
+
+html[data-design="modern"] .kiju-ticket-card.is-ready {
+  border-color: rgba(22, 127, 95, 0.28);
+  box-shadow: inset 4px 0 0 var(--ready-green), var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-ticket-card.is-countdown {
+  border-color: rgba(183, 121, 31, 0.34);
+  box-shadow: inset 4px 0 0 var(--amber), var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-ticket-card.is-blocked {
+  border-color: rgba(180, 35, 24, 0.3);
+  box-shadow: inset 4px 0 0 var(--service-red), var(--shadow-card);
+}
+
+html[data-design="modern"] .kiju-ticket-card__action {
+  border-radius: 8px;
+  background: linear-gradient(135deg, #167f5f, #1c9a76);
+}
+
+html[data-design="modern"] .kiju-kitchen-summary-table__row,
+html[data-design="modern"] .kiju-kitchen-archived-ticket,
+html[data-design="modern"] .kiju-kitchen-refresh-indicator {
+  border-radius: 8px;
+}
+
+@media (max-width: 1100px) {
+  html[data-design="modern"] .kiju-admin-hero,
+  html[data-design="modern"] .kiju-admin-toolbar,
+  html[data-design="modern"] .kiju-topbar,
+  html[data-design="modern"] .kiju-kitchen-topbar {
+    align-items: stretch;
+  }
+
+  html[data-design="modern"] .kiju-admin-hero__actions,
+  html[data-design="modern"] .kiju-topbar-actions,
+  html[data-design="modern"] .kiju-kitchen-topbar__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  html[data-design="modern"] .kiju-page {
+    padding: 4.35rem 0.7rem 0.9rem;
+  }
+
+  html[data-design="modern"] .kiju-topbar,
+  html[data-design="modern"] .kiju-kitchen-topbar {
+    padding: 0.85rem;
+  }
+
+  html[data-design="modern"] .kiju-admin-hero__copy h1,
+  html[data-design="modern"] .kiju-topbar h1,
+  html[data-design="modern"] .kiju-kitchen-topbar__copy h1 {
+    font-size: 1.7rem;
+  }
+
+  html[data-design="modern"] .kiju-design-switch {
+    width: 100%;
+  }
+
+  html[data-design="modern"] .kiju-design-switch__button {
+    flex: 1;
+  }
+}

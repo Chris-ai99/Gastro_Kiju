@@ -12,6 +12,7 @@ import {
   type AppState,
   type CourseKey,
   type CourseTicket,
+  type DesignMode,
   type OrderTarget,
   type OrderSession,
   type PaymentMethod,
@@ -20,7 +21,6 @@ import {
   type ProductionTarget,
   type Role,
   type ServiceOrderMode,
-  type SessionStatus,
   type TableLayout,
   type UserAccount
 } from "@kiju/domain";
@@ -37,12 +37,12 @@ import {
 } from "react";
 
 const STORAGE_KEY = "kiju-app-state-v2";
-const AUTH_KEY = "kiju-auth-v2";
+const AUTH_KEY = "kiju-auth-session-v1";
+const LEGACY_AUTH_KEY = "kiju-auth-v2";
 const NOTIFICATION_READS_KEY = "kiju-notification-reads-v1";
 const NOTIFICATION_DEVICE_KEY = "kiju-notification-device-v1";
 const SHARED_SYNC_POLL_MS = 1000;
 const SHARED_SYNC_REQUEST_TIMEOUT_MS = 2500;
-const SERVICE_DRINK_ACCEPTED_NOTIFICATION_TTL_MS = 10_000;
 
 type SharedSyncState = {
   status: "connecting" | "online" | "offline";
@@ -65,13 +65,17 @@ type DemoActions = {
   ) => void;
   removeItem: (tableId: string, itemId: string) => void;
   skipCourse: (tableId: string, course: CourseKey) => void;
+  setCourseWait: (
+    tableId: string,
+    course: CourseKey,
+    minutes: number
+  ) => { ok: boolean; message?: string };
   sendCourseToKitchen: (
     tableId: string,
     course: CourseKey
   ) => { ok: boolean; message?: string; ticketStatus?: CourseTicket["status"] | "ready" };
   releaseCourse: (tableId: string, course: CourseKey) => void;
   markCourseCompleted: (tableId: string, course: CourseKey) => void;
-  setSessionStatus: (tableId: string, status: SessionStatus, holdReason?: string) => void;
   printReceipt: (tableId: string) => void;
   reprintReceipt: (tableId: string) => void;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
@@ -79,6 +83,7 @@ type DemoActions = {
     name: string;
     description: string;
     category: ProductCategory;
+    drinkSubcategory?: string;
     priceCents: number;
     taxRate: number;
     productionTarget: ProductionTarget;
@@ -106,11 +111,15 @@ type DemoActions = {
     patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly">>
   ) => void;
   setServiceOrderMode: (mode: ServiceOrderMode) => void;
+  setDesignMode: (mode: DesignMode) => void;
   setSeatVisible: (tableId: string, seatId: string, visible: boolean) => void;
   toggleTableActive: (tableId: string) => void;
   resetDemoState: () => void;
-  removeTableAndServices: (tableId: string) => void;
-  markNotificationRead: (notificationId: string, scope?: "local" | "shared") => void;
+  removeTableAndServices: (tableId: string) => { ok: boolean; message?: string };
+  markNotificationRead: (
+    notificationId: string,
+    scope?: "local" | "shared" | "shared-dismiss"
+  ) => void;
 };
 
 type DemoContextValue = {
@@ -133,7 +142,7 @@ type LocalNotificationReadState = Record<string, string[]>;
 const DemoContext = createContext<DemoContextValue | null>(null);
 
 const serviceCourseOrder: CourseKey[] = ["drinks", "starter", "main", "dessert"];
-const kitchenSequence: CourseKey[] = ["starter", "main", "dessert"];
+const kitchenCourseOrder: CourseKey[] = ["starter", "main", "dessert"];
 const tablePlacements = [
   { x: 63, y: 60, width: 15, height: 20 },
   { x: 78, y: 60, width: 15, height: 20 },
@@ -334,23 +343,6 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
   receipt: {}
 });
 
-const getPreviousKitchenCourse = (course: CourseKey) => {
-  const index = kitchenSequence.indexOf(course);
-  if (index <= 0) return undefined;
-  return kitchenSequence[index - 1];
-};
-
-const getNextKitchenCourse = (course: CourseKey) => {
-  const index = kitchenSequence.indexOf(course);
-  if (index < 0 || index === kitchenSequence.length - 1) return undefined;
-  return kitchenSequence[index + 1];
-};
-
-const isCourseResolved = (session: OrderSession, course: CourseKey) => {
-  const status = session.courseTickets[course].status;
-  return status === "completed" || status === "skipped" || status === "not-recorded";
-};
-
 const withNotification = (
   state: AppState,
   notification: Omit<AppNotification, "id" | "createdAt" | "read">
@@ -437,6 +429,80 @@ const summarizeServiceItems = (
   return `${labels.slice(0, 4).join(", ")} und ${labels.length - 4} weitere Positionen`;
 };
 
+const resolveServiceDeliveryTask = (notification: AppNotification, state: AppState) => {
+  const tableName =
+    state.tables.find((table) => table.id === notification.tableId)?.name ??
+    notification.tableId?.replace("table-", "Tisch ") ??
+    "den Tisch";
+  const tablePrefix = `${tableName}: `;
+  const taskText = notification.body.startsWith(tablePrefix)
+    ? notification.body.slice(tablePrefix.length)
+    : notification.body;
+  const itemText = taskText.endsWith(".") ? taskText.slice(0, -1) : taskText;
+
+  return {
+    tableName,
+    itemText
+  };
+};
+
+const resolveNotificationCourse = (
+  notification: AppNotification,
+  sourceNotification?: AppNotification
+): CourseKey | null => {
+  if (notification.course) return notification.course;
+  if (sourceNotification?.course) return sourceNotification.course;
+
+  if (notification.kind === "service-drinks" || sourceNotification?.kind === "service-drinks") {
+    return "drinks";
+  }
+
+  const titleText = `${sourceNotification?.title ?? ""} ${notification.title}`.trim();
+  return serviceCourseOrder.find((course) => titleText.includes(courseLabels[course])) ?? null;
+};
+
+const markServiceDeliveryCompleted = (notification: AppNotification, state: AppState) => {
+  const sourceNotification = notification.sourceNotificationId
+    ? state.notifications.find((entry) => entry.id === notification.sourceNotificationId)
+    : undefined;
+  const tableId = notification.tableId ?? sourceNotification?.tableId;
+  const course = resolveNotificationCourse(notification, sourceNotification);
+
+  if (!tableId || !course) {
+    return null;
+  }
+
+  const session = getSessionForTable(state.sessions, tableId);
+  if (!session) {
+    return null;
+  }
+
+  const deliveredAt = new Date().toISOString();
+  const itemIds = new Set(
+    notification.itemIds?.length ? notification.itemIds : (sourceNotification?.itemIds ?? [])
+  );
+  const itemsToMark = session.items.filter((item) => {
+    if (item.category !== course || item.servedAt) {
+      return false;
+    }
+
+    if (itemIds.size > 0) {
+      return itemIds.has(item.id);
+    }
+
+    return course === "drinks" ? Boolean(item.sentAt) : Boolean(item.preparedAt);
+  });
+
+  itemsToMark.forEach((item) => {
+    item.servedAt = deliveredAt;
+  });
+
+  return {
+    course,
+    deliveredCount: itemsToMark.reduce((sum, item) => sum + item.quantity, 0)
+  };
+};
+
 const summarizeCourseItems = (items: OrderSession["items"], products: Product[]) => {
   const groupedItems = new Map<
     string,
@@ -482,11 +548,22 @@ const normalizeSessionAfterItemRemoval = (session: OrderSession) => {
   }
 };
 
-const commitStorage = (state: AppState, currentUserId: string | null) => {
+const commitStorage = (state: AppState) => {
   if (typeof window === "undefined") return;
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  localStorage.setItem(AUTH_KEY, JSON.stringify({ currentUserId }));
+};
+
+const commitAuthStorage = (currentUserId: string | null) => {
+  if (typeof window === "undefined") return;
+
+  if (currentUserId) {
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify({ currentUserId }));
+  } else {
+    sessionStorage.removeItem(AUTH_KEY);
+  }
+
+  localStorage.removeItem(LEGACY_AUTH_KEY);
 };
 
 const readStoredState = () => {
@@ -505,7 +582,7 @@ const readStoredState = () => {
 const readStoredAuth = () => {
   if (typeof window === "undefined") return null;
 
-  const rawAuth = localStorage.getItem(AUTH_KEY);
+  const rawAuth = sessionStorage.getItem(AUTH_KEY);
   if (!rawAuth) return null;
 
   try {
@@ -557,14 +634,21 @@ const requestSharedSnapshot = async (input: string, init?: RequestInit) => {
 const getNotificationReaderKey = () => {
   if (typeof window === "undefined") return "device-server";
 
-  const existingKey = window.sessionStorage.getItem(NOTIFICATION_DEVICE_KEY);
-  if (existingKey) return existingKey;
+  const existingKey =
+    window.localStorage.getItem(NOTIFICATION_DEVICE_KEY) ??
+    window.sessionStorage.getItem(NOTIFICATION_DEVICE_KEY);
+  if (existingKey) {
+    window.localStorage.setItem(NOTIFICATION_DEVICE_KEY, existingKey);
+    window.sessionStorage.setItem(NOTIFICATION_DEVICE_KEY, existingKey);
+    return existingKey;
+  }
 
   const nextKey =
     typeof window.crypto?.randomUUID === "function"
       ? `device-${window.crypto.randomUUID()}`
       : `device-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 
+  window.localStorage.setItem(NOTIFICATION_DEVICE_KEY, nextKey);
   window.sessionStorage.setItem(NOTIFICATION_DEVICE_KEY, nextKey);
   return nextKey;
 };
@@ -667,10 +751,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       !isNotificationExpired(notification, notificationClock)
   );
 
-  const broadcast = useCallback((nextState: AppState, nextUserId: string | null) => {
+  const broadcast = useCallback((nextState: AppState) => {
     channelRef.current?.postMessage({
-      state: nextState,
-      currentUserId: nextUserId
+      state: nextState
     });
   }, []);
 
@@ -683,8 +766,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       setState(normalizedState);
       setCurrentUserId(nextUserId);
-      commitStorage(normalizedState, nextUserId);
-      broadcast(normalizedState, nextUserId);
+      commitStorage(normalizedState);
+      commitAuthStorage(nextUserId);
+      broadcast(normalizedState);
 
       void replaceSharedSnapshot(normalizedState).then((snapshot) => {
         if (!snapshot) {
@@ -709,6 +793,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   useEffect(() => {
+    if (!hydrated || sharedSync.status === "connecting") return;
+
     setLocalNotificationReads((currentReads) => {
       const nextReads = pruneNotificationReads(currentReads, state.notifications);
       if (nextReads === currentReads) {
@@ -718,7 +804,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       storeNotificationReads(nextReads);
       return nextReads;
     });
-  }, [state.notifications]);
+  }, [hydrated, sharedSync.status, state.notifications]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !hasActiveExpiringNotification) return;
@@ -755,12 +841,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     if ("BroadcastChannel" in window) {
       channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
       channelRef.current.onmessage = (event) => {
-        const payload = event.data as { state: AppState; currentUserId: string | null };
+        const payload = event.data as { state: AppState };
         const normalizedBroadcastState = normalizeAppState(payload.state);
         stateRef.current = normalizedBroadcastState;
-        currentUserIdRef.current = payload.currentUserId;
         setState(normalizedBroadcastState);
-        setCurrentUserId(payload.currentUserId);
       };
     }
 
@@ -772,16 +856,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           setState(normalizedStoredState);
         } catch {
           // Ignore malformed local cache entries.
-        }
-      }
-
-      if (event.key === AUTH_KEY && event.newValue) {
-        try {
-          const parsedAuth = JSON.parse(event.newValue) as { currentUserId: string | null };
-          currentUserIdRef.current = parsedAuth.currentUserId;
-          setCurrentUserId(parsedAuth.currentUserId);
-        } catch {
-          // Ignore malformed local auth cache entries.
         }
       }
 
@@ -808,7 +882,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         if (!hasLocalWritesSinceBoot) {
           stateRef.current = normalizedSnapshotState;
           setState(normalizedSnapshotState);
-          commitStorage(normalizedSnapshotState, currentUserIdRef.current);
+          commitStorage(normalizedSnapshotState);
         }
 
         setSharedSync({
@@ -855,7 +929,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
           stateRef.current = normalizedSnapshotState;
           setState(normalizedSnapshotState);
-          commitStorage(normalizedSnapshotState, currentUserIdRef.current);
+          commitStorage(normalizedSnapshotState);
           setSharedSync({
             status: "online",
             usingSharedState: true,
@@ -895,19 +969,33 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
   const login = useCallback(
     (identifier: string, secret: string) => {
-      const user = state.users.find((candidate) => {
+      const normalizedIdentifier = identifier.trim().toLowerCase();
+      const normalizedSecret = secret.trim();
+      const activeUsers = state.users.filter((candidate) => candidate.active);
+      const pinOnlyMatches =
+        normalizedIdentifier.length === 0
+          ? activeUsers.filter((candidate) => candidate.pin === normalizedSecret)
+          : [];
+      const user = pinOnlyMatches.length === 1 ? pinOnlyMatches[0] : activeUsers.find((candidate) => {
         const identifierMatches =
-          candidate.username.toLowerCase() === identifier.toLowerCase() ||
-          candidate.name.toLowerCase() === identifier.toLowerCase();
-        const secretMatches = candidate.password === secret || candidate.pin === secret;
+          candidate.username.toLowerCase() === normalizedIdentifier ||
+          candidate.name.toLowerCase() === normalizedIdentifier;
+        const secretMatches = candidate.password === normalizedSecret || candidate.pin === normalizedSecret;
 
-        return candidate.active && identifierMatches && secretMatches;
+        return identifierMatches && secretMatches;
       });
 
       if (!user) {
+        if (pinOnlyMatches.length > 1) {
+          return {
+            ok: false,
+            message: "Diese PIN ist mehrfach vergeben. Bitte zusätzlich den Namen eingeben."
+          };
+        }
+
         return {
           ok: false,
-          message: "Login nicht gefunden. Bitte Benutzername und Passwort oder PIN prüfen."
+          message: "Login nicht gefunden. Bitte PIN prüfen oder Name und Passwort eingeben."
         };
       }
 
@@ -1031,6 +1119,64 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, state]
   );
 
+  const setCourseWait = useCallback(
+    (tableId: string, course: CourseKey, minutes: number) => {
+      if (course === "drinks") {
+        return {
+          ok: false,
+          message: "Getränke werden an den Service gemeldet und können nicht für die Küche warten."
+        };
+      }
+
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      if (!session) {
+        return {
+          ok: false,
+          message: "Für diesen Tisch gibt es noch keine laufende Bestellung."
+        };
+      }
+
+      const courseItems = session.items.filter((item) => item.category === course);
+      if (courseItems.length === 0) {
+        return {
+          ok: false,
+          message: `Für ${courseLabels[course]} wurden noch keine Positionen erfasst.`
+        };
+      }
+
+      const normalizedMinutes = Math.min(180, Math.max(1, Math.round(minutes)));
+      const ticket = session.courseTickets[course];
+      if (ticket.status === "completed" || ticket.status === "skipped") {
+        return {
+          ok: false,
+          message: `${courseLabels[course]} ist bereits abgeschlossen oder übersprungen.`
+        };
+      }
+      const now = new Date().toISOString();
+
+      ticket.status = "countdown";
+      ticket.countdownMinutes = normalizedMinutes;
+      ticket.completedAt = undefined;
+      ticket.readyAt = undefined;
+      ticket.manualRelease = false;
+      if (ticket.sentAt) {
+        ticket.releasedAt = now;
+      } else {
+        ticket.releasedAt = undefined;
+      }
+
+      session.status = "waiting";
+
+      commit(next);
+      return {
+        ok: true,
+        message: `${courseLabels[course]} wartet ${normalizedMinutes} Minuten.`
+      };
+    },
+    [commit, state]
+  );
+
   const sendCourseToKitchen = useCallback(
     (tableId: string, course: CourseKey) => {
       const next = structuredClone(state);
@@ -1043,34 +1189,73 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       const courseItems = session.items.filter((item) => item.category === course);
-      if (courseItems.length === 0 && !session.skippedCourses.includes(course)) {
+      const kitchenCourseItems = kitchenCourseOrder
+        .map((kitchenCourse) => ({
+          course: kitchenCourse,
+          items: session.items.filter((item) => item.category === kitchenCourse)
+        }))
+        .filter(({ course: kitchenCourse, items }) => {
+          const ticket = session.courseTickets[kitchenCourse];
+          return (
+            items.length > 0 &&
+            ticket.status !== "completed" &&
+            ticket.status !== "skipped"
+          );
+        });
+
+      if (course === "drinks" && courseItems.length === 0 && !session.skippedCourses.includes(course)) {
         return {
           ok: false,
           message: `Für ${courseLabels[course]} wurden noch keine Positionen erfasst.`
         };
       }
 
+      if (course !== "drinks" && kitchenCourseItems.length === 0) {
+        return {
+          ok: false,
+          message: "Für diesen Tisch wurden noch keine offenen Speisen erfasst."
+        };
+      }
+
       const ticket = session.courseTickets[course];
       const sentAt = new Date().toISOString();
-      ticket.sentAt = sentAt;
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+      const pendingDrinkItems = session.items.filter(
+        (item) => item.category === "drinks" && !item.sentAt
+      );
+      const sendPendingDrinksToService = () => {
+        if (pendingDrinkItems.length === 0) return false;
 
-      courseItems.forEach((item) => {
-        item.sentAt = sentAt;
-      });
+        const drinkTicket = session.courseTickets.drinks;
+        drinkTicket.sentAt = sentAt;
+        drinkTicket.status = "completed";
+        drinkTicket.completedAt = sentAt;
 
-      if (course === "drinks") {
-        ticket.status = "completed";
-        ticket.completedAt = sentAt;
-        session.status = "waiting";
+        pendingDrinkItems.forEach((item) => {
+          item.sentAt = sentAt;
+        });
+
         withNotification(next, {
           kind: "service-drinks",
+          course: "drinks",
+          itemIds: pendingDrinkItems.map((item) => item.id),
           title: "Getränke an den Tisch",
-          body: `${tableName}: ${summarizeServiceItems(courseItems, next.products, table)}.`,
+          body: `${tableName}: ${summarizeServiceItems(pendingDrinkItems, next.products, table)}.`,
           tone: "info",
           tableId
         });
+
+        return true;
+      };
+
+      if (course === "drinks") {
+        ticket.sentAt = sentAt;
+        courseItems.forEach((item) => {
+          item.sentAt = sentAt;
+        });
+        sendPendingDrinksToService();
+        session.status = "waiting";
         emitOperatorFeedback();
         commit(next);
         return {
@@ -1080,34 +1265,57 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         };
       }
 
-      const previousCourse = getPreviousKitchenCourse(course);
-      ticket.releasedAt = sentAt;
-      ticket.readyAt = undefined;
-      ticket.completedAt = undefined;
-      ticket.manualRelease = false;
+      const drinksWereSent = sendPendingDrinksToService();
+      const sentKitchenCourseLabels: string[] = [];
+      const waitingKitchenCourseLabels: string[] = [];
 
-      if (!previousCourse || isCourseResolved(session, previousCourse)) {
-        ticket.status = "countdown";
-      } else {
-        ticket.status = "blocked";
-      }
+      kitchenCourseItems.forEach(({ course: kitchenCourse, items }) => {
+        const kitchenTicket = session.courseTickets[kitchenCourse];
+        const shouldWait = kitchenTicket.status === "countdown";
+        kitchenTicket.sentAt = sentAt;
+        kitchenTicket.releasedAt = sentAt;
+        kitchenTicket.readyAt = undefined;
+        kitchenTicket.completedAt = undefined;
+        kitchenTicket.manualRelease = false;
+        kitchenTicket.status = shouldWait ? "countdown" : "ready";
+
+        items.forEach((item) => {
+          item.sentAt = sentAt;
+        });
+
+        sentKitchenCourseLabels.push(courseLabels[kitchenCourse]);
+        if (shouldWait) {
+          waitingKitchenCourseLabels.push(courseLabels[kitchenCourse]);
+        }
+
+        withNotification(next, {
+          title: shouldWait
+            ? `${courseLabels[kitchenCourse]} wartet`
+            : `${courseLabels[kitchenCourse]} gesendet`,
+          body: shouldWait
+            ? `${tableName}: ${courseLabels[kitchenCourse]} wartet ${kitchenTicket.countdownMinutes} Minuten, bevor die Küche startet.`
+            : `${tableName} wartet auf die ${courseLabels[kitchenCourse].toLowerCase()}.`,
+          tone: "info",
+          tableId
+        });
+      });
 
       session.status = "waiting";
-      withNotification(next, {
-        title: `${courseLabels[course]} gesendet`,
-        body: `${tableName} wartet auf die ${courseLabels[course].toLowerCase()}.`,
-        tone: "info",
-        tableId
-      });
       emitOperatorFeedback();
       commit(next);
       return {
         ok: true,
         message:
-          ticket.status === "blocked"
-            ? `${courseLabels[course]} wurde an die Küche gesendet, erscheint als gesperrter Bon und läuft jetzt mit 15-Minuten-Timer.`
-            : `${courseLabels[course]} wurde an die Küche gesendet und läuft jetzt mit 15-Minuten-Timer.`,
-        ticketStatus: ticket.status
+          `${sentKitchenCourseLabels.join(", ")} ${
+            sentKitchenCourseLabels.length === 1 ? "wurde" : "wurden"
+          } an die Küche gesendet.` +
+          (waitingKitchenCourseLabels.length > 0
+            ? ` ${waitingKitchenCourseLabels.join(", ")} ${
+                waitingKitchenCourseLabels.length === 1 ? "läuft" : "laufen"
+              } dort erst nach der Wartezeit frei.`
+            : " Alle offenen Speisen sind direkt frei.") +
+          (drinksWereSent ? " Offene Getränke wurden gleichzeitig an den Service gemeldet." : ""),
+        ticketStatus: waitingKitchenCourseLabels.length > 0 ? ("countdown" as const) : ("ready" as const)
       };
     },
     [commit, state]
@@ -1144,6 +1352,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
       const courseItems = session.items.filter((item) => item.category === course);
+      if (ticket.status !== "ready") {
+        return;
+      }
 
       ticket.status = "completed";
       ticket.completedAt = completedAt;
@@ -1158,25 +1369,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       withNotification(next, {
         kind: "service-course-ready",
+        course,
+        itemIds: courseItems.map((item) => item.id),
         title: `${courseLabels[course]} fertig`,
         body: `${summarizeCourseItems(courseItems, next.products)} für ${tableName} ist fertig.`,
         tone: "success",
         tableId
       });
       emitOperatorFeedback();
-      commit(next);
-    },
-    [commit, state]
-  );
-
-  const setSessionStatus = useCallback(
-    (tableId: string, status: SessionStatus, holdReason?: string) => {
-      const next = structuredClone(state);
-      const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
-
-      session.status = status;
-      session.holdReason = holdReason;
       commit(next);
     },
     [commit, state]
@@ -1191,10 +1391,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.receipt.printedAt = new Date().toISOString();
       session.status = "ready-to-bill";
       withNotification(next, {
+        kind: "admin-receipt-alarm",
         title: "Rechnung gedruckt",
-        body: `${tableId.replace("table-", "Tisch ")} hat jetzt einen Erstbeleg.`,
-        tone: "success",
-        tableId
+        body: `${tableId.replace("table-", "Tisch ")} hat gerade eine Rechnung gedruckt. Bitte Abrechnung prüfen.`,
+        tone: "alert",
+        tableId,
+        targetRoles: ["admin"]
       });
       emitOperatorFeedback();
       commit(next);
@@ -1211,10 +1413,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.receipt.printedAt ??= new Date().toISOString();
       session.receipt.reprintedAt = new Date().toISOString();
       withNotification(next, {
+        kind: "admin-receipt-alarm",
         title: "Rechnung erneut gedruckt",
-        body: `${tableId.replace("table-", "Tisch ")} hat einen Reprint.`,
-        tone: "info",
-        tableId
+        body: `${tableId.replace("table-", "Tisch ")} hat gerade einen Rechnungs-Reprint gedruckt. Bitte Abrechnung prüfen.`,
+        tone: "alert",
+        tableId,
+        targetRoles: ["admin"]
       });
       emitOperatorFeedback();
       commit(next);
@@ -1264,6 +1468,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       name: string;
       description: string;
       category: ProductCategory;
+      drinkSubcategory?: string;
       priceCents: number;
       taxRate: number;
       productionTarget: ProductionTarget;
@@ -1272,6 +1477,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (!name) {
         return { ok: false, message: "Bitte einen Produktnamen eingeben." };
       }
+      const drinkSubcategory =
+        input.category === "drinks" ? (input.drinkSubcategory ?? "").trim() : undefined;
 
       const next = structuredClone(state);
       next.products.unshift({
@@ -1279,6 +1486,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         name,
         description: input.description.trim() || "Neu angelegtes Produkt.",
         category: input.category,
+        drinkSubcategory,
         priceCents: Math.max(0, input.priceCents),
         taxRate: input.taxRate,
         allergens: [],
@@ -1305,7 +1513,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const product = next.products.find((entry) => entry.id === productId);
       if (!product) return;
 
-      Object.assign(product, patch);
+      const normalizedPatch = { ...patch };
+      if (typeof normalizedPatch.drinkSubcategory === "string") {
+        normalizedPatch.drinkSubcategory = normalizedPatch.drinkSubcategory.trim();
+      }
+
+      Object.assign(product, normalizedPatch);
+      if (product.category !== "drinks") {
+        delete product.drinkSubcategory;
+      }
       if (patch.productionTarget !== undefined && patch.showInKitchen === undefined) {
         product.showInKitchen = patch.productionTarget === "kitchen";
       }
@@ -1594,7 +1810,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const next = structuredClone(state);
       const fallbackUserId =
-        currentUserId ??
+        next.users.find(
+          (entry) =>
+            entry.id === currentUserId &&
+            entry.id !== userId &&
+            (entry.role === "admin" || entry.role === "waiter")
+        )?.id ??
         next.users.find(
           (entry) => entry.id !== userId && (entry.role === "admin" || entry.role === "waiter")
         )?.id;
@@ -1607,6 +1828,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       next.users = next.users.filter((entry) => entry.id !== userId);
+      next.deletedUserIds = [...new Set([...(next.deletedUserIds ?? []), userId])];
       if (fallbackUserId) {
         next.sessions.forEach((session) => {
           if (session.waiterId === userId) {
@@ -1634,6 +1856,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const nextNumber = getNextTableNumber(next.tables);
       const tableId = `table-${nextNumber}`;
       const tableName = input.name?.trim() || `Tisch ${nextNumber}`;
+      next.deletedTableIds = (next.deletedTableIds ?? []).filter((deletedId) => deletedId !== tableId);
 
       next.tables.push({
         id: tableId,
@@ -1681,6 +1904,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (mode: ServiceOrderMode) => {
       const next = structuredClone(state);
       next.serviceOrderMode = mode;
+      commit(next);
+    },
+    [commit, state]
+  );
+
+  const setDesignMode = useCallback(
+    (mode: DesignMode) => {
+      const next = structuredClone(state);
+      next.designMode = mode;
       commit(next);
     },
     [commit, state]
@@ -1735,7 +1967,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (tableId: string) => {
       const next = structuredClone(state);
       const table = next.tables.find((entry) => entry.id === tableId);
-      if (!table) return;
+      if (!table) {
+        return { ok: false, message: "Tisch konnte nicht gefunden werden." };
+      }
 
       const relatedSessions = next.sessions.filter((session) => session.tableId === tableId);
       const closedSessions = relatedSessions.filter((session) => session.status === "closed");
@@ -1751,6 +1985,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       next.tables = next.tables.filter((entry) => entry.id !== tableId);
       next.sessions = next.sessions.filter((session) => session.tableId !== tableId);
       next.notifications = next.notifications.filter((notification) => notification.tableId !== tableId);
+      next.deletedTableIds = [...new Set([...(next.deletedTableIds ?? []), tableId])];
       next.dailyStats.servedTables = Math.max(0, next.dailyStats.servedTables - closedSessions.length);
       next.dailyStats.servedGuests = Math.max(0, next.dailyStats.servedGuests - guestReduction);
       next.dailyStats.revenueCents = Math.max(0, next.dailyStats.revenueCents - revenueReduction);
@@ -1767,35 +2002,52 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
       commit(next, nextUserId);
+      return { ok: true };
     },
     [commit, currentUserId, state]
   );
 
   const markNotificationRead = useCallback(
-    (notificationId: string, scope: "local" | "shared" = "local") => {
-      if (scope === "shared") {
+    (notificationId: string, scope: "local" | "shared" | "shared-dismiss" = "local") => {
+      if (scope === "shared" || scope === "shared-dismiss") {
         const next = structuredClone(state);
         const notification = next.notifications.find((entry) => entry.id === notificationId);
         if (!notification || notification.read) return;
 
         notification.read = true;
 
-        if (notification.kind === "service-drinks") {
-          const acceptedBy =
-            next.users.find((user) => user.id === currentUserId)?.name ?? "Service";
-          const taskText = notification.body.endsWith(".")
-            ? notification.body.slice(0, -1)
-            : notification.body;
+        if (
+          scope === "shared" &&
+          (notification.kind === "service-drinks-accepted" ||
+            notification.kind === "service-course-ready-accepted")
+        ) {
+          markServiceDeliveryCompleted(notification, next);
+          emitOperatorFeedback();
+        }
+
+        if (
+          scope === "shared" &&
+          (notification.kind === "service-drinks" || notification.kind === "service-course-ready")
+        ) {
+          const acceptedByUser = next.users.find((user) => user.id === currentUserId);
+          const acceptedByName = acceptedByUser?.name ?? "Service";
+          const { tableName, itemText } = resolveServiceDeliveryTask(notification, next);
+          const isDrinkTask = notification.kind === "service-drinks";
+          const course = resolveNotificationCourse(notification);
 
           withNotification(next, {
-            kind: "service-drinks-accepted",
-            title: "Getränke übernommen",
-            body: `${acceptedBy} kümmert sich um ${taskText}.`,
+            kind: isDrinkTask ? "service-drinks-accepted" : "service-course-ready-accepted",
+            course: course ?? undefined,
+            itemIds: notification.itemIds,
+            title: isDrinkTask ? "Getränke ausliefern" : "Speisen ausliefern",
+            body: isDrinkTask
+              ? `Bringe die Getränke ${itemText} zu ${tableName}.`
+              : `Hole den fertigen Küchenbon ab und bringe ihn zu ${tableName}: ${itemText}.`,
             tone: "success",
             tableId: notification.tableId,
-            expiresAt: new Date(
-              Date.now() + SERVICE_DRINK_ACCEPTED_NOTIFICATION_TTL_MS
-            ).toISOString()
+            acceptedByUserId: acceptedByUser?.id,
+            acceptedByName,
+            sourceNotificationId: notification.id
           });
           emitOperatorFeedback();
         }
@@ -1830,7 +2082,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (notification) =>
       !notification.read &&
       !hiddenNotificationIds.has(notification.id) &&
-      !isNotificationExpired(notification, notificationClock)
+      !isNotificationExpired(notification, notificationClock) &&
+      (!notification.targetRoles?.length ||
+        (currentUser ? notification.targetRoles.includes(currentUser.role) : false)) &&
+      ((notification.kind !== "service-drinks-accepted" &&
+        notification.kind !== "service-course-ready-accepted") ||
+        !notification.acceptedByUserId ||
+        notification.acceptedByUserId === currentUserId)
   );
 
   const value = useMemo<DemoContextValue>(
@@ -1847,10 +2105,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         updateItem,
         removeItem,
         skipCourse,
+        setCourseWait,
         sendCourseToKitchen,
         releaseCourse,
         markCourseCompleted,
-        setSessionStatus,
         printReceipt,
         reprintReceipt,
         closeOrder,
@@ -1864,6 +2122,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         createTable,
         updateTable,
         setServiceOrderMode,
+        setDesignMode,
         setSeatVisible,
         toggleTableActive,
         resetDemoState,
@@ -1893,9 +2152,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
+      setCourseWait,
+      setDesignMode,
       setSeatVisible,
       setServiceOrderMode,
-      setSessionStatus,
       sharedSync,
       skipCourse,
       state,
@@ -1936,20 +2196,36 @@ export const resolveCourseStatus = (session: OrderSession | undefined, course: C
     };
   }
 
-  const releaseTime = new Date(ticket.releasedAt ?? ticket.sentAt ?? Date.now()).getTime();
-  const deadline = releaseTime + ticket.countdownMinutes * 60 * 1000;
-  const remaining = Math.ceil((deadline - Date.now()) / 60000);
-
-  if (remaining <= 0) {
+  if (ticket.status === "blocked") {
     return {
-      status: "ready" as const,
+      status: "blocked" as const,
       minutesLeft: 0
     };
   }
 
+  const waitMinutes = Math.max(1, ticket.countdownMinutes || 1);
+  const waitStartedAt = ticket.releasedAt ?? ticket.sentAt;
+  if (!waitStartedAt) {
+    return {
+      status: "countdown" as const,
+      minutesLeft: waitMinutes
+    };
+  }
+
+  const startTime = new Date(waitStartedAt).getTime();
+  if (!Number.isFinite(startTime)) {
+    return {
+      status: "countdown" as const,
+      minutesLeft: waitMinutes
+    };
+  }
+
+  const deadline = startTime + waitMinutes * 60 * 1000;
+  const minutesLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 60000));
+
   return {
-    status: ticket.status,
-    minutesLeft: remaining
+    status: "countdown" as const,
+    minutesLeft
   };
 };
 

@@ -4,9 +4,18 @@ export type CourseKey = "drinks" | "starter" | "main" | "dessert";
 export type ProductCategory = CourseKey;
 export type ProductionTarget = "service" | "bar" | "kitchen";
 export type PaymentMethod = "cash" | "card" | "voucher";
-export type SessionStatus = "planned" | "idle" | "serving" | "hold" | "waiting" | "ready-to-bill" | "closed";
+export type SessionStatus = "planned" | "idle" | "serving" | "waiting" | "ready-to-bill" | "closed";
 export type KitchenStatus = "not-recorded" | "skipped" | "blocked" | "countdown" | "ready" | "completed";
+export type ServiceOrderMode = "table" | "seat";
+export type DesignMode = "modern" | "classic";
+export type OrderTarget = {
+    type: "table";
+} | {
+    type: "seat";
+    seatId: string;
+};
 export type NotificationTone = "info" | "success" | "alert";
+export type NotificationKind = "service-drinks" | "service-drinks-accepted" | "service-course-ready" | "service-course-ready-accepted" | "admin-receipt-alarm";
 export interface UserAccount {
     id: string;
     name: string;
@@ -34,6 +43,7 @@ export interface Product {
     id: string;
     name: string;
     category: ProductCategory;
+    drinkSubcategory?: string;
     description: string;
     priceCents: number;
     taxRate: number;
@@ -45,6 +55,7 @@ export interface Product {
 export interface TableSeat {
     id: string;
     label: string;
+    visible: boolean;
 }
 export interface TableLayout {
     id: string;
@@ -65,7 +76,7 @@ export interface OrderModifierSelection {
 }
 export interface OrderItem {
     id: string;
-    seatId: string;
+    target: OrderTarget;
     productId: string;
     category: ProductCategory;
     quantity: number;
@@ -101,7 +112,6 @@ export interface OrderSession {
     tableId: string;
     waiterId: string;
     status: SessionStatus;
-    holdReason?: string;
     items: OrderItem[];
     skippedCourses: CourseKey[];
     courseTickets: Record<CourseKey, CourseTicket>;
@@ -117,14 +127,27 @@ export interface DailyStats {
 }
 export interface AppNotification {
     id: string;
+    kind?: NotificationKind;
+    course?: CourseKey;
+    itemIds?: string[];
     title: string;
     body: string;
     tone: NotificationTone;
     tableId?: string;
+    targetRoles?: Role[];
+    acceptedByUserId?: string;
+    acceptedByName?: string;
+    sourceNotificationId?: string;
     createdAt: string;
+    expiresAt?: string;
     read: boolean;
 }
 export interface AppState {
+    catalogVersion?: number;
+    serviceOrderMode: ServiceOrderMode;
+    designMode: DesignMode;
+    deletedTableIds?: string[];
+    deletedUserIds?: string[];
     users: UserAccount[];
     tables: TableLayout[];
     products: Product[];

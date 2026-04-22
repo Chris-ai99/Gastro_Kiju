@@ -80,6 +80,18 @@ fi
 
 run pnpm build
 
+echo
+echo "==> Copying Next.js static assets into standalone runtime"
+standalone_web_dir="apps/web/.next/standalone/apps/web"
+rm -rf "${standalone_web_dir}/.next/static"
+mkdir -p "${standalone_web_dir}/.next"
+cp -a apps/web/.next/static "${standalone_web_dir}/.next/static"
+
+if [[ -d apps/web/public ]]; then
+  rm -rf "${standalone_web_dir}/public"
+  cp -a apps/web/public "${standalone_web_dir}/public"
+fi
+
 run systemctl restart "${SERVICE_NAME}"
 
 run systemctl status "${SERVICE_NAME}" --no-pager

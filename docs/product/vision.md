@@ -2,20 +2,20 @@
 
 ## Zielbild
 
-KiJu Gastro Order System ist ein lokales Service-System fuer Kinder- und Jugendarbeit mit einem professionellen Gastro-Flow:
+KiJu Gastro Order System ist ein lokales Service-System für Kinder- und Jugendarbeit mit einem professionellen Gastro-Flow:
 
 - Tablet-first Kellneroberflaeche mit Raumansicht, Tisch-Zoom und Sitzplatzwahl
-- Gefuehrter Bestellweg fuer Getraenke, Vorspeise, Hauptspeise und Nachtisch
+- Geführter Bestellweg für Getränke, Vorspeise, Hauptspeise und Nachtisch
 - Hold, Warten, Kuechenversand, Review, Rechnung und Schliessen im selben Fluss
 - Fester Kuechenmonitor mit 7 Tischspalten und klarer Wellenschaltung pro Gang
-- Admin-Konsole fuer Produkte, Preise, Rollen, Tischstatus und Tagesuebersichten
+- Admin-Konsole für Produkte, Preise, Rollen, Tischstatus und Tagesübersichten
 
 ## Aktueller Implementierungsstand
 
 - Shared Domain-Modell mit Demo-Daten, Produkten, Tischen, Rollen und Workflow-Helfern
-- Next.js UI fuer Login, Kellner, Kueche und Admin
+- Next.js UI für Login, Kellner, Küche und Admin
 - Browserbasierte lokale Sync-Schicht per `localStorage` und `BroadcastChannel`
-- NestJS API-Skelett fuer Auth, Dashboard, Kueche, Admin und Realtime-Gateway
+- NestJS API-Skelett für Auth, Dashboard, Küche, Admin und Realtime-Gateway
 - Druck- und Fiskalgrenzen als eigenstaendige Adapter-Schicht
 
 ## Nächste fachliche Ausbaustufen

@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: workspaceRoot
   },
-  // Erlaubt Tablets und andere Geraete im lokalen Netzwerk den Dev-Client sauber zu laden.
+  // Erlaubt Tablets und andere Geräte im lokalen Netzwerk den Dev-Client sauber zu laden.
   allowedDevOrigins: resolveAllowedDevOrigins()
 };
 

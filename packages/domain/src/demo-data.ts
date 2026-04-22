@@ -208,6 +208,7 @@ export const demoProducts: Product[] = [
     id: "drink-beer",
     name: "Bier",
     category: "drinks",
+    drinkSubcategory: "Bier/Radler",
     description: "Kalt serviertes Bier.",
     priceCents: 300,
     taxRate: 19,
@@ -220,6 +221,7 @@ export const demoProducts: Product[] = [
     id: "drink-cola",
     name: "Cola",
     category: "drinks",
+    drinkSubcategory: "Alkoholfrei",
     description: "Klassische Cola, kalt serviert.",
     priceCents: 250,
     taxRate: 19,
@@ -232,6 +234,7 @@ export const demoProducts: Product[] = [
     id: "drink-water",
     name: "Wasser Still",
     category: "drinks",
+    drinkSubcategory: "Alkoholfrei",
     description: "Stilles Wasser.",
     priceCents: 200,
     taxRate: 19,
@@ -244,6 +247,7 @@ export const demoProducts: Product[] = [
     id: "drink-wine",
     name: "Wein",
     category: "drinks",
+    drinkSubcategory: "Wein",
     description: "Hauswein im Glas.",
     priceCents: 400,
     taxRate: 19,
@@ -347,8 +351,7 @@ export const demoSessions: OrderSession[] = [
     id: "session-table-3",
     tableId: "table-3",
     waiterId: "user-waiter-2",
-    status: "hold",
-    holdReason: "Gäste brauchen Bedenkzeit für Hauptgang",
+    status: "serving",
     items: [
       {
         id: "item-4",
@@ -433,6 +436,7 @@ export const demoSessions: OrderSession[] = [
 
 export const demoAppState: AppState = {
   serviceOrderMode: "table",
+  designMode: "modern",
   users: demoUsers,
   tables: demoTables,
   products: demoProducts,
@@ -450,7 +454,7 @@ export const demoAppState: AppState = {
     {
       id: "note-2",
       title: "Hauptgang wartet",
-      body: "Tisch 3 ist auf Hold gesetzt.",
+      body: "Tisch 3 wartet auf die Entscheidung zum Hauptgang.",
       tone: "info",
       tableId: "table-3",
       createdAt: "2026-03-27T18:40:00.000Z",

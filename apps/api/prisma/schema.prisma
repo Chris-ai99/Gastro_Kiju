@@ -62,7 +62,6 @@ model OrderSession {
   tableId       String
   waiterId      String
   status        SessionStatus
-  holdReason    String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   receiptPrintedAt DateTime?
@@ -125,7 +124,6 @@ enum SessionStatus {
   planned
   idle
   serving
-  hold
   waiting
   ready_to_bill
   closed

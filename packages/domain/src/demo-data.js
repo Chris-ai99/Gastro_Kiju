@@ -262,8 +262,7 @@ exports.demoSessions = [
         id: "session-table-3",
         tableId: "table-3",
         waiterId: "user-waiter-2",
-        status: "hold",
-        holdReason: "Gäste brauchen Bedenkzeit für Hauptgang",
+        status: "serving",
         items: [
             {
                 id: "item-4",
@@ -363,7 +362,7 @@ exports.demoAppState = {
         {
             id: "note-2",
             title: "Hauptgang wartet",
-            body: "Tisch 3 ist auf Hold gesetzt.",
+            body: "Tisch 3 wartet auf die Entscheidung zum Hauptgang.",
             tone: "info",
             tableId: "table-3",
             createdAt: "2026-03-27T18:40:00.000Z",

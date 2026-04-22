@@ -30,7 +30,7 @@ const ticketCourses: CourseKey[] = ["starter", "main", "dessert"];
 const MAX_VISIBLE_TICKETS = 7;
 
 const ticketStatusLabels = {
-  blocked: "Noch nicht zubereiten",
+  blocked: "Gesperrt",
   countdown: "Wartezeit läuft",
   ready: "Frei zur Zubereitung",
   completed: "Fertig"
@@ -38,7 +38,7 @@ const ticketStatusLabels = {
 
 const ticketStatusShortLabels = {
   blocked: "Gesperrt",
-  countdown: "Timer",
+  countdown: "Warten",
   ready: "Frei",
   completed: "Fertig"
 } as const;
@@ -70,10 +70,11 @@ type KitchenTicket = {
   courseLabel: string;
   sentAt?: string;
   completedAt?: string;
-  minutesLeft: number;
   status: TicketStatus;
   itemCount: number;
   targetSummary: string;
+  waitLabel?: string;
+  waitExpired?: boolean;
   lines: KitchenTicketLine[];
 };
 
@@ -86,14 +87,41 @@ const formatClock = (value: number | string | undefined) => {
   }).format(new Date(value));
 };
 
-const formatDuration = (from: string | undefined, now: number) => {
-  if (!from) return "00:00:00";
+const formatWaitDuration = (secondsLeft: number) => {
+  const safeSeconds = Math.max(0, secondsLeft);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
 
-  const totalSeconds = Math.max(0, Math.floor((now - new Date(from).getTime()) / 1000));
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+};
+
+const resolveWaitDisplay = (
+  ticket: { sentAt?: string; releasedAt?: string; countdownMinutes: number },
+  now: number
+) => {
+  const waitStartedAt = ticket.releasedAt ?? ticket.sentAt;
+  if (!waitStartedAt) {
+    return {
+      label: `${Math.max(1, ticket.countdownMinutes || 1)}:00`,
+      expired: false
+    };
+  }
+
+  const startTime = new Date(waitStartedAt).getTime();
+  const waitMinutes = Math.max(1, ticket.countdownMinutes || 1);
+  if (!Number.isFinite(startTime)) {
+    return {
+      label: `${waitMinutes}:00`,
+      expired: false
+    };
+  }
+
+  const secondsLeft = Math.max(0, Math.ceil((startTime + waitMinutes * 60 * 1000 - now) / 1000));
+
+  return {
+    label: formatWaitDuration(secondsLeft),
+    expired: secondsLeft <= 0
+  };
 };
 
 const buildModifierLabels = (item: OrderItem, product: Product | undefined) =>
@@ -137,17 +165,24 @@ const buildTargetSummary = (items: OrderItem[]) => {
 
 export const KitchenBoard = () => {
   const { state, unreadNotifications, actions, currentUser } = useDemoApp();
-  const [clock, setClock] = useState(() => Date.now());
   const [showArchived, setShowArchived] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [kitchenClock, setKitchenClock] = useState(() => Date.now());
+  const hasWaitingTickets = state.sessions.some((session) =>
+    Object.values(session.courseTickets).some(
+      (ticket) => ticket.status === "countdown" && Boolean(ticket.sentAt)
+    )
+  );
 
   useEffect(() => {
+    if (!hasWaitingTickets) return;
+
     const timer = window.setInterval(() => {
-      setClock(Date.now());
+      setKitchenClock(Date.now());
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [hasWaitingTickets]);
 
   const tickets = useMemo(() => {
     let ticketNumber = 1;
@@ -187,7 +222,11 @@ export const KitchenBoard = () => {
           resolved.status === "countdown" ||
           resolved.status === "blocked"
             ? resolved.status
-            : "blocked";
+            : "ready";
+        const waitDisplay =
+          ticketStatus === "countdown"
+            ? resolveWaitDisplay(courseTicket, kitchenClock)
+            : undefined;
 
         const ticket: KitchenTicket = {
           id: `${table.id}-${course}`,
@@ -198,10 +237,11 @@ export const KitchenBoard = () => {
           courseLabel: courseLabels[course],
           sentAt: courseTicket.sentAt,
           completedAt: courseTicket.completedAt,
-          minutesLeft: resolved.minutesLeft,
           status: ticketStatus,
           itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
           targetSummary: buildTargetSummary(items),
+          waitLabel: waitDisplay?.label,
+          waitExpired: waitDisplay?.expired,
           lines
         };
 
@@ -209,21 +249,13 @@ export const KitchenBoard = () => {
         return [ticket];
       });
     });
-  }, [clock, state.products, state.sessions, state.tables]);
+  }, [kitchenClock, state.products, state.sessions, state.tables]);
 
   const sortedTickets = useMemo(
     () =>
       [...tickets].sort((left, right) => {
         const rankDelta = ticketStatusRank[left.status] - ticketStatusRank[right.status];
         if (rankDelta !== 0) return rankDelta;
-
-        const hasTimer =
-          (left.status === "blocked" || left.status === "countdown") &&
-          (right.status === "blocked" || right.status === "countdown");
-        if (hasTimer) {
-          const timerDelta = left.minutesLeft - right.minutesLeft;
-          if (timerDelta !== 0) return timerDelta;
-        }
 
         const leftSentAt = left.sentAt ? new Date(left.sentAt).getTime() : Number.MAX_SAFE_INTEGER;
         const rightSentAt = right.sentAt
@@ -247,10 +279,8 @@ export const KitchenBoard = () => {
   const visibleTickets = activeTickets.slice(0, MAX_VISIBLE_TICKETS);
   const hiddenTicketCount = Math.max(0, activeTickets.length - MAX_VISIBLE_TICKETS);
   const emptySlotCount = Math.max(0, MAX_VISIBLE_TICKETS - visibleTickets.length);
-  const lockedCount = activeTickets.filter(
-    (ticket) => ticket.status === "blocked" || ticket.status === "countdown"
-  ).length;
   const readyCount = activeTickets.filter((ticket) => ticket.status === "ready").length;
+  const waitingCount = activeTickets.filter((ticket) => ticket.status === "countdown").length;
 
   const allOpenItems = useMemo(() => {
     const grouped = new Map<string, { id: string; label: string; quantity: number }>();
@@ -280,11 +310,8 @@ export const KitchenBoard = () => {
 
   const renderTicketCard = (ticket: KitchenTicket) => {
     const canMarkCompleted = ticket.status === "ready";
-    const timerVisible =
-      (ticket.status === "blocked" || ticket.status === "countdown") && ticket.minutesLeft > 0;
-    const stateBadge = timerVisible
-      ? `${ticket.minutesLeft} Min.`
-      : ticketStatusShortLabels[ticket.status];
+    const canReleaseWait = ticket.status === "countdown";
+    const stateBadge = ticketStatusShortLabels[ticket.status];
 
     return (
       <article key={ticket.id} className={`kiju-pass-ticket is-${ticket.status}`}>
@@ -295,7 +322,6 @@ export const KitchenBoard = () => {
               <Clock3 size={12} />
               {formatClock(ticket.sentAt)}
             </span>
-            <span>{formatDuration(ticket.sentAt, clock)}</span>
           </div>
         </header>
 
@@ -311,6 +337,18 @@ export const KitchenBoard = () => {
             <span>{ticketStatusLabels[ticket.status]}</span>
           </div>
         </div>
+
+        {ticket.status === "countdown" ? (
+          <div className={`kiju-pass-ticket__wait ${ticket.waitExpired ? "is-expired" : ""}`}>
+            <span>{ticket.waitExpired ? "Wartezeit abgelaufen" : "Startet in"}</span>
+            <strong>{ticket.waitLabel ?? "0:00"}</strong>
+            <small>
+              {ticket.waitExpired
+                ? "Jetzt bestätigen oder sofort freigeben."
+                : "Dieser Gang bleibt bis dahin auf Warten."}
+            </small>
+          </div>
+        ) : null}
 
         <ol className="kiju-pass-ticket__lines">
           {ticket.lines.map((line) => (
@@ -336,19 +374,35 @@ export const KitchenBoard = () => {
               {ticket.tableName} · {ticket.itemCount} {ticket.itemCount === 1 ? "Posten" : "Posten"}
             </small>
           </div>
-          <button
-            type="button"
-            className="kiju-pass-ticket__action"
-            onClick={() => actions.markCourseCompleted(ticket.tableId, ticket.course)}
-            disabled={!canMarkCompleted}
-            aria-label={
-              canMarkCompleted
-                ? `${ticket.courseLabel} für ${ticket.tableName} als fertig markieren`
-                : `${ticket.courseLabel} für ${ticket.tableName} ist noch gesperrt`
-            }
-          >
-            <CheckCheck size={18} />
-          </button>
+          {ticket.status !== "countdown" ? (
+            <button
+              type="button"
+              className="kiju-pass-ticket__action"
+              onClick={() => actions.markCourseCompleted(ticket.tableId, ticket.course)}
+              disabled={!canMarkCompleted}
+              aria-label={
+                canMarkCompleted
+                  ? `${ticket.courseLabel} für ${ticket.tableName} als fertig markieren`
+                  : `${ticket.courseLabel} für ${ticket.tableName} ist bereits fertig`
+              }
+            >
+              <CheckCheck size={18} />
+            </button>
+          ) : null}
+          {canReleaseWait ? (
+            <button
+              type="button"
+              className="kiju-pass-ticket__action kiju-pass-ticket__action--wait"
+              onClick={() => actions.releaseCourse(ticket.tableId, ticket.course)}
+              aria-label={
+                ticket.waitExpired
+                  ? `Wartezeit für ${ticket.courseLabel} an ${ticket.tableName} bestätigen`
+                  : `Wartezeit für ${ticket.courseLabel} an ${ticket.tableName} überspringen`
+              }
+            >
+              {ticket.waitExpired ? "Bestätigen" : "Überspringen"}
+            </button>
+          ) : null}
         </footer>
       </article>
     );
@@ -469,14 +523,14 @@ export const KitchenBoard = () => {
 
           <div className="kiju-kitchen-wallboard__footer-center">
             {hiddenTicketCount > 0 ? <span>+{hiddenTicketCount} weitere Bons</span> : null}
-            <span>{lockedCount} mit Timer</span>
             <span>{readyCount} frei</span>
+            <span>{waitingCount} wartet</span>
           </div>
 
           <div className="kiju-kitchen-wallboard__footer-right">
             <span className="kiju-kitchen-wallboard__refresh">
               <RefreshCw size={16} />
-              5 Sek
+              Live
             </span>
             {currentUser?.role === "admin" ? (
               <Link href={routeConfig.waiter} className="kiju-kitchen-wallboard__service-link">

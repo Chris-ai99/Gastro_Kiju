@@ -31,7 +31,7 @@ export const AccordionSection = ({
       <div className="kiju-accordion__summary-actions">
         {action}
         <span className="kiju-accordion__chevron" aria-hidden="true">
-          ▾
+          v
         </span>
       </div>
     </summary>

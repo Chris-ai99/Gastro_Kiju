@@ -47,4 +47,15 @@ describe("domain workflow", () => {
     expect(normalizedItem.target).toEqual({ type: "seat", seatId: "table-1-seat-1" });
     expect("seatId" in normalizedItem).toBe(false);
   });
+
+  it("does not rehydrate deleted seeded users during normalization", () => {
+    const state = structuredClone(demoAppState);
+    state.deletedUserIds = ["user-kitchen"];
+    state.users = state.users.filter((user) => user.id !== "user-kitchen");
+
+    const normalized = normalizeOperationalState(state);
+
+    expect(normalized.deletedUserIds).toContain("user-kitchen");
+    expect(normalized.users.some((user) => user.id === "user-kitchen")).toBe(false);
+  });
 });

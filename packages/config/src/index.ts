@@ -77,7 +77,6 @@ export const kitchenRules = {
 export const serviceLabels = {
   notRecorded: "Nicht erfasst",
   skipped: "X",
-  onHold: "Hold",
   waiting: "Bestellung warten",
   sendToKitchen: "Bestellung an Küche senden",
   finalize: "Bestellung verbuchen",

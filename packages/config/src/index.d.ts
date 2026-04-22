@@ -45,7 +45,6 @@ export declare const kitchenRules: {
 export declare const serviceLabels: {
     readonly notRecorded: "Nicht erfasst";
     readonly skipped: "X";
-    readonly onHold: "Hold";
     readonly waiting: "Bestellung warten";
     readonly sendToKitchen: "Bestellung an Küche senden";
     readonly finalize: "Bestellung verbuchen";
