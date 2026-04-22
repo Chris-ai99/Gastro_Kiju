@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import clsx from "clsx";
 
 type ProgressStepsProps = {
@@ -7,7 +9,12 @@ type ProgressStepsProps = {
 };
 
 export const ProgressSteps = ({ steps, currentStep, onStepSelect }: ProgressStepsProps) => (
-  <div className="kiju-steps" role="list" aria-label="Bestellschritte">
+  <div
+    className="kiju-steps"
+    role="list"
+    aria-label="Bestellschritte"
+    style={{ "--kiju-step-count": steps.length } as CSSProperties}
+  >
     {steps.map((step, index) => {
       const className = clsx("kiju-step", {
         "kiju-step--active": step === currentStep,
