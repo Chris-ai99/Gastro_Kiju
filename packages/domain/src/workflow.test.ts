@@ -5,7 +5,12 @@ import { normalizeOperationalState } from "./runtime-state";
 import {
   buildDashboardSummary,
   buildKitchenSummary,
+  calculateLineItemsTotal,
+  calculateOpenItemQuantity,
+  calculateSessionOpenTotal,
   calculateSessionTotal,
+  getCheckoutTableIds,
+  getOpenTotalForTables,
   getSessionForTable
 } from "./workflow";
 
@@ -57,5 +62,62 @@ describe("domain workflow", () => {
 
     expect(normalized.deletedUserIds).toContain("user-kitchen");
     expect(normalized.users.some((user) => user.id === "user-kitchen")).toBe(false);
+  });
+
+  it("calculates open totals after a partial payment", () => {
+    const state = normalizeOperationalState(structuredClone(demoAppState));
+    const session = getSessionForTable(state.sessions, "table-1")!;
+    const item = session.items[0]!;
+    const paymentLine = [{ itemId: item.id, quantity: 1 }];
+    const amountCents = calculateLineItemsTotal(session, state.products, paymentLine);
+
+    session.payments.push({
+      id: "payment-test-1",
+      label: "Teilzahlung",
+      amountCents,
+      method: "cash",
+      lineItems: paymentLine,
+      tableIds: ["table-1"]
+    });
+
+    expect(calculateOpenItemQuantity(session, item)).toBe(item.quantity - 1);
+    expect(calculateSessionOpenTotal(session, state.products)).toBe(
+      calculateSessionTotal(session, state.products) - amountCents
+    );
+  });
+
+  it("allows a full payment to leave no open amount", () => {
+    const state = normalizeOperationalState(structuredClone(demoAppState));
+    const session = getSessionForTable(state.sessions, "table-3")!;
+    const lineItems = session.items.map((item) => ({ itemId: item.id, quantity: item.quantity }));
+    const amountCents = calculateLineItemsTotal(session, state.products, lineItems);
+
+    session.payments.push({
+      id: "payment-test-full",
+      label: "Restzahlung",
+      amountCents,
+      method: "card",
+      lineItems,
+      tableIds: ["table-3"]
+    });
+
+    expect(calculateSessionOpenTotal(session, state.products)).toBe(0);
+  });
+
+  it("resolves linked tables for a shared checkout", () => {
+    const state = normalizeOperationalState(structuredClone(demoAppState));
+    state.linkedTableGroups = [];
+    state.linkedTableGroups.push({
+      id: "linked-test",
+      label: "Gemeinsame Abrechnung",
+      tableIds: ["table-1", "table-3"],
+      active: true,
+      createdAt: "2026-04-22T12:00:00.000Z"
+    });
+
+    expect(getCheckoutTableIds(state, "table-1")).toEqual(["table-1", "table-3"]);
+    expect(getOpenTotalForTables(state, ["table-1", "table-3"])).toBeGreaterThan(
+      calculateSessionTotal(getSessionForTable(state.sessions, "table-1"), state.products)
+    );
   });
 });

@@ -2,9 +2,15 @@
 
 import {
   calculateGuestCount,
+  calculateLineItemsTotal,
+  calculateSessionOpenTotal,
   calculateSessionTotal,
   courseLabels,
   createDefaultOperationalState as createSeedOperationalState,
+  euro,
+  getCheckoutTableIds,
+  getLinkedTableGroupForTable,
+  getOpenLineItems,
   getProductById,
   getSessionForTable,
   normalizeOperationalState,
@@ -15,6 +21,7 @@ import {
   type DesignMode,
   type OrderTarget,
   type OrderSession,
+  type PaymentLineItem,
   type PaymentMethod,
   type Product,
   type ProductCategory,
@@ -79,6 +86,23 @@ type DemoActions = {
   printReceipt: (tableId: string) => void;
   reprintReceipt: (tableId: string) => void;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
+  closePaidOrder: (tableId: string) => { ok: boolean; message?: string };
+  recordPartialPayment: (
+    tableIds: string[],
+    selectedLineItems: PaymentLineItem[],
+    method: PaymentMethod,
+    label?: string
+  ) => { ok: boolean; message?: string };
+  createPartyGroup: (tableId: string, label: string) => { ok: boolean; message?: string };
+  updatePartyGroup: (tableId: string, groupId: string, label: string) => { ok: boolean; message?: string };
+  deletePartyGroup: (tableId: string, groupId: string) => { ok: boolean; message?: string };
+  assignItemsToPartyGroup: (
+    tableId: string,
+    groupId: string,
+    itemIds: string[]
+  ) => { ok: boolean; message?: string };
+  linkTables: (tableIds: string[], label?: string) => { ok: boolean; message?: string };
+  unlinkTables: (groupId: string) => { ok: boolean; message?: string };
   createProduct: (input: {
     name: string;
     description: string;
@@ -340,6 +364,7 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
   skippedCourses: [],
   courseTickets: createBaseTickets(),
   payments: [],
+  partyGroups: [],
   receipt: {}
 });
 
@@ -379,6 +404,25 @@ const emitOperatorFeedback = () => {
 const getClosedSessionAmount = (session: OrderSession, products: Product[]) => {
   const paymentTotal = session.payments.reduce((sum, payment) => sum + payment.amountCents, 0);
   return paymentTotal > 0 ? paymentTotal : calculateSessionTotal(session, products);
+};
+
+const normalizePaymentSelection = (session: OrderSession, selectedLineItems: PaymentLineItem[]) => {
+  const itemById = new Map(session.items.map((item) => [item.id, item]));
+  const selectedByItemId = new Map<string, number>();
+
+  selectedLineItems.forEach((lineItem) => {
+    const item = itemById.get(lineItem.itemId);
+    if (!item) return;
+
+    const openEntry = getOpenLineItems(session).find((entry) => entry.item.id === item.id);
+    const openQuantity = openEntry?.openQuantity ?? 0;
+    const nextQuantity = Math.min(openQuantity, Math.max(0, Math.floor(lineItem.quantity)));
+    if (nextQuantity <= 0) return;
+
+    selectedByItemId.set(item.id, (selectedByItemId.get(item.id) ?? 0) + nextQuantity);
+  });
+
+  return [...selectedByItemId.entries()].map(([itemId, quantity]) => ({ itemId, quantity }));
 };
 
 const summarizeServiceItems = (
@@ -1432,19 +1476,25 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const session = getSessionForTable(next.sessions, tableId);
       if (!session || !session.receipt.printedAt) return;
 
-      const total = calculateSessionTotal(session, next.products);
+      const openLineItems = getOpenLineItems(session).map(({ item, openQuantity }) => ({
+        itemId: item.id,
+        quantity: openQuantity
+      }));
+      const total = calculateLineItemsTotal(session, next.products, openLineItems);
       const guests = calculateGuestCount(session);
 
       session.status = "closed";
       session.receipt.closedAt = new Date().toISOString();
-      session.payments = [
-        {
+      if (total > 0) {
+        session.payments.push({
           id: createClientId("payment"),
           label: "Hauptzahlung",
           amountCents: total,
-          method
-        }
-      ];
+          method,
+          lineItems: openLineItems,
+          tableIds: [tableId]
+        });
+      }
 
       next.dailyStats.servedTables += 1;
       next.dailyStats.servedGuests += guests;
@@ -1459,6 +1509,240 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       });
       emitOperatorFeedback();
       commit(next);
+    },
+    [commit, state]
+  );
+
+  const recordPartialPayment = useCallback(
+    (
+      tableIds: string[],
+      selectedLineItems: PaymentLineItem[],
+      method: PaymentMethod,
+      label = "Teilzahlung"
+    ) => {
+      const uniqueTableIds = [...new Set(tableIds)];
+      const next = structuredClone(state);
+      const sessions = uniqueTableIds
+        .map((tableId) => getSessionForTable(next.sessions, tableId))
+        .filter((session): session is OrderSession => Boolean(session));
+
+      if (sessions.length === 0) {
+        return { ok: false, message: "Keine offene Bestellung für diese Auswahl gefunden." };
+      }
+
+      let bookedAmount = 0;
+      const paidAt = new Date().toISOString();
+
+      sessions.forEach((session) => {
+        const sessionLineItems = normalizePaymentSelection(
+          session,
+          selectedLineItems.filter((lineItem) =>
+            session.items.some((item) => item.id === lineItem.itemId)
+          )
+        );
+        if (sessionLineItems.length === 0) return;
+
+        const amountCents = calculateLineItemsTotal(session, next.products, sessionLineItems);
+        if (amountCents <= 0) return;
+
+        session.receipt.printedAt ??= paidAt;
+        session.status = calculateSessionOpenTotal(session, next.products) - amountCents <= 0
+          ? "ready-to-bill"
+          : "serving";
+        session.payments.push({
+          id: createClientId("payment"),
+          label: label.trim() || "Teilzahlung",
+          amountCents,
+          method,
+          lineItems: sessionLineItems,
+          tableIds: uniqueTableIds
+        });
+        bookedAmount += amountCents;
+      });
+
+      if (bookedAmount <= 0) {
+        return { ok: false, message: "Bitte mindestens eine offene Position auswählen." };
+      }
+
+      withNotification(next, {
+        title: "Teilzahlung verbucht",
+        body: `${euro(bookedAmount)} wurden als ${label.trim() || "Teilzahlung"} gespeichert.`,
+        tone: "success",
+        tableId: uniqueTableIds[0]
+      });
+      emitOperatorFeedback();
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const closePaidOrder = useCallback(
+    (tableId: string) => {
+      const next = structuredClone(state);
+      const checkoutTableIds = getCheckoutTableIds(next, tableId);
+      const sessions = checkoutTableIds
+        .map((checkoutTableId) => getSessionForTable(next.sessions, checkoutTableId))
+        .filter((session): session is OrderSession => Boolean(session));
+
+      if (sessions.length === 0) {
+        return { ok: false, message: "Keine offene Bestellung gefunden." };
+      }
+
+      const openTotal = sessions.reduce(
+        (sum, session) => sum + calculateSessionOpenTotal(session, next.products),
+        0
+      );
+      if (openTotal > 0) {
+        return { ok: false, message: "Es sind noch Positionen offen." };
+      }
+
+      const closedAt = new Date().toISOString();
+      sessions.forEach((session) => {
+        if (session.status === "closed") return;
+        session.status = "closed";
+        session.receipt.printedAt ??= closedAt;
+        session.receipt.closedAt = closedAt;
+        next.dailyStats.servedTables += 1;
+        next.dailyStats.servedGuests += calculateGuestCount(session);
+        next.dailyStats.revenueCents += session.payments.reduce(
+          (sum, payment) => sum + payment.amountCents,
+          0
+        );
+        next.dailyStats.closedOrderIds.push(session.id);
+      });
+
+      const linkedGroup = getLinkedTableGroupForTable(next, tableId);
+      if (linkedGroup) {
+        linkedGroup.active = false;
+      }
+
+      withNotification(next, {
+        title: "Bestellung geschlossen",
+        body: `${checkoutTableIds.length > 1 ? "Gekoppelte Tische" : tableId.replace("table-", "Tisch ")} wurden abgeschlossen.`,
+        tone: "success",
+        tableId
+      });
+      emitOperatorFeedback();
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const createPartyGroup = useCallback(
+    (tableId: string, label: string) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      const normalizedLabel = label.trim();
+      if (!session || !normalizedLabel) {
+        return { ok: false, message: "Bitte zuerst eine Bestellung und einen Gruppennamen anlegen." };
+      }
+
+      const now = new Date().toISOString();
+      session.partyGroups.push({
+        id: createClientId("party"),
+        label: normalizedLabel,
+        itemIds: [],
+        createdAt: now,
+        updatedAt: now
+      });
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const updatePartyGroup = useCallback(
+    (tableId: string, groupId: string, label: string) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      const group = session?.partyGroups.find((entry) => entry.id === groupId);
+      const normalizedLabel = label.trim();
+      if (!session || !group || !normalizedLabel) {
+        return { ok: false, message: "Gruppe konnte nicht aktualisiert werden." };
+      }
+
+      group.label = normalizedLabel;
+      group.updatedAt = new Date().toISOString();
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const deletePartyGroup = useCallback(
+    (tableId: string, groupId: string) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      if (!session) {
+        return { ok: false, message: "Gruppe konnte nicht gelöscht werden." };
+      }
+
+      session.partyGroups = session.partyGroups.filter((group) => group.id !== groupId);
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const assignItemsToPartyGroup = useCallback(
+    (tableId: string, groupId: string, itemIds: string[]) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      const group = session?.partyGroups.find((entry) => entry.id === groupId);
+      if (!session || !group) {
+        return { ok: false, message: "Gruppe konnte nicht gefunden werden." };
+      }
+
+      const validItemIds = new Set(session.items.map((item) => item.id));
+      group.itemIds = [...new Set(itemIds.filter((itemId) => validItemIds.has(itemId)))];
+      group.updatedAt = new Date().toISOString();
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const linkTables = useCallback(
+    (tableIds: string[], label?: string) => {
+      const uniqueTableIds = [...new Set(tableIds)].filter((tableId) =>
+        state.tables.some((table) => table.id === tableId)
+      );
+      if (uniqueTableIds.length < 2) {
+        return { ok: false, message: "Bitte mindestens zwei Tische auswählen." };
+      }
+
+      const next = structuredClone(state);
+      next.linkedTableGroups = next.linkedTableGroups.map((group) =>
+        group.tableIds.some((tableId) => uniqueTableIds.includes(tableId))
+          ? { ...group, active: false }
+          : group
+      );
+      next.linkedTableGroups.push({
+        id: createClientId("linked-table"),
+        label: label?.trim() || "Gemeinsame Abrechnung",
+        tableIds: uniqueTableIds,
+        active: true,
+        createdAt: new Date().toISOString()
+      });
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const unlinkTables = useCallback(
+    (groupId: string) => {
+      const next = structuredClone(state);
+      const group = next.linkedTableGroups.find((entry) => entry.id === groupId);
+      if (!group) {
+        return { ok: false, message: "Tischkopplung wurde nicht gefunden." };
+      }
+
+      group.active = false;
+      commit(next);
+      return { ok: true };
     },
     [commit, state]
   );
@@ -2112,6 +2396,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         printReceipt,
         reprintReceipt,
         closeOrder,
+        closePaidOrder,
+        recordPartialPayment,
+        createPartyGroup,
+        updatePartyGroup,
+        deletePartyGroup,
+        assignItemsToPartyGroup,
+        linkTables,
+        unlinkTables,
         createProduct,
         updateProduct,
         deleteProduct: deleteProductHard,
@@ -2132,10 +2424,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     }),
     [
       addItem,
+      assignItemsToPartyGroup,
       closeOrder,
+      closePaidOrder,
+      createPartyGroup,
       createProduct,
       createTable,
       createUser,
+      deletePartyGroup,
       currentUser,
       deleteProductHard,
       deleteSession,
@@ -2149,6 +2445,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       releaseCourse,
       removeItem,
       reprintReceipt,
+      recordPartialPayment,
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
@@ -2160,7 +2457,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       skipCourse,
       state,
       toggleTableActive,
+      unlinkTables,
       unreadNotifications,
+      updatePartyGroup,
       updateTable,
       updateItem,
       updateProduct,

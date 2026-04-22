@@ -13,6 +13,7 @@ import {
   Plus,
   Receipt,
   ShoppingBag,
+  Split,
   Trash2,
   Users,
   X
@@ -21,13 +22,19 @@ import {
 import { routeConfig, serviceLabels } from "@kiju/config";
 import {
   buildDashboardSummary,
+  calculateItemTotal,
+  calculateSessionOpenTotal,
   euro,
+  getCheckoutTableIds,
+  getLinkedTableGroupForTable,
+  getOpenLineItems,
   getSeatItems,
   getTableTargetItems,
   type CourseKey,
   type OrderItem,
   type OrderSession,
   type OrderTarget,
+  type PaymentLineItem,
   type Product,
   type TableSeat
 } from "@kiju/domain";
@@ -42,18 +49,13 @@ import {
   resolveProductName,
   useDemoApp
 } from "../lib/app-state";
-import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
+import { ServiceTopbarMenu } from "./service-topbar-menu";
 import { ThermalReceiptPaper } from "./thermal-receipt-paper";
 
-const serviceSteps = ["Getränke", "Vorspeise", "Hauptspeise", "Nachtisch", "Review"] as const;
-const serviceStepCourses: (CourseKey | "review")[] = [
-  "drinks",
-  "starter",
-  "main",
-  "dessert",
-  "review"
-];
+const wizardSteps = ["Tisch", "Gruppe", "Artikel", "Abrechnung"] as const;
+const orderWizardSteps = ["Gruppe", "Artikel", "Abrechnung"] as const;
+type WaiterStep = "table" | "course" | "items" | "checkout";
 
 const normalizePublicBasePath = (value?: string) => {
   if (!value) return "";
@@ -311,15 +313,22 @@ export const WaiterWorkspace = () => {
   const dashboard = useMemo(() => buildDashboardSummary(state), [state]);
   const defaultTableId =
     dashboard.find((entry) => entry.table.active)?.table.id ?? dashboard[0]?.table.id ?? null;
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(defaultTableId);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedSeatId, setSelectedSeatId] = useState("");
-  const [activeCourse, setActiveCourse] = useState<CourseKey | "review">("drinks");
+  const [currentStep, setCurrentStep] = useState<WaiterStep>("table");
+  const [isOrderWizardOpen, setIsOrderWizardOpen] = useState(false);
+  const [tableManagementOpen, setTableManagementOpen] = useState(false);
+  const [activeCourse, setActiveCourse] = useState<CourseKey>("drinks");
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
   const [showMobileFloorplan, setShowMobileFloorplan] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
+  const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
+  const [partyGroupLabel, setPartyGroupLabel] = useState("Person 1+2");
+  const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [receiptPreview, setReceiptPreview] = useState<{
     mode: "print" | "reprint";
     openedAt: string;
+    lineItems?: PaymentLineItem[];
   } | null>(null);
   const [serviceFeedback, setServiceFeedback] = useState<{
     tone: "success" | "alert" | "info";
@@ -351,13 +360,18 @@ export const WaiterWorkspace = () => {
   );
   const selectedDashboardEntry =
     dashboard.find((entry) => entry.table.id === selectedTableId) ?? null;
+  const linkedTableGroup = selectedTableId ? getLinkedTableGroupForTable(state, selectedTableId) : undefined;
+  const checkoutTableIds = selectedTableId ? getCheckoutTableIds(state, selectedTableId) : [];
+  const checkoutSessions = checkoutTableIds
+    .map((tableId) => ({
+      table: state.tables.find((table) => table.id === tableId),
+      session: getSessionForTable(state.sessions, tableId)
+    }))
+    .filter((entry): entry is { table: NonNullable<typeof entry.table>; session: OrderSession } =>
+      Boolean(entry.table && entry.session)
+    );
 
   useEffect(() => {
-    if (!selectedTable && defaultTableId) {
-      setSelectedTableId(defaultTableId);
-      return;
-    }
-
     if (!defaultTableId && selectedTableId) {
       setSelectedTableId(null);
     }
@@ -384,7 +398,7 @@ export const WaiterWorkspace = () => {
   }, [selectedSeatId, selectedTable, usesSeatMode, visibleSeats]);
 
   const currentProducts = useMemo(
-    () => (activeCourse === "review" ? [] : getOrderableProducts(state.products, activeCourse)),
+    () => getOrderableProducts(state.products, activeCourse),
     [activeCourse, state.products]
   );
   const drinkSubcategories = useMemo(() => {
@@ -428,9 +442,7 @@ export const WaiterWorkspace = () => {
       : selectedTable?.seats.find((seat) => seat.id === selectedOrderTarget.seatId)?.label ??
         "Sitzplatz";
   const activeCourseTicketState =
-    activeCourse === "review" || !selectedSession
-      ? null
-      : resolveServiceCourseStatus(selectedSession, activeCourse);
+    !selectedSession ? null : resolveServiceCourseStatus(selectedSession, activeCourse);
   const waitableCourses = useMemo(() => {
     if (!selectedSession) return [];
 
@@ -473,15 +485,11 @@ export const WaiterWorkspace = () => {
     if (!selectedSession) return [];
 
     if (!usesSeatMode) {
-      return selectedSession.items.filter((item) =>
-        activeCourse === "review" ? true : item.category === activeCourse
-      );
+      return selectedSession.items.filter((item) => item.category === activeCourse);
     }
 
     return selectedSession.items.filter((item) =>
-      activeCourse === "review"
-        ? isItemForTarget(item, selectedOrderTarget)
-        : isItemForTarget(item, selectedOrderTarget) && item.category === activeCourse
+      isItemForTarget(item, selectedOrderTarget) && item.category === activeCourse
     );
   }, [activeCourse, selectedOrderTarget, selectedSession, usesSeatMode]);
   const tableTargetItems = useMemo(
@@ -513,6 +521,33 @@ export const WaiterWorkspace = () => {
   }, [selectedSession]);
 
   const sessionTotal = calculateSessionTotal(selectedSession, state.products);
+  const sessionOpenTotal = calculateSessionOpenTotal(selectedSession, state.products);
+  const checkoutOpenTotal = checkoutSessions.reduce(
+    (sum, entry) => sum + calculateSessionOpenTotal(entry.session, state.products),
+    0
+  );
+  const checkoutOpenEntries = checkoutSessions.flatMap(({ table, session }) =>
+    getOpenLineItems(session).map(({ item, openQuantity }) => ({
+      table,
+      session,
+      item,
+      openQuantity,
+      unitTotal: Math.round(calculateItemTotal(item, state.products) / item.quantity)
+    }))
+  );
+  const selectedPaymentLineItems = checkoutOpenEntries
+    .map(({ item, openQuantity }) => ({
+      itemId: item.id,
+      quantity: Math.min(openQuantity, Math.max(0, selectedPaymentQuantities[item.id] ?? 0))
+    }))
+    .filter((lineItem) => lineItem.quantity > 0);
+  const selectedPaymentTotal = checkoutOpenEntries.reduce((sum, entry) => {
+    const quantity = Math.min(
+      entry.openQuantity,
+      Math.max(0, selectedPaymentQuantities[entry.item.id] ?? 0)
+    );
+    return sum + entry.unitTotal * quantity;
+  }, 0);
   const sessionItemCount =
     selectedSession?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
   const openServiceDeliveryNotifications = unreadNotifications.filter(
@@ -537,7 +572,20 @@ export const WaiterWorkspace = () => {
 
   useEffect(() => {
     setReceiptPreview(null);
+    setSelectedPaymentQuantities({});
+    setLinkTableSelection(selectedTableId ? [selectedTableId] : []);
   }, [selectedTableId]);
+
+  useEffect(() => {
+    if (!isOrderWizardOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOrderWizardOpen]);
 
   const scrollToServiceSection = () => {
     window.requestAnimationFrame(() => {
@@ -554,6 +602,13 @@ export const WaiterWorkspace = () => {
 
     setSelectedTableId(tableId);
     setSelectedSeatId(usesSeatMode ? getVisibleSeats(nextTable.seats)[0]?.id ?? "" : "");
+
+    if (isWaiterView) {
+      setCurrentStep("course");
+      setTableManagementOpen(false);
+      setIsOrderWizardOpen(true);
+      return;
+    }
 
     if (!scrollToService) return;
 
@@ -573,13 +628,20 @@ export const WaiterWorkspace = () => {
     setSelectedTableId(tableId);
     setSelectedSeatId(seatId);
 
+    if (isWaiterView) {
+      setCurrentStep("course");
+      setTableManagementOpen(false);
+      setIsOrderWizardOpen(true);
+      return;
+    }
+
     if (!scrollToService) return;
 
     scrollToServiceSection();
   };
 
   const handleSendCourseToKitchen = () => {
-    if (!selectedTable || activeCourse === "review") return;
+    if (!selectedTable) return;
 
     const result = actions.sendCourseToKitchen(selectedTable.id, activeCourse);
 
@@ -624,7 +686,7 @@ export const WaiterWorkspace = () => {
     }
 
     const preferredCourse =
-      activeCourse !== "review" && waitableCourses.some((entry) => entry.course === activeCourse)
+      waitableCourses.some((entry) => entry.course === activeCourse)
         ? activeCourse
         : waitableCourses[0]?.course ?? "main";
 
@@ -663,12 +725,13 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const openReceiptPreview = (mode: "print" | "reprint") => {
+  const openReceiptPreview = (mode: "print" | "reprint", lineItems?: PaymentLineItem[]) => {
     if (!selectedTable || !selectedSession) return;
 
     setReceiptPreview({
       mode,
-      openedAt: new Date().toISOString()
+      openedAt: new Date().toISOString(),
+      lineItems
     });
   };
 
@@ -699,6 +762,146 @@ export const WaiterWorkspace = () => {
 
     window.requestAnimationFrame(() => {
       window.print();
+    });
+  };
+
+  const setPaymentQuantity = (itemId: string, quantity: number, maxQuantity: number) => {
+    setSelectedPaymentQuantities((current) => ({
+      ...current,
+      [itemId]: Math.min(maxQuantity, Math.max(0, Math.floor(quantity)))
+    }));
+  };
+
+  const togglePaymentItem = (itemId: string, checked: boolean, maxQuantity: number) => {
+    setPaymentQuantity(itemId, checked ? maxQuantity : 0, maxQuantity);
+  };
+
+  const handleRecordPartialPayment = () => {
+    if (!selectedTable) return;
+
+    const result = actions.recordPartialPayment(
+      checkoutTableIds,
+      selectedPaymentLineItems,
+      paymentMethod,
+      selectedPaymentTotal === checkoutOpenTotal ? "Restzahlung" : "Teilzahlung"
+    );
+
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Zahlung verbucht" : "Zahlung nicht verbucht",
+      detail: result.message ?? (result.ok ? "Die ausgewählten Positionen sind bezahlt." : "Bitte Auswahl prüfen.")
+    });
+
+    if (result.ok) {
+      setSelectedPaymentQuantities({});
+      setReceiptPreview(null);
+    }
+  };
+
+  const handleClosePaidOrder = () => {
+    if (!selectedTable) return;
+
+    const result = actions.closePaidOrder(selectedTable.id);
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Tisch geschlossen" : "Noch nicht geschlossen",
+      detail: result.message ?? (result.ok ? "Alle Positionen sind bezahlt und der Tisch ist abgeschlossen." : "Es sind noch Positionen offen.")
+    });
+  };
+
+  const closeOrderWizard = () => {
+    setIsOrderWizardOpen(false);
+    setTableManagementOpen(false);
+    setCurrentStep("table");
+  };
+
+  const goBack = () => {
+    setTableManagementOpen(false);
+    if (currentStep === "checkout") {
+      setCurrentStep("items");
+      return;
+    }
+    if (currentStep === "items") {
+      setCurrentStep("course");
+      return;
+    }
+    if (currentStep === "course") {
+      closeOrderWizard();
+      return;
+    }
+    setCurrentStep("table");
+  };
+
+  const goNext = () => {
+    setTableManagementOpen(false);
+    if (currentStep === "table") {
+      if (!selectedTable) return;
+      setCurrentStep("course");
+      return;
+    }
+
+    if (currentStep === "course") {
+      setCurrentStep("items");
+      return;
+    }
+
+    if (currentStep === "items") {
+      setCurrentStep("checkout");
+      return;
+    }
+
+    handleClosePaidOrder();
+  };
+
+  const selectWizardStep = (step: string) => {
+    setTableManagementOpen(false);
+    if (step === "Tisch") closeOrderWizard();
+    if (step === "Gruppe") setCurrentStep("course");
+    if (step === "Artikel") setCurrentStep("items");
+    if (step === "Abrechnung") setCurrentStep("checkout");
+  };
+
+  const currentWizardStepLabel =
+    currentStep === "table"
+      ? "Tisch"
+      : currentStep === "course"
+        ? "Gruppe"
+        : currentStep === "items"
+          ? "Artikel"
+          : "Abrechnung";
+  const canGoNext =
+    currentStep === "table"
+      ? Boolean(selectedTable)
+      : currentStep === "checkout"
+        ? checkoutOpenTotal === 0 && checkoutSessions.length > 0
+        : true;
+  const nextButtonLabel = currentStep === "checkout" ? "Abschließen" : "Weiter";
+
+  const handleCreatePartyGroup = () => {
+    if (!selectedTable) return;
+
+    const result = actions.createPartyGroup(selectedTable.id, partyGroupLabel);
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Gruppe angelegt" : "Gruppe nicht angelegt",
+      detail: result.message ?? (result.ok ? "Die Gruppe steht für die Abrechnung bereit." : "Bitte Gruppennamen prüfen.")
+    });
+  };
+
+  const toggleLinkTableSelection = (tableId: string) => {
+    setLinkTableSelection((current) =>
+      current.includes(tableId)
+        ? current.filter((entry) => entry !== tableId)
+        : [...current, tableId]
+    );
+  };
+
+  const handleLinkTables = () => {
+    const result = actions.linkTables(linkTableSelection);
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Tische gekoppelt" : "Kopplung nicht möglich",
+      detail: result.message ?? (result.ok ? "Die Tische erscheinen gemeinsam in der Abrechnung." : "Bitte mindestens zwei Tische wählen.")
     });
   };
 
@@ -855,6 +1058,19 @@ export const WaiterWorkspace = () => {
     });
   };
 
+  const receiptPreviewSession =
+    receiptPreview?.lineItems && selectedSession
+      ? {
+          ...selectedSession,
+          items: receiptPreview.lineItems
+            .map((lineItem) => {
+              const item = selectedSession.items.find((entry) => entry.id === lineItem.itemId);
+              return item ? { ...item, quantity: lineItem.quantity } : null;
+            })
+            .filter((item): item is OrderItem => Boolean(item))
+        }
+      : selectedSession;
+
   return (
     <RouteGuard allowedRoles={["waiter", "admin"]}>
       <main className="kiju-page">
@@ -880,50 +1096,11 @@ export const WaiterWorkspace = () => {
                   Admin
                 </Link>
               </>
-            ) : (
-              <details className="kiju-notification-popover">
-                <summary className="kiju-notification-popover__trigger">
-                  <Bell size={18} />
-                  <span>Hinweise</span>
-                  <strong>{unreadNotifications.length}</strong>
-                </summary>
-                <div className="kiju-notification-popover__panel">
-                  <div className="kiju-notification-popover__header">
-                    <strong>Offene Benachrichtigungen</strong>
-                    <span>{unreadNotifications.length} offen</span>
-                  </div>
-                  {unreadNotifications.length === 0 ? (
-                    <div className="kiju-inline-panel">
-                      <span>Aktuell gibt es keine offenen Hinweise.</span>
-                    </div>
-                  ) : (
-                    unreadNotifications.slice(0, 8).map((notification) => (
-                      <article
-                        key={notification.id}
-                        className="kiju-notification-row"
-                      >
-                        <Bell size={16} />
-                        <div>
-                          <strong>{notification.title}</strong>
-                          <span>{notification.body}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="kiju-button kiju-button--secondary kiju-notification-row__action"
-                          onClick={() => handleNotificationAction(notification)}
-                        >
-                          {notification.kind === "service-drinks" ||
-                          notification.kind === "service-course-ready"
-                            ? "Annehmen"
-                            : "Erledigt"}
-                        </button>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </details>
-            )}
-            <RoleSwitchPopover />
+            ) : null}
+            <ServiceTopbarMenu
+              unreadNotifications={unreadNotifications}
+              onNotificationAction={handleNotificationAction}
+            />
           </div>
         </header>
 
@@ -969,7 +1146,7 @@ export const WaiterWorkspace = () => {
           </aside>
         ) : null}
 
-        {isWaiterView ? (
+        {isWaiterView && currentStep === "table" ? (
           <section className="kiju-service-drink-delivery">
             <div className="kiju-service-drink-delivery__header">
               <div>
@@ -1014,7 +1191,7 @@ export const WaiterWorkspace = () => {
           </section>
         ) : null}
 
-        {isWaiterView ? (
+        {isWaiterView && currentStep === "table" ? (
           <section
             ref={floorplanSectionRef}
             className={`kiju-floorplan-stage ${showMobileFloorplan ? "is-mobile-open" : ""}`}
@@ -1076,7 +1253,7 @@ export const WaiterWorkspace = () => {
               </div>
             </div>
           </section>
-        ) : (
+        ) : !isWaiterView ? (
           <section className="kiju-metric-grid">
             <MetricCard
               label="Aktive Tische"
@@ -1118,7 +1295,7 @@ export const WaiterWorkspace = () => {
               icon={<Users size={18} />}
             />
           </section>
-        )}
+        ) : null}
 
         <div className={`kiju-workspace ${isWaiterView ? "kiju-workspace--waiter" : ""}`}>
           {!isWaiterView ? (
@@ -1165,27 +1342,24 @@ export const WaiterWorkspace = () => {
             </AccordionSection>
           ) : null}
 
-          <section ref={serviceSectionRef} className="kiju-service-section">
+          {!isWaiterView || (isOrderWizardOpen && selectedTable) ? (
+          <section
+            ref={serviceSectionRef}
+            className={`kiju-service-section ${isWaiterView ? "kiju-order-wizard-overlay" : ""}`}
+            role={isWaiterView ? "dialog" : undefined}
+            aria-modal={isWaiterView ? true : undefined}
+            aria-label={isWaiterView ? "Bestell-Assistent" : undefined}
+          >
             <SectionCard
+              className={isWaiterView ? "kiju-order-wizard-modal" : undefined}
               title={
                 selectedTable
-                  ? usesSeatMode
-                    ? `Sitzplätze und Service für ${selectedTable.name}`
-                    : `Service für ${selectedTable.name}`
-                  : "Service"
+                  ? `Service für ${selectedTable.name}`
+                  : "Tisch wählen"
               }
-              eyebrow="Direkt unter dem Floorplan"
-              action={
-                <button
-                  className="kiju-button kiju-button--primary"
-                  onClick={() => setActiveCourse("review")}
-                  disabled={!selectedTable}
-                >
-                  {serviceLabels.finalize}
-                </button>
-              }
+              eyebrow="Kellner-Wizard"
             >
-              {waiterMenuEntries.length > 0 ? (
+              {currentStep === "table" && waiterMenuEntries.length > 0 ? (
                 <div className="kiju-table-menu" role="tablist" aria-label="Tischauswahl">
                   {waiterMenuEntries.map((entry) => (
                     <button
@@ -1206,7 +1380,7 @@ export const WaiterWorkspace = () => {
                 </div>
               ) : null}
 
-              {isWaiterView ? (
+              {isWaiterView && !isOrderWizardOpen ? (
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary kiju-mobile-floorplan-toggle"
@@ -1240,19 +1414,49 @@ export const WaiterWorkspace = () => {
                 </div>
               </div>
 
+              <ProgressSteps
+                steps={(isWaiterView ? orderWizardSteps : wizardSteps).map((step) => step)}
+                currentStep={currentWizardStepLabel}
+                onStepSelect={selectWizardStep}
+              />
+
               {selectedTable ? (
                 <>
-                  <ProgressSteps
-                    steps={serviceSteps.map((step) => step)}
-                    currentStep={activeCourse === "review" ? "Review" : courseLabels[activeCourse]}
-                    onStepSelect={(step) => {
-                      const nextCourse = serviceStepCourses[serviceSteps.indexOf(step as typeof serviceSteps[number])];
-
-                      if (nextCourse) {
-                        setActiveCourse(nextCourse);
-                      }
-                    }}
-                  />
+                  <div className="kiju-waiter-wizard-bar">
+                    <div>
+                      <span className="kiju-eyebrow">Aktiver Tisch</span>
+                      <strong>
+                        {selectedTable.name}
+                        {linkedTableGroup ? ` · ${linkedTableGroup.label}` : ""}
+                      </strong>
+                    </div>
+                    <div className="kiju-step-actions">
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={isWaiterView ? closeOrderWizard : () => setCurrentStep("table")}
+                      >
+                        <Map size={18} />
+                        Tisch wechseln
+                      </button>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => setTableManagementOpen((open) => !open)}
+                      >
+                        <Split size={18} />
+                        Teilen
+                      </button>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--primary"
+                        onClick={() => setCurrentStep("checkout")}
+                      >
+                        <Receipt size={18} />
+                        Abrechnung
+                      </button>
+                    </div>
+                  </div>
 
                   {usesSeatMode && visibleSeats.length > 0 ? (
                     <div className="kiju-seat-row">
@@ -1268,29 +1472,146 @@ export const WaiterWorkspace = () => {
                     </div>
                   ) : null}
 
-                  {activeCourse === "review" ? (
+                  {tableManagementOpen ? (
+                    <div className="kiju-review-grid">
+                      <SectionCard title="Tisch teilen" eyebrow="Gruppen">
+                        <div className="kiju-inline-field">
+                          <span>Neue Gruppe</span>
+                          <input
+                            value={partyGroupLabel}
+                            onChange={(event) => setPartyGroupLabel(event.target.value)}
+                            placeholder="Person 1+2"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="kiju-button kiju-button--primary"
+                          onClick={handleCreatePartyGroup}
+                          disabled={!selectedSession}
+                        >
+                          Gruppe anlegen
+                        </button>
+                        <div className="kiju-review-list">
+                          {selectedSession?.partyGroups.length ? (
+                            selectedSession.partyGroups.map((group) => (
+                              <article key={group.id} className="kiju-inline-panel">
+                                <strong>{group.label}</strong>
+                                <small>{group.itemIds.length} zugeordnete Positionen</small>
+                                <button
+                                  type="button"
+                                  className="kiju-button kiju-button--danger"
+                                  onClick={() => actions.deletePartyGroup(selectedTable.id, group.id)}
+                                >
+                                  Löschen
+                                </button>
+                              </article>
+                            ))
+                          ) : (
+                            <div className="kiju-inline-panel">
+                              <span>Noch keine Personengruppe angelegt.</span>
+                            </div>
+                          )}
+                        </div>
+                      </SectionCard>
+
+                      <SectionCard title="Tische zusammenlegen" eyebrow="Gemeinsame Abrechnung">
+                        <div className="kiju-table-menu kiju-table-menu--compact">
+                          {waiterMenuEntries.map((entry) => (
+                            <button
+                              key={entry.table.id}
+                              type="button"
+                              className={`kiju-table-menu__button ${
+                                linkTableSelection.includes(entry.table.id) ? "is-selected" : ""
+                              }`}
+                              onClick={() => toggleLinkTableSelection(entry.table.id)}
+                            >
+                              <strong>{entry.table.name}</strong>
+                              <small>{statusLabel[entry.status] ?? "Status"}</small>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="kiju-step-actions">
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--primary"
+                            onClick={handleLinkTables}
+                          >
+                            Tische koppeln
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => linkedTableGroup && actions.unlinkTables(linkedTableGroup.id)}
+                            disabled={!linkedTableGroup}
+                          >
+                            Kopplung lösen
+                          </button>
+                        </div>
+                      </SectionCard>
+                    </div>
+                  ) : currentStep === "course" ? (
+                    <div className="kiju-course-choice-grid">
+                      {serviceTicketCourses.map((course) => {
+                        const itemCount =
+                          selectedSession?.items
+                            .filter((item) => item.category === course)
+                            .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+
+                        return (
+                          <button
+                            key={course}
+                            type="button"
+                            className={`kiju-course-choice ${course === activeCourse ? "is-selected" : ""}`}
+                            onClick={() => setActiveCourse(course)}
+                          >
+                            <strong>{courseLabels[course]}</strong>
+                            <span>{itemCount} gewählt</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : currentStep === "checkout" ? (
                     <div className="kiju-review-grid">
                       <div className="kiju-review-list">
-                        {(!usesSeatMode || tableTargetItems.length > 0) ? (
-                          <article className="kiju-seat-summary">
-                            <header>
-                              <strong>Tisch</strong>
-                              <span>{tableTargetItems.length} Positionen</span>
-                            </header>
-                            {renderEditableItems(tableTargetItems, "Keine Positionen erfasst.")}
-                          </article>
-                        ) : null}
-                        {usesSeatMode
-                          ? visibleSeatSummaries.map(({ seat, items }) => (
-                            <article key={seat.id} className="kiju-seat-summary">
-                              <header>
-                                <strong>{seat.label}</strong>
-                                <span>{items.length} Positionen</span>
-                              </header>
-                              {renderEditableItems(items, "Keine Positionen erfasst.")}
-                            </article>
-                          ))
-                          : null}
+                        {checkoutOpenEntries.length > 0 ? (
+                          checkoutOpenEntries.map(({ table, item, openQuantity, unitTotal }) => {
+                            const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
+
+                            return (
+                              <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedQuantity > 0}
+                                    onChange={(event) =>
+                                      togglePaymentItem(item.id, event.target.checked, openQuantity)
+                                    }
+                                  />
+                                  <span>
+                                    <strong>{resolveProductName(state.products, item.productId)}</strong>
+                                    <small>
+                                      {table.name} · {courseLabels[item.category]} · offen {openQuantity}
+                                    </small>
+                                  </span>
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={openQuantity}
+                                  value={selectedQuantity}
+                                  onChange={(event) =>
+                                    setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
+                                  }
+                                />
+                                <strong>{euro(unitTotal * selectedQuantity)}</strong>
+                              </article>
+                            );
+                          })
+                        ) : (
+                          <div className="kiju-inline-panel">
+                            <span>Alle Positionen sind bezahlt.</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="kiju-review-actions">
@@ -1309,20 +1630,32 @@ export const WaiterWorkspace = () => {
                             </select>
                           </div>
                           <div className="kiju-inline-panel">
-                            <strong>Gesamtsumme</strong>
-                            <span>{euro(sessionTotal)}</span>
+                            <strong>Offen</strong>
+                            <span>{euro(checkoutOpenTotal)}</span>
                             <small>
-                              {usesSeatMode
-                                ? "Split nach Sitzplatz ist vorbereitet und kann weiter vertieft werden."
-                                : "Die Rechnung läuft gesammelt auf den ausgewählten Tisch."}
+                              {checkoutTableIds.length > 1
+                                ? `${checkoutTableIds.length} gekoppelte Tische`
+                                : `${euro(sessionTotal)} gesamt, ${euro(sessionOpenTotal)} offen am Tisch`}
                             </small>
+                          </div>
+                          <div className="kiju-inline-panel">
+                            <strong>Auswahl</strong>
+                            <span>{euro(selectedPaymentTotal)}</span>
+                            <small>{selectedPaymentLineItems.length} Positionen in dieser Zahlung</small>
                           </div>
                           <button
                             className="kiju-button kiju-button--primary"
-                            onClick={() => openReceiptPreview("print")}
-                            disabled={!!selectedSession?.receipt.printedAt}
+                            onClick={handleRecordPartialPayment}
+                            disabled={selectedPaymentLineItems.length === 0}
                           >
-                            Bon-Vorschau öffnen
+                            Auswahl bezahlt
+                          </button>
+                          <button
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("print", selectedPaymentLineItems)}
+                            disabled={selectedPaymentLineItems.length === 0}
+                          >
+                            Teil-Bon prüfen
                           </button>
                           <button
                             className="kiju-button kiju-button--secondary"
@@ -1333,8 +1666,8 @@ export const WaiterWorkspace = () => {
                           </button>
                           <button
                             className="kiju-button kiju-button--danger"
-                            onClick={() => actions.closeOrder(selectedTable.id, paymentMethod)}
-                            disabled={!selectedSession?.receipt.printedAt}
+                            onClick={handleClosePaidOrder}
+                            disabled={checkoutOpenTotal > 0}
                           >
                             {serviceLabels.closeOrder}
                           </button>
@@ -1357,9 +1690,9 @@ export const WaiterWorkspace = () => {
                               />
                             </div>
 
-                            {selectedSession ? (
+                            {receiptPreviewSession ? (
                               <ThermalReceiptPaper
-                                session={selectedSession}
+                                session={receiptPreviewSession}
                                 products={state.products}
                                 openedAt={receiptPreview.openedAt}
                               />
@@ -1385,7 +1718,7 @@ export const WaiterWorkspace = () => {
                         ) : null}
                       </div>
                     </div>
-                  ) : (
+                  ) : currentStep === "items" ? (
                     <>
                       {activeCourse === "drinks" && drinkSubcategories.length > 0 ? (
                         <div className="kiju-drink-group-tabs" aria-label="Getränkegruppen">
@@ -1582,19 +1915,46 @@ export const WaiterWorkspace = () => {
                         </button>
                       </div>
                     </>
+                  ) : (
+                    <div className="kiju-empty-state kiju-empty-state--compact">
+                      <strong>{selectedTable.name} ist ausgewählt</strong>
+                      <span>Prüfe den Tisch und gehe mit Weiter zur Bestellgruppe.</span>
+                    </div>
                   )}
                 </>
               ) : (
                 <div className="kiju-empty-state kiju-empty-state--compact">
-                  <strong>Kein Tisch angelegt</strong>
+                  <strong>Tisch auswählen</strong>
                   <span>
-                    Im Admin-Bereich kannst du neue Tische und Leistungen anlegen.
+                    Wähle zuerst einen Tisch im Raumplan oder in der Tischauswahl. Danach geht es mit Weiter zur Gruppe.
                   </span>
                 </div>
               )}
+              {isWaiterView ? (
+                <div className="kiju-wizard-footer">
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--secondary"
+                    onClick={goBack}
+                    disabled={currentStep === "table"}
+                  >
+                    Zurück
+                  </button>
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--primary"
+                    onClick={goNext}
+                    disabled={!canGoNext}
+                  >
+                    {nextButtonLabel}
+                  </button>
+                </div>
+              ) : null}
             </SectionCard>
           </section>
+          ) : null}
 
+          {!isWaiterView || !isOrderWizardOpen ? (
           <AccordionSection
             title={selectedTable ? "Tischzusammenfassung" : "Tischstatus"}
             eyebrow="Live für den gewählten Tisch"
@@ -1677,11 +2037,12 @@ export const WaiterWorkspace = () => {
               <p>Für diesen Tisch wurde noch keine Bestellung gestartet.</p>
             )}
           </AccordionSection>
+          ) : null}
         </div>
-        {receiptPreview && selectedSession ? (
+        {receiptPreview && receiptPreviewSession ? (
           <div className="kiju-print-root" aria-hidden="true">
             <ThermalReceiptPaper
-              session={selectedSession}
+              session={receiptPreviewSession}
               products={state.products}
               openedAt={receiptPreview.openedAt}
               className="kiju-receipt-paper--print"

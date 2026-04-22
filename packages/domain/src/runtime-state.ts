@@ -168,6 +168,8 @@ type LegacyOrderSession = Omit<OrderSession, "items" | "status"> & {
   status?: OrderSession["status"] | "hold";
   holdReason?: string;
   items: LegacyOrderItem[];
+  payments?: (OrderSession["payments"][number] & { lineItems?: OrderSession["payments"][number]["lineItems"] })[];
+  partyGroups?: OrderSession["partyGroups"];
 };
 
 const normalizeOrderTarget = (item: LegacyOrderItem): OrderTarget => {
@@ -201,20 +203,32 @@ const normalizeTables = (tables: AppState["tables"]) =>
 const normalizeSessions = (sessions: AppState["sessions"]) =>
   sessions.map((session) => {
     const legacySession = session as LegacyOrderSession;
-    const { holdReason: _legacyHoldReason, status, items, ...sessionFields } = legacySession;
+    const { holdReason: _legacyHoldReason, status, items, payments, partyGroups, ...sessionFields } =
+      legacySession;
+    const normalizedItems = items.map((item) => {
+      const legacyItem = item as LegacyOrderItem;
+      const { seatId: _legacySeatId, target: _legacyTarget, ...itemFields } = legacyItem;
+
+      return {
+        ...itemFields,
+        target: normalizeOrderTarget(legacyItem)
+      };
+    });
 
     return {
       ...sessionFields,
       status: normalizeSessionStatus(status),
-      items: items.map((item) => {
-        const legacyItem = item as LegacyOrderItem;
-        const { seatId: _legacySeatId, target: _legacyTarget, ...itemFields } = legacyItem;
-
-        return {
-          ...itemFields,
-          target: normalizeOrderTarget(legacyItem)
-        };
-      })
+      items: normalizedItems,
+      payments: (payments ?? []).map((payment) => ({
+        ...payment,
+        lineItems:
+          payment.lineItems ??
+          normalizedItems.map((item) => ({
+            itemId: item.id,
+            quantity: item.quantity
+          }))
+      })),
+      partyGroups: partyGroups ?? []
     };
   });
 
@@ -234,6 +248,12 @@ export const normalizeOperationalState = (state: AppState): AppState => {
     catalogVersion: SYSTEM_CATALOG_VERSION,
     serviceOrderMode: state.serviceOrderMode === "seat" ? "seat" : "table",
     designMode: state.designMode === "classic" ? "classic" : "modern",
+    linkedTableGroups: (state.linkedTableGroups ?? []).filter(
+      (group) =>
+        group.active &&
+        group.tableIds.length > 1 &&
+        group.tableIds.every((tableId) => !deletedTableIdSet.has(tableId))
+    ),
     deletedTableIds,
     deletedUserIds,
     users: mergeSeededUsers(state.users, deletedUserIdSet),
@@ -250,6 +270,7 @@ export const createDefaultOperationalState = (): AppState =>
   normalizeOperationalState({
     serviceOrderMode: "table",
     designMode: "modern",
+    linkedTableGroups: [],
     deletedTableIds: [],
     deletedUserIds: [],
     users: createSystemUsers(),

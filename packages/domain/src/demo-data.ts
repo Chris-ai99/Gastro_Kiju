@@ -345,6 +345,7 @@ export const demoSessions: OrderSession[] = [
       })
     },
     payments: [],
+    partyGroups: [],
     receipt: {}
   },
   {
@@ -374,6 +375,7 @@ export const demoSessions: OrderSession[] = [
       starter: createTicket("starter", "skipped")
     },
     payments: [],
+    partyGroups: [],
     receipt: {}
   },
   {
@@ -424,9 +426,14 @@ export const demoSessions: OrderSession[] = [
         id: "payment-closed-1",
         label: "Kartenzahlung",
         amountCents: 1010,
-        method: "card"
+        method: "card",
+        lineItems: [
+          { itemId: "item-closed-1", quantity: 1 },
+          { itemId: "item-closed-2", quantity: 1 }
+        ]
       }
     ],
+    partyGroups: [],
     receipt: {
       printedAt: "2026-03-27T16:47:00.000Z",
       closedAt: "2026-03-27T16:49:00.000Z"
@@ -437,6 +444,7 @@ export const demoSessions: OrderSession[] = [
 export const demoAppState: AppState = {
   serviceOrderMode: "table",
   designMode: "modern",
+  linkedTableGroups: [],
   users: demoUsers,
   tables: demoTables,
   products: demoProducts,

@@ -118,11 +118,27 @@ export interface CourseTicket {
   countdownMinutes: number;
 }
 
+export interface PaymentLineItem {
+  itemId: string;
+  quantity: number;
+}
+
 export interface PaymentSplit {
   id: string;
   label: string;
   amountCents: number;
   method: PaymentMethod;
+  lineItems: PaymentLineItem[];
+  tableIds?: string[];
+  groupId?: string;
+}
+
+export interface OrderPartyGroup {
+  id: string;
+  label: string;
+  itemIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ReceiptRecord {
@@ -140,6 +156,7 @@ export interface OrderSession {
   skippedCourses: CourseKey[];
   courseTickets: Record<CourseKey, CourseTicket>;
   payments: PaymentSplit[];
+  partyGroups: OrderPartyGroup[];
   receipt: ReceiptRecord;
 }
 
@@ -169,10 +186,19 @@ export interface AppNotification {
   read: boolean;
 }
 
+export interface LinkedTableGroup {
+  id: string;
+  label: string;
+  tableIds: string[];
+  active: boolean;
+  createdAt: string;
+}
+
 export interface AppState {
   catalogVersion?: number;
   serviceOrderMode: ServiceOrderMode;
   designMode: DesignMode;
+  linkedTableGroups: LinkedTableGroup[];
   deletedTableIds?: string[];
   deletedUserIds?: string[];
   users: UserAccount[];

@@ -1,6 +1,6 @@
 {
-  "version": 677,
-  "updatedAt": "2026-04-20T15:22:38.302Z",
+  "version": 687,
+  "updatedAt": "2026-04-22T17:25:16.998Z",
   "state": {
     "users": [
       {
@@ -554,7 +554,56 @@
         "modifierGroups": []
       }
     ],
-    "sessions": [],
+    "sessions": [
+      {
+        "id": "session-table-1-8ea70865-0f0c-4ec6-9d6a-50e00d041f46",
+        "tableId": "table-1",
+        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {},
+        "status": "serving",
+        "items": [
+          {
+            "id": "item-9dc46057-31f3-4957-b366-f3e91ac850d3",
+            "productId": "drink-cola",
+            "category": "drinks",
+            "quantity": 1,
+            "modifiers": [],
+            "target": {
+              "type": "table"
+            }
+          }
+        ],
+        "payments": [],
+        "partyGroups": []
+      }
+    ],
     "notifications": [
       {
         "id": "notification-8a058c98-3220-45e6-92c7-314fef95863b",
@@ -1699,6 +1748,7 @@
     "deletedUserIds": [
       "user-waiter-1"
     ],
-    "designMode": "classic"
+    "designMode": "classic",
+    "linkedTableGroups": []
   }
 }

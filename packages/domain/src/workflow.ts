@@ -4,6 +4,7 @@ import type {
   KitchenStatus,
   OrderItem,
   OrderSession,
+  PaymentLineItem,
   Product,
   SessionStatus,
   TableLayout
@@ -80,6 +81,63 @@ export const calculateItemTotal = (item: OrderItem, products: Product[]) => {
 
 export const calculateSessionTotal = (session: OrderSession | undefined, products: Product[]) =>
   session?.items.reduce((sum, item) => sum + calculateItemTotal(item, products), 0) ?? 0;
+
+export const calculatePaidItemQuantity = (session: OrderSession | undefined, itemId: string) => {
+  if (!session) return 0;
+
+  return session.payments.reduce(
+    (sum, payment) =>
+      sum +
+      payment.lineItems
+        .filter((lineItem) => lineItem.itemId === itemId)
+        .reduce((lineSum, lineItem) => lineSum + lineItem.quantity, 0),
+    0
+  );
+};
+
+export const calculateOpenItemQuantity = (session: OrderSession | undefined, item: OrderItem) =>
+  Math.max(0, item.quantity - calculatePaidItemQuantity(session, item.id));
+
+export const calculateLineItemsTotal = (
+  session: OrderSession | undefined,
+  products: Product[],
+  lineItems: PaymentLineItem[]
+) =>
+  lineItems.reduce((sum, lineItem) => {
+    const item = session?.items.find((entry) => entry.id === lineItem.itemId);
+    if (!item) return sum;
+
+    const quantity = Math.min(calculateOpenItemQuantity(session, item), Math.max(0, lineItem.quantity));
+    if (quantity <= 0) return sum;
+
+    return sum + Math.round((calculateItemTotal(item, products) / item.quantity) * quantity);
+  }, 0);
+
+export const calculateSessionPaidTotal = (session: OrderSession | undefined) =>
+  session?.payments.reduce((sum, payment) => sum + payment.amountCents, 0) ?? 0;
+
+export const calculateSessionOpenTotal = (session: OrderSession | undefined, products: Product[]) =>
+  Math.max(0, calculateSessionTotal(session, products) - calculateSessionPaidTotal(session));
+
+export const getOpenLineItems = (session: OrderSession | undefined) =>
+  session?.items
+    .map((item) => ({
+      item,
+      openQuantity: calculateOpenItemQuantity(session, item)
+    }))
+    .filter((entry) => entry.openQuantity > 0) ?? [];
+
+export const getLinkedTableGroupForTable = (state: AppState, tableId: string) =>
+  state.linkedTableGroups.find((group) => group.active && group.tableIds.includes(tableId));
+
+export const getCheckoutTableIds = (state: AppState, tableId: string) =>
+  getLinkedTableGroupForTable(state, tableId)?.tableIds ?? [tableId];
+
+export const getOpenTotalForTables = (state: AppState, tableIds: string[]) =>
+  tableIds.reduce((sum, tableId) => {
+    const session = getSessionForTable(state.sessions, tableId);
+    return sum + calculateSessionOpenTotal(session, state.products);
+  }, 0);
 
 export const calculateGuestCount = (session?: OrderSession) =>
   session ? new Set(session.items.map(getOrderTargetKey)).size : 0;

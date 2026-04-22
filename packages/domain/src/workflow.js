@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildClosedSessions = exports.buildDashboardSummary = exports.buildKitchenSummary = exports.calculateGuestCount = exports.calculateSessionTotal = exports.calculateItemTotal = exports.resolveSessionStatus = exports.getSeatItems = exports.getItemsForCourse = exports.getSessionForTable = exports.getProductById = exports.euro = exports.paymentLabels = exports.courseLabels = void 0;
+exports.buildClosedSessions = exports.buildDashboardSummary = exports.buildKitchenSummary = exports.calculateGuestCount = exports.getOpenTotalForTables = exports.getCheckoutTableIds = exports.getLinkedTableGroupForTable = exports.getOpenLineItems = exports.calculateSessionOpenTotal = exports.calculateSessionPaidTotal = exports.calculateLineItemsTotal = exports.calculateOpenItemQuantity = exports.calculatePaidItemQuantity = exports.calculateSessionTotal = exports.calculateItemTotal = exports.resolveSessionStatus = exports.getTableTargetItems = exports.getSeatItems = exports.getOrderTargetKey = exports.getItemsForCourse = exports.getSessionForTable = exports.getProductById = exports.euro = exports.paymentLabels = exports.courseLabels = void 0;
 exports.courseLabels = {
     drinks: "Getränke",
     starter: "Vorspeise",
@@ -23,8 +23,12 @@ const getSessionForTable = (sessions, tableId) => sessions.find((session) => ses
 exports.getSessionForTable = getSessionForTable;
 const getItemsForCourse = (session, course) => session?.items.filter((item) => item.category === course) ?? [];
 exports.getItemsForCourse = getItemsForCourse;
-const getSeatItems = (session, seatId) => session?.items.filter((item) => item.seatId === seatId) ?? [];
+const getOrderTargetKey = (item) => item.target?.type === "table" ? "table" : item.target?.seatId ?? item.seatId ?? "table";
+exports.getOrderTargetKey = getOrderTargetKey;
+const getSeatItems = (session, seatId) => session?.items.filter((item) => item.target?.type === "seat" && item.target.seatId === seatId) ?? [];
 exports.getSeatItems = getSeatItems;
+const getTableTargetItems = (session) => session?.items.filter((item) => item.target?.type === "table" || !item.target) ?? [];
+exports.getTableTargetItems = getTableTargetItems;
 const resolveSessionStatus = (table, session) => {
     if (table.plannedOnly && !table.active)
         return "planned";
@@ -52,7 +56,46 @@ const calculateItemTotal = (item, products) => {
 exports.calculateItemTotal = calculateItemTotal;
 const calculateSessionTotal = (session, products) => session?.items.reduce((sum, item) => sum + (0, exports.calculateItemTotal)(item, products), 0) ?? 0;
 exports.calculateSessionTotal = calculateSessionTotal;
-const calculateGuestCount = (session) => session ? new Set(session.items.map((item) => item.seatId)).size : 0;
+const calculatePaidItemQuantity = (session, itemId) => {
+    if (!session)
+        return 0;
+    return session.payments.reduce((sum, payment) => sum +
+        (payment.lineItems ?? []).filter((lineItem) => lineItem.itemId === itemId).reduce((lineSum, lineItem) => lineSum + lineItem.quantity, 0), 0);
+};
+exports.calculatePaidItemQuantity = calculatePaidItemQuantity;
+const calculateOpenItemQuantity = (session, item) => Math.max(0, item.quantity - (0, exports.calculatePaidItemQuantity)(session, item.id));
+exports.calculateOpenItemQuantity = calculateOpenItemQuantity;
+const calculateLineItemsTotal = (session, products, lineItems) => lineItems.reduce((sum, lineItem) => {
+    const item = session?.items.find((entry) => entry.id === lineItem.itemId);
+    if (!item)
+        return sum;
+    const quantity = Math.min((0, exports.calculateOpenItemQuantity)(session, item), Math.max(0, lineItem.quantity));
+    if (quantity <= 0)
+        return sum;
+    return sum + Math.round(((0, exports.calculateItemTotal)(item, products) / item.quantity) * quantity);
+}, 0);
+exports.calculateLineItemsTotal = calculateLineItemsTotal;
+const calculateSessionPaidTotal = (session) => session?.payments.reduce((sum, payment) => sum + payment.amountCents, 0) ?? 0;
+exports.calculateSessionPaidTotal = calculateSessionPaidTotal;
+const calculateSessionOpenTotal = (session, products) => Math.max(0, (0, exports.calculateSessionTotal)(session, products) - (0, exports.calculateSessionPaidTotal)(session));
+exports.calculateSessionOpenTotal = calculateSessionOpenTotal;
+const getOpenLineItems = (session) => session?.items
+    .map((item) => ({
+    item,
+    openQuantity: (0, exports.calculateOpenItemQuantity)(session, item)
+}))
+    .filter((entry) => entry.openQuantity > 0) ?? [];
+exports.getOpenLineItems = getOpenLineItems;
+const getLinkedTableGroupForTable = (state, tableId) => (state.linkedTableGroups ?? []).find((group) => group.active && group.tableIds.includes(tableId));
+exports.getLinkedTableGroupForTable = getLinkedTableGroupForTable;
+const getCheckoutTableIds = (state, tableId) => (0, exports.getLinkedTableGroupForTable)(state, tableId)?.tableIds ?? [tableId];
+exports.getCheckoutTableIds = getCheckoutTableIds;
+const getOpenTotalForTables = (state, tableIds) => tableIds.reduce((sum, tableId) => {
+    const session = (0, exports.getSessionForTable)(state.sessions, tableId);
+    return sum + (0, exports.calculateSessionOpenTotal)(session, state.products);
+}, 0);
+exports.getOpenTotalForTables = getOpenTotalForTables;
+const calculateGuestCount = (session) => session ? new Set(session.items.map(exports.getOrderTargetKey)).size : 0;
 exports.calculateGuestCount = calculateGuestCount;
 const buildKitchenSummary = (session, table, products) => {
     const courses = ["starter", "main", "dessert", "drinks"].map((course) => {
