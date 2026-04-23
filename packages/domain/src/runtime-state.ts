@@ -1,4 +1,13 @@
-import type { AppState, OrderItem, OrderSession, OrderTarget, Product, UserAccount } from "./types";
+import type {
+  AppState,
+  CourseKey,
+  KitchenTicketBatch,
+  OrderItem,
+  OrderSession,
+  OrderTarget,
+  Product,
+  UserAccount
+} from "./types";
 import { demoProducts, demoTables } from "./demo-data";
 
 const SYSTEM_CATALOG_VERSION = 1;
@@ -164,12 +173,13 @@ type LegacyOrderItem = Omit<OrderItem, "target"> & {
   seatId?: string;
 };
 
-type LegacyOrderSession = Omit<OrderSession, "items" | "status"> & {
+type LegacyOrderSession = Omit<OrderSession, "items" | "status" | "kitchenTicketBatches"> & {
   status?: OrderSession["status"] | "hold";
   holdReason?: string;
   items: LegacyOrderItem[];
   payments?: (OrderSession["payments"][number] & { lineItems?: OrderSession["payments"][number]["lineItems"] })[];
   partyGroups?: OrderSession["partyGroups"];
+  kitchenTicketBatches?: OrderSession["kitchenTicketBatches"];
 };
 
 const normalizeOrderTarget = (item: LegacyOrderItem): OrderTarget => {
@@ -191,6 +201,55 @@ const normalizeOrderTarget = (item: LegacyOrderItem): OrderTarget => {
 const normalizeSessionStatus = (status: LegacyOrderSession["status"]): OrderSession["status"] =>
   status === "hold" ? "serving" : status ?? "serving";
 
+const kitchenBatchCourses: CourseKey[] = ["starter", "main", "dessert"];
+
+const createLegacyKitchenTicketBatches = (
+  session: LegacyOrderSession,
+  normalizedItems: OrderItem[]
+): KitchenTicketBatch[] => {
+  const existingBatches = session.kitchenTicketBatches;
+  if (existingBatches?.length) {
+    return existingBatches
+      .map((batch) => ({
+        ...batch,
+        itemIds: batch.itemIds.filter((itemId) =>
+          normalizedItems.some((item) => item.id === itemId)
+        )
+      }))
+      .filter((batch) => batch.itemIds.length > 0);
+  }
+
+  return kitchenBatchCourses.flatMap((course) => {
+    const ticket = session.courseTickets[course];
+    if (!ticket?.sentAt || ticket.status === "not-recorded" || ticket.status === "skipped") {
+      return [];
+    }
+
+    const courseItems = normalizedItems.filter((item) => item.category === course);
+    const sentItems = courseItems.filter((item) => item.sentAt);
+    const itemIds = (sentItems.length > 0 ? sentItems : courseItems).map((item) => item.id);
+    if (itemIds.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        id: `${session.id}-${course}-batch-1`,
+        course,
+        itemIds,
+        status: ticket.status,
+        sentAt: ticket.sentAt,
+        releasedAt: ticket.releasedAt,
+        readyAt: ticket.readyAt,
+        completedAt: ticket.completedAt,
+        manualRelease: ticket.manualRelease,
+        countdownMinutes: ticket.countdownMinutes,
+        sequence: 1
+      }
+    ];
+  });
+};
+
 const normalizeTables = (tables: AppState["tables"]) =>
   tables.map((table) => ({
     ...table,
@@ -203,8 +262,15 @@ const normalizeTables = (tables: AppState["tables"]) =>
 const normalizeSessions = (sessions: AppState["sessions"]) =>
   sessions.map((session) => {
     const legacySession = session as LegacyOrderSession;
-    const { holdReason: _legacyHoldReason, status, items, payments, partyGroups, ...sessionFields } =
-      legacySession;
+    const {
+      holdReason: _legacyHoldReason,
+      status,
+      items,
+      payments,
+      partyGroups,
+      kitchenTicketBatches: _legacyKitchenTicketBatches,
+      ...sessionFields
+    } = legacySession;
     const normalizedItems = items.map((item) => {
       const legacyItem = item as LegacyOrderItem;
       const { seatId: _legacySeatId, target: _legacyTarget, ...itemFields } = legacyItem;
@@ -228,6 +294,7 @@ const normalizeSessions = (sessions: AppState["sessions"]) =>
             quantity: item.quantity
           }))
       })),
+      kitchenTicketBatches: createLegacyKitchenTicketBatches(legacySession, normalizedItems),
       partyGroups: partyGroups ?? []
     };
   });

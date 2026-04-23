@@ -118,6 +118,20 @@ export interface CourseTicket {
   countdownMinutes: number;
 }
 
+export interface KitchenTicketBatch {
+  id: string;
+  course: CourseKey;
+  itemIds: string[];
+  status: KitchenStatus;
+  sentAt: string;
+  releasedAt?: string;
+  readyAt?: string;
+  completedAt?: string;
+  manualRelease: boolean;
+  countdownMinutes: number;
+  sequence: number;
+}
+
 export interface PaymentLineItem {
   itemId: string;
   quantity: number;
@@ -155,6 +169,7 @@ export interface OrderSession {
   items: OrderItem[];
   skippedCourses: CourseKey[];
   courseTickets: Record<CourseKey, CourseTicket>;
+  kitchenTicketBatches: KitchenTicketBatch[];
   payments: PaymentSplit[];
   partyGroups: OrderPartyGroup[];
   receipt: ReceiptRecord;

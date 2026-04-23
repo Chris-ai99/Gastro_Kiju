@@ -64,6 +64,51 @@ describe("domain workflow", () => {
     expect(normalized.users.some((user) => user.id === "user-kitchen")).toBe(false);
   });
 
+  it("migrates sent kitchen courses into kitchen ticket batches", () => {
+    const legacyState = structuredClone(demoAppState) as any;
+    delete legacyState.sessions[0]!.kitchenTicketBatches;
+
+    const normalized = normalizeOperationalState(legacyState);
+    const session = getSessionForTable(normalized.sessions, "table-1")!;
+
+    expect(session.kitchenTicketBatches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          course: "starter",
+          itemIds: ["item-2"],
+          status: "completed",
+          sequence: 1
+        }),
+        expect.objectContaining({
+          course: "main",
+          itemIds: ["item-3"],
+          status: "countdown",
+          sequence: 1
+        })
+      ])
+    );
+  });
+
+  it("keeps unsent follow-up items out of migrated kitchen batches", () => {
+    const legacyState = structuredClone(demoAppState) as any;
+    const session = legacyState.sessions[2]!;
+    delete session.kitchenTicketBatches;
+    session.items.push({
+      id: "item-closed-follow-up",
+      target: { type: "seat", seatId: "table-5-seat-1" },
+      productId: "main-pizza-margherita",
+      category: "main",
+      quantity: 1,
+      modifiers: []
+    });
+
+    const normalized = normalizeOperationalState(legacyState);
+    const normalizedSession = normalized.sessions.find((entry) => entry.id === session.id)!;
+    const mainBatch = normalizedSession.kitchenTicketBatches.find((batch) => batch.course === "main");
+
+    expect(mainBatch?.itemIds).toEqual(["item-closed-2"]);
+  });
+
   it("calculates open totals after a partial payment", () => {
     const state = normalizeOperationalState(structuredClone(demoAppState));
     const session = getSessionForTable(state.sessions, "table-1")!;

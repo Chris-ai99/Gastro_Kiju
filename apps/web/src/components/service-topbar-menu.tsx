@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Menu, MoonStar, SunMedium, UserCog } from "lucide-react";
+import { Bell, Clock3, Menu, MoonStar, Printer, SunMedium, UserCog, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { routeConfig } from "@kiju/config";
@@ -15,14 +15,34 @@ const roleLabels: Record<Role, string> = {
   kitchen: "Küche"
 };
 
+type ServiceHistoryEntry = {
+  sessionId: string;
+  tableName: string;
+  closedAtLabel: string;
+  closedByName: string;
+  guestCountLabel: string;
+  totalLabel: string;
+  payments: {
+    id: string;
+    methodLabel: string;
+    amountLabel: string;
+    payerLabel: string;
+    label: string;
+  }[];
+};
+
 type ServiceTopbarMenuProps = {
   unreadNotifications: AppNotification[];
   onNotificationAction: (notification: AppNotification) => void;
+  historyEntries: ServiceHistoryEntry[];
+  onHistoryPrint: (sessionId: string) => void;
 };
 
 export const ServiceTopbarMenu = ({
   unreadNotifications,
-  onNotificationAction
+  onNotificationAction,
+  historyEntries,
+  onHistoryPrint
 }: ServiceTopbarMenuProps) => {
   const router = useRouter();
   const { currentUser, actions } = useDemoApp();
@@ -70,6 +90,67 @@ export const ServiceTopbarMenu = ({
                 </button>
               </article>
             ))
+          )}
+        </section>
+
+        <section className="kiju-service-menu-section">
+          <header>
+            <strong>Verlauf</strong>
+            <span>{historyEntries.length} abgeschlossen</span>
+          </header>
+          {historyEntries.length === 0 ? (
+            <div className="kiju-inline-panel">
+              <span>Noch keine abgerechneten Tische vorhanden.</span>
+            </div>
+          ) : (
+            <details className="kiju-service-history">
+              <summary className="kiju-service-history__summary">
+                <span>Abgerechnete Tische öffnen</span>
+                <strong>{historyEntries.length}</strong>
+              </summary>
+              <div className="kiju-service-history__list">
+                {historyEntries.slice(0, 12).map((entry) => (
+                  <article key={entry.sessionId} className="kiju-service-history-item">
+                    <div className="kiju-service-history-item__head">
+                      <div>
+                        <strong>{entry.tableName}</strong>
+                        <span>Service: {entry.closedByName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => onHistoryPrint(entry.sessionId)}
+                      >
+                        <Printer size={16} />
+                        Bon drucken
+                      </button>
+                    </div>
+                    <div className="kiju-service-history-item__meta">
+                      <span>
+                        <Clock3 size={14} />
+                        {entry.closedAtLabel}
+                      </span>
+                      <span>
+                        <Users size={14} />
+                        {entry.guestCountLabel}
+                      </span>
+                      <strong>{entry.totalLabel}</strong>
+                    </div>
+                    <div className="kiju-service-history-item__payments">
+                      {entry.payments.map((payment) => (
+                        <div key={payment.id} className="kiju-service-history-payment">
+                          <strong>{payment.amountLabel}</strong>
+                          <span>
+                            {payment.methodLabel} · {payment.payerLabel}
+                          </span>
+                          <small>{payment.label}</small>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </details>
           )}
         </section>
 

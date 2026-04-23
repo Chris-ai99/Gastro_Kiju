@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  calculatePaidItemQuantity,
   calculateGuestCount,
   calculateLineItemsTotal,
   calculateSessionOpenTotal,
@@ -19,6 +20,9 @@ import {
   type CourseKey,
   type CourseTicket,
   type DesignMode,
+  type KitchenStatus,
+  type KitchenTicketBatch,
+  type OrderItem,
   type OrderTarget,
   type OrderSession,
   type PaymentLineItem,
@@ -81,10 +85,10 @@ type DemoActions = {
     tableId: string,
     course: CourseKey
   ) => { ok: boolean; message?: string; ticketStatus?: CourseTicket["status"] | "ready" };
-  releaseCourse: (tableId: string, course: CourseKey) => void;
-  markCourseCompleted: (tableId: string, course: CourseKey) => void;
+  releaseCourse: (tableId: string, course: CourseKey, batchId?: string) => void;
+  markCourseCompleted: (tableId: string, course: CourseKey, batchId?: string) => void;
   printReceipt: (tableId: string) => void;
-  reprintReceipt: (tableId: string) => void;
+  reprintReceipt: (tableId: string, sessionId?: string) => void;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
   closePaidOrder: (tableId: string) => { ok: boolean; message?: string };
   recordPartialPayment: (
@@ -337,6 +341,85 @@ const createBaseTickets = (): Record<CourseKey, CourseTicket> => ({
   dessert: createBaseTicket("dessert")
 });
 
+const kitchenTicketStatusRank: Record<KitchenStatus, number> = {
+  ready: 0,
+  countdown: 1,
+  blocked: 2,
+  completed: 3,
+  skipped: 4,
+  "not-recorded": 5
+};
+
+const getKitchenBatchesForCourse = (session: OrderSession, course: CourseKey) =>
+  session.kitchenTicketBatches.filter((batch) => batch.course === course);
+
+const sortKitchenBatchesByNewest = (batches: KitchenTicketBatch[]) =>
+  [...batches].sort((left, right) => {
+    if (right.sequence !== left.sequence) return right.sequence - left.sequence;
+    return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
+  });
+
+const syncCourseTicketFromKitchenBatches = (session: OrderSession, course: CourseKey) => {
+  if (course === "drinks") return;
+
+  const batches = getKitchenBatchesForCourse(session, course);
+  if (batches.length === 0) {
+    const hasItems = session.items.some((item) => item.category === course);
+    if (!hasItems && !session.skippedCourses.includes(course)) {
+      session.courseTickets[course] = createBaseTicket(course);
+    }
+    return;
+  }
+
+  const activeBatch = [...batches]
+    .filter((batch) => batch.status !== "completed" && batch.status !== "skipped")
+    .sort((left, right) => {
+      const rankDelta = kitchenTicketStatusRank[left.status] - kitchenTicketStatusRank[right.status];
+      if (rankDelta !== 0) return rankDelta;
+      if (right.sequence !== left.sequence) return right.sequence - left.sequence;
+      return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
+    })[0];
+  const latestBatch = activeBatch ?? sortKitchenBatchesByNewest(batches)[0];
+  if (!latestBatch) return;
+
+  session.courseTickets[course] = {
+    course,
+    status: latestBatch.status,
+    sentAt: latestBatch.sentAt,
+    releasedAt: latestBatch.releasedAt,
+    readyAt: latestBatch.readyAt,
+    completedAt: latestBatch.completedAt,
+    manualRelease: latestBatch.manualRelease,
+    countdownMinutes: latestBatch.countdownMinutes
+  };
+};
+
+const createKitchenTicketBatch = (
+  session: OrderSession,
+  tableId: string,
+  course: CourseKey,
+  items: OrderSession["items"],
+  sentAt: string,
+  status: KitchenStatus
+): KitchenTicketBatch => {
+  const sequence = getKitchenBatchesForCourse(session, course).length + 1;
+  const ticket = session.courseTickets[course];
+
+  return {
+    id: createClientId(`kitchen-ticket-${tableId}-${course}`),
+    course,
+    itemIds: items.map((item) => item.id),
+    status,
+    sentAt,
+    releasedAt: sentAt,
+    readyAt: undefined,
+    completedAt: undefined,
+    manualRelease: false,
+    countdownMinutes: ticket.countdownMinutes || kitchenRules.releaseCountdownMinutes,
+    sequence
+  };
+};
+
 const tableOrderTarget: OrderTarget = { type: "table" };
 
 const resolveOrderTargetForTable = (
@@ -363,6 +446,7 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
   items: [],
   skippedCourses: [],
   courseTickets: createBaseTickets(),
+  kitchenTicketBatches: [],
   payments: [],
   partyGroups: [],
   receipt: {}
@@ -583,11 +667,125 @@ const summarizeCourseItems = (items: OrderSession["items"], products: Product[])
 
   return `${labels.slice(0, 4).join(", ")} und ${labels.length - 4} weitere Positionen`;
 };
+
+const resolveItemTargetLabel = (item: OrderItem, table?: TableLayout) => {
+  const target = item.target;
+  if (target.type === "table") {
+    return "Tisch";
+  }
+
+  return table?.seats.find((seat) => seat.id === target.seatId)?.label ?? "Sitzplatz";
+};
+
+const formatItemCorrectionSummary = (
+  item: Pick<OrderItem, "productId" | "quantity" | "note" | "target">,
+  products: Product[],
+  table?: TableLayout
+) => {
+  const parts = [`${item.quantity}x ${resolveProductName(products, item.productId)}`];
+  if (item.note?.trim()) {
+    parts.push(`(${item.note.trim()})`);
+  }
+
+  parts.push(`· ${resolveItemTargetLabel(item as OrderItem, table)}`);
+  return parts.join(" ");
+};
+
+const canReviseSentItem = (session: OrderSession, item: OrderItem) => {
+  if (!item.sentAt) return false;
+  if (item.servedAt) return false;
+  if (item.category !== "drinks" && item.preparedAt) return false;
+
+  return calculatePaidItemQuantity(session, item.id) === 0;
+};
+
+const syncOpenDrinkNotifications = (
+  state: AppState,
+  session: OrderSession,
+  tableId: string,
+  table?: TableLayout
+) => {
+  const activeDrinkItems = session.items.filter(
+    (item) => item.category === "drinks" && item.sentAt && !item.servedAt
+  );
+  const activeDrinkItemIds = new Set(activeDrinkItems.map((item) => item.id));
+  const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+
+  state.notifications.forEach((notification) => {
+    if (
+      notification.tableId !== tableId ||
+      (notification.kind !== "service-drinks" && notification.kind !== "service-drinks-accepted")
+    ) {
+      return;
+    }
+
+    const notificationItemIds = notification.itemIds ?? [];
+    const remainingItemIds = notificationItemIds.filter((itemId) => activeDrinkItemIds.has(itemId));
+    if (remainingItemIds.length === 0) {
+      notification.read = true;
+      return;
+    }
+
+    notification.itemIds = remainingItemIds;
+    const remainingItems = activeDrinkItems.filter((item) => remainingItemIds.includes(item.id));
+    notification.body = `${tableName}: ${summarizeServiceItems(remainingItems, state.products, table)}.`;
+  });
+};
+
+const notifySentItemCorrection = (
+  state: AppState,
+  tableId: string,
+  nextItem: OrderItem | null,
+  previousItem: Pick<OrderItem, "category" | "productId" | "quantity" | "note" | "target">,
+  action: "updated" | "removed"
+) => {
+  const table = state.tables.find((entry) => entry.id === tableId);
+  const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+  const course = previousItem.category;
+  const previousLabel = formatItemCorrectionSummary(previousItem, state.products, table);
+  const nextLabel = nextItem ? formatItemCorrectionSummary(nextItem, state.products, table) : null;
+  const targetRoles = course === "drinks" ? (["waiter"] as const) : (["kitchen", "waiter"] as const);
+
+  withNotification(state, {
+    title:
+      action === "removed"
+        ? `${courseLabels[course]} storniert`
+        : `${courseLabels[course]} korrigiert`,
+    body:
+      action === "removed"
+        ? `${tableName}: ${previousLabel} wurde storniert.`
+        : `${tableName}: ${previousLabel} wurde geändert zu ${nextLabel}.`,
+    tone: action === "removed" ? "alert" : "info",
+    tableId,
+    targetRoles: [...targetRoles]
+  });
+
+  if (course === "drinks") {
+    const session = getSessionForTable(state.sessions, tableId);
+    if (session) {
+      syncOpenDrinkNotifications(state, session, tableId, table);
+    }
+  }
+};
+
 const normalizeSessionAfterItemRemoval = (session: OrderSession) => {
+  const itemIds = new Set(session.items.map((item) => item.id));
+  session.kitchenTicketBatches = session.kitchenTicketBatches
+    .map((batch) => ({
+      ...batch,
+      itemIds: batch.itemIds.filter((itemId) => itemIds.has(itemId))
+    }))
+    .filter((batch) => batch.itemIds.length > 0);
+
   for (const course of serviceCourseOrder) {
     const hasItems = session.items.some((item) => item.category === course);
     if (!hasItems && !session.skippedCourses.includes(course)) {
       session.courseTickets[course] = createBaseTicket(course);
+      continue;
+    }
+
+    if (course !== "drinks") {
+      syncCourseTicketFromKitchenBatches(session, course);
     }
   }
 };
@@ -1103,6 +1301,16 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const item = session.items.find((entry) => entry.id === itemId);
       if (!item) return;
+      const previousItem = item.sentAt
+        ? {
+            category: item.category,
+            productId: item.productId,
+            quantity: item.quantity,
+            note: item.note,
+            target: structuredClone(item.target)
+          }
+        : null;
+      if (item.sentAt && !canReviseSentItem(session, item)) return;
 
       if (patch.target !== undefined) {
         item.target = resolveOrderTargetForTable(table, patch.target);
@@ -1117,6 +1325,19 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         item.note = note ? note : undefined;
       }
 
+      const changed =
+        !previousItem ||
+        previousItem.quantity !== item.quantity ||
+        previousItem.note !== item.note ||
+        JSON.stringify(previousItem.target) !== JSON.stringify(item.target);
+      if (!changed) {
+        return;
+      }
+
+      if (previousItem) {
+        notifySentItemCorrection(next, tableId, item, previousItem, "updated");
+      }
+
       commit(next);
     },
     [commit, state]
@@ -1128,8 +1349,23 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const session = getSessionForTable(next.sessions, tableId);
       if (!session || session.status === "closed") return;
 
+      const item = session.items.find((entry) => entry.id === itemId);
+      if (!item) return;
+      if (item.sentAt && !canReviseSentItem(session, item)) return;
+      const previousItem = {
+        category: item.category,
+        productId: item.productId,
+        quantity: item.quantity,
+        note: item.note,
+        target: structuredClone(item.target)
+      };
+
       session.items = session.items.filter((entry) => entry.id !== itemId);
       normalizeSessionAfterItemRemoval(session);
+
+      if (item.sentAt) {
+        notifySentItemCorrection(next, tableId, null, previousItem, "removed");
+      }
 
       if (session.items.length === 0) {
         next.sessions = next.sessions.filter((entry) => entry.id !== session.id);
@@ -1181,22 +1417,18 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         };
       }
 
-      const courseItems = session.items.filter((item) => item.category === course);
-      if (courseItems.length === 0) {
+      const pendingCourseItems = session.items.filter(
+        (item) => item.category === course && !item.sentAt
+      );
+      if (pendingCourseItems.length === 0) {
         return {
           ok: false,
-          message: `Für ${courseLabels[course]} wurden noch keine Positionen erfasst.`
+          message: `Für ${courseLabels[course]} gibt es keine neuen Positionen.`
         };
       }
 
       const normalizedMinutes = Math.min(180, Math.max(1, Math.round(minutes)));
       const ticket = session.courseTickets[course];
-      if (ticket.status === "completed" || ticket.status === "skipped") {
-        return {
-          ok: false,
-          message: `${courseLabels[course]} ist bereits abgeschlossen oder übersprungen.`
-        };
-      }
       const now = new Date().toISOString();
 
       ticket.status = "countdown";
@@ -1232,42 +1464,36 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         };
       }
 
-      const courseItems = session.items.filter((item) => item.category === course);
       const kitchenCourseItems = kitchenCourseOrder
         .map((kitchenCourse) => ({
           course: kitchenCourse,
-          items: session.items.filter((item) => item.category === kitchenCourse)
+          items: session.items.filter(
+            (item) => item.category === kitchenCourse && !item.sentAt
+          )
         }))
-        .filter(({ course: kitchenCourse, items }) => {
-          const ticket = session.courseTickets[kitchenCourse];
-          return (
-            items.length > 0 &&
-            ticket.status !== "completed" &&
-            ticket.status !== "skipped"
-          );
-        });
+        .filter(({ items }) => items.length > 0);
 
-      if (course === "drinks" && courseItems.length === 0 && !session.skippedCourses.includes(course)) {
-        return {
-          ok: false,
-          message: `Für ${courseLabels[course]} wurden noch keine Positionen erfasst.`
-        };
-      }
-
-      if (course !== "drinks" && kitchenCourseItems.length === 0) {
-        return {
-          ok: false,
-          message: "Für diesen Tisch wurden noch keine offenen Speisen erfasst."
-        };
-      }
-
-      const ticket = session.courseTickets[course];
       const sentAt = new Date().toISOString();
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
       const pendingDrinkItems = session.items.filter(
         (item) => item.category === "drinks" && !item.sentAt
       );
+
+      if (course === "drinks" && pendingDrinkItems.length === 0) {
+        return {
+          ok: false,
+          message: `Für ${courseLabels[course]} gibt es keine neuen Positionen.`
+        };
+      }
+
+      if (course !== "drinks" && kitchenCourseItems.length === 0) {
+        return {
+          ok: false,
+          message: "Für diesen Tisch gibt es keine neuen Speisen für die Küche."
+        };
+      }
+
       const sendPendingDrinksToService = () => {
         if (pendingDrinkItems.length === 0) return false;
 
@@ -1279,6 +1505,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         pendingDrinkItems.forEach((item) => {
           item.sentAt = sentAt;
         });
+        session.skippedCourses = session.skippedCourses.filter((entry) => entry !== "drinks");
 
         withNotification(next, {
           kind: "service-drinks",
@@ -1294,18 +1521,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       };
 
       if (course === "drinks") {
-        ticket.sentAt = sentAt;
-        courseItems.forEach((item) => {
-          item.sentAt = sentAt;
-        });
         sendPendingDrinksToService();
         session.status = "waiting";
         emitOperatorFeedback();
         commit(next);
         return {
           ok: true,
-          message: "Getränke wurden gespeichert und an alle im Service gemeldet.",
-          ticketStatus: ticket.status
+          message: "Neue Getränke wurden gespeichert und an alle im Service gemeldet.",
+          ticketStatus: session.courseTickets.drinks.status
         };
       }
 
@@ -1316,29 +1539,40 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       kitchenCourseItems.forEach(({ course: kitchenCourse, items }) => {
         const kitchenTicket = session.courseTickets[kitchenCourse];
         const shouldWait = kitchenTicket.status === "countdown";
-        kitchenTicket.sentAt = sentAt;
-        kitchenTicket.releasedAt = sentAt;
-        kitchenTicket.readyAt = undefined;
-        kitchenTicket.completedAt = undefined;
-        kitchenTicket.manualRelease = false;
-        kitchenTicket.status = shouldWait ? "countdown" : "ready";
+        const batchStatus: KitchenStatus = shouldWait ? "countdown" : "ready";
+        const batch = createKitchenTicketBatch(
+          session,
+          tableId,
+          kitchenCourse,
+          items,
+          sentAt,
+          batchStatus
+        );
+        session.kitchenTicketBatches.push(batch);
 
         items.forEach((item) => {
           item.sentAt = sentAt;
         });
+        session.skippedCourses = session.skippedCourses.filter((entry) => entry !== kitchenCourse);
 
-        sentKitchenCourseLabels.push(courseLabels[kitchenCourse]);
+        syncCourseTicketFromKitchenBatches(session, kitchenCourse);
+
+        const batchLabel =
+          batch.sequence > 1
+            ? `${courseLabels[kitchenCourse]} · Nachbestellung ${batch.sequence}`
+            : courseLabels[kitchenCourse];
+        sentKitchenCourseLabels.push(batchLabel);
         if (shouldWait) {
-          waitingKitchenCourseLabels.push(courseLabels[kitchenCourse]);
+          waitingKitchenCourseLabels.push(batchLabel);
         }
 
         withNotification(next, {
           title: shouldWait
-            ? `${courseLabels[kitchenCourse]} wartet`
-            : `${courseLabels[kitchenCourse]} gesendet`,
+            ? `${batchLabel} wartet`
+            : `${batchLabel} gesendet`,
           body: shouldWait
-            ? `${tableName}: ${courseLabels[kitchenCourse]} wartet ${kitchenTicket.countdownMinutes} Minuten, bevor die Küche startet.`
-            : `${tableName} wartet auf die ${courseLabels[kitchenCourse].toLowerCase()}.`,
+            ? `${tableName}: ${batchLabel} wartet ${batch.countdownMinutes} Minuten, bevor die Küche startet.`
+            : `${tableName} wartet auf ${batchLabel.toLowerCase()}.`,
           tone: "info",
           tableId
         });
@@ -1366,10 +1600,30 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const releaseCourse = useCallback(
-    (tableId: string, course: CourseKey) => {
+    (tableId: string, course: CourseKey, batchId?: string) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
       if (!session) return;
+
+      const batch = batchId
+        ? session.kitchenTicketBatches.find((entry) => entry.id === batchId)
+        : sortKitchenBatchesByNewest(
+            getKitchenBatchesForCourse(session, course).filter(
+              (entry) => entry.status === "countdown"
+            )
+          )[0];
+
+      if (batch) {
+        if (batch.course !== course || batch.status !== "countdown") return;
+
+        batch.status = "ready";
+        batch.manualRelease = true;
+        batch.readyAt = new Date().toISOString();
+        syncCourseTicketFromKitchenBatches(session, course);
+        emitOperatorFeedback();
+        commit(next);
+        return;
+      }
 
       const ticket = session.courseTickets[course];
       if (!ticket.sentAt || ticket.status === "completed" || ticket.status === "skipped") {
@@ -1386,7 +1640,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const markCourseCompleted = useCallback(
-    (tableId: string, course: CourseKey) => {
+    (tableId: string, course: CourseKey, batchId?: string) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
       if (!session) return;
@@ -1395,17 +1649,37 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const ticket = session.courseTickets[course];
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
-      const courseItems = session.items.filter((item) => item.category === course);
-      if (ticket.status !== "ready") {
+      const batch = batchId
+        ? session.kitchenTicketBatches.find((entry) => entry.id === batchId)
+        : sortKitchenBatchesByNewest(
+            getKitchenBatchesForCourse(session, course).filter((entry) => entry.status === "ready")
+          )[0];
+      const batchItemIds = new Set(batch?.itemIds);
+      const courseItems = batch
+        ? session.items.filter((item) => batchItemIds.has(item.id))
+        : session.items.filter((item) => item.category === course);
+
+      if (batch && (batch.course !== course || batch.status !== "ready")) {
         return;
       }
 
-      ticket.status = "completed";
-      ticket.completedAt = completedAt;
+      if (!batch && ticket.status !== "ready") {
+        return;
+      }
+
+      if (batch) {
+        batch.status = "completed";
+        batch.completedAt = completedAt;
+      } else {
+        ticket.status = "completed";
+        ticket.completedAt = completedAt;
+      }
 
       courseItems.forEach((item) => {
         item.preparedAt = completedAt;
       });
+
+      syncCourseTicketFromKitchenBatches(session, course);
 
       if (course === "dessert" || course === "main") {
         session.status = "ready-to-bill";
@@ -1449,9 +1723,22 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const reprintReceipt = useCallback(
-    (tableId: string) => {
+    (tableId: string, sessionId?: string) => {
       const next = structuredClone(state);
-      const session = getSessionForTable(next.sessions, tableId);
+      const session =
+        (sessionId
+          ? next.sessions.find((entry) => entry.id === sessionId)
+          : undefined) ??
+        getSessionForTable(next.sessions, tableId) ??
+        [...next.sessions]
+          .filter((entry) => entry.tableId === tableId)
+          .sort((left, right) => {
+            const leftClosedAt = Date.parse(left.receipt.closedAt ?? left.receipt.printedAt ?? "0");
+            const rightClosedAt = Date.parse(
+              right.receipt.closedAt ?? right.receipt.printedAt ?? "0"
+            );
+            return rightClosedAt - leftClosedAt;
+          })[0];
       if (!session) return;
 
       session.receipt.printedAt ??= new Date().toISOString();
@@ -2480,6 +2767,52 @@ export const useDemoApp = () => {
 };
 
 export const resolveCourseStatus = (session: OrderSession | undefined, course: CourseKey) => {
+  const unsentItems = session?.items.filter((item) => item.category === course && !item.sentAt) ?? [];
+  if (unsentItems.length > 0) {
+    return {
+      status: "not-recorded" as const,
+      minutesLeft: 0
+    };
+  }
+
+  if (session && course !== "drinks") {
+    const batches = getKitchenBatchesForCourse(session, course);
+    if (batches.length > 0) {
+      const activeBatch = [...batches]
+        .filter((batch) => batch.status !== "completed" && batch.status !== "skipped")
+        .sort((left, right) => {
+          const rankDelta = kitchenTicketStatusRank[left.status] - kitchenTicketStatusRank[right.status];
+          if (rankDelta !== 0) return rankDelta;
+          if (right.sequence !== left.sequence) return right.sequence - left.sequence;
+          return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
+        })[0];
+      const latestBatch = activeBatch ?? sortKitchenBatchesByNewest(batches)[0];
+
+      if (latestBatch?.status !== "countdown") {
+        return {
+          status: latestBatch?.status ?? ("not-recorded" as const),
+          minutesLeft: 0
+        };
+      }
+
+      const waitMinutes = Math.max(1, latestBatch.countdownMinutes || 1);
+      const waitStartedAt = latestBatch.releasedAt ?? latestBatch.sentAt;
+      const startTime = new Date(waitStartedAt).getTime();
+      if (!Number.isFinite(startTime)) {
+        return {
+          status: "countdown" as const,
+          minutesLeft: waitMinutes
+        };
+      }
+
+      const deadline = startTime + waitMinutes * 60 * 1000;
+      return {
+        status: "countdown" as const,
+        minutesLeft: Math.max(0, Math.ceil((deadline - Date.now()) / 60000))
+      };
+    }
+  }
+
   const ticket = session?.courseTickets[course];
   if (!ticket) {
     return {

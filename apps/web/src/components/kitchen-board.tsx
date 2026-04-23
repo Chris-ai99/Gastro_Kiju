@@ -14,7 +14,6 @@ import {
 import { routeConfig } from "@kiju/config";
 import {
   courseLabels,
-  getItemsForCourse,
   getProductById,
   getSessionForTable,
   type CourseKey,
@@ -22,11 +21,10 @@ import {
   type Product
 } from "@kiju/domain";
 
-import { resolveCourseStatus, useDemoApp } from "../lib/app-state";
+import { useDemoApp } from "../lib/app-state";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
 
-const ticketCourses: CourseKey[] = ["starter", "main", "dessert"];
 const MAX_VISIBLE_TICKETS = 7;
 
 const ticketStatusLabels = {
@@ -169,9 +167,7 @@ export const KitchenBoard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [kitchenClock, setKitchenClock] = useState(() => Date.now());
   const hasWaitingTickets = state.sessions.some((session) =>
-    Object.values(session.courseTickets).some(
-      (ticket) => ticket.status === "countdown" && Boolean(ticket.sentAt)
-    )
+    session.kitchenTicketBatches.some((ticket) => ticket.status === "countdown")
   );
 
   useEffect(() => {
@@ -191,15 +187,14 @@ export const KitchenBoard = () => {
       const session = getSessionForTable(state.sessions, table.id);
       if (!session) return [];
 
-      return ticketCourses.flatMap((course) => {
-        const courseTicket = session.courseTickets[course];
-        if (!courseTicket.sentAt) {
+      return session.kitchenTicketBatches.flatMap((courseTicket) => {
+        if (!courseTicket.sentAt || courseTicket.status === "not-recorded" || courseTicket.status === "skipped") {
           return [];
         }
 
-        const items = getItemsForCourse(session, course);
-        const resolved = resolveCourseStatus(session, course);
-        if (resolved.status === "not-recorded" || resolved.status === "skipped") {
+        const ticketItemIds = new Set(courseTicket.itemIds);
+        const items = session.items.filter((item) => ticketItemIds.has(item.id));
+        if (items.length === 0) {
           return [];
         }
 
@@ -217,24 +212,28 @@ export const KitchenBoard = () => {
         });
 
         const ticketStatus =
-          resolved.status === "completed" ||
-          resolved.status === "ready" ||
-          resolved.status === "countdown" ||
-          resolved.status === "blocked"
-            ? resolved.status
+          courseTicket.status === "completed" ||
+          courseTicket.status === "ready" ||
+          courseTicket.status === "countdown" ||
+          courseTicket.status === "blocked"
+            ? courseTicket.status
             : "ready";
         const waitDisplay =
           ticketStatus === "countdown"
             ? resolveWaitDisplay(courseTicket, kitchenClock)
             : undefined;
+        const courseLabel =
+          courseTicket.sequence > 1
+            ? `${courseLabels[courseTicket.course]} · Nachbestellung ${courseTicket.sequence}`
+            : courseLabels[courseTicket.course];
 
         const ticket: KitchenTicket = {
-          id: `${table.id}-${course}`,
+          id: courseTicket.id,
           ticketNumber,
           tableId: table.id,
           tableName: table.name,
-          course,
-          courseLabel: courseLabels[course],
+          course: courseTicket.course,
+          courseLabel,
           sentAt: courseTicket.sentAt,
           completedAt: courseTicket.completedAt,
           status: ticketStatus,
@@ -378,7 +377,7 @@ export const KitchenBoard = () => {
             <button
               type="button"
               className="kiju-pass-ticket__action"
-              onClick={() => actions.markCourseCompleted(ticket.tableId, ticket.course)}
+              onClick={() => actions.markCourseCompleted(ticket.tableId, ticket.course, ticket.id)}
               disabled={!canMarkCompleted}
               aria-label={
                 canMarkCompleted
@@ -393,7 +392,7 @@ export const KitchenBoard = () => {
             <button
               type="button"
               className="kiju-pass-ticket__action kiju-pass-ticket__action--wait"
-              onClick={() => actions.releaseCourse(ticket.tableId, ticket.course)}
+              onClick={() => actions.releaseCourse(ticket.tableId, ticket.course, ticket.id)}
               aria-label={
                 ticket.waitExpired
                   ? `Wartezeit für ${ticket.courseLabel} an ${ticket.tableName} bestätigen`

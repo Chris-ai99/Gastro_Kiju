@@ -598,7 +598,7 @@ export const AdminPanel = () => {
     });
 
     if (mode === "reprint") {
-      actions.reprintReceipt(session.tableId);
+      actions.reprintReceipt(session.tableId, session.id);
     } else {
       actions.printReceipt(session.tableId);
     }

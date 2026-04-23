@@ -4,6 +4,7 @@ import type {
   AppState,
   CourseKey,
   CourseTicket,
+  KitchenTicketBatch,
   ModifierGroup,
   OrderSession,
   Product,
@@ -290,6 +291,26 @@ const baseCourseTickets = () =>
     dessert: createTicket("dessert", "not-recorded")
   }) satisfies Record<CourseKey, CourseTicket>;
 
+const createKitchenBatch = (
+  id: string,
+  course: CourseKey,
+  itemIds: string[],
+  ticket: CourseTicket,
+  sequence = 1
+): KitchenTicketBatch => ({
+  id,
+  course,
+  itemIds,
+  status: ticket.status,
+  sentAt: ticket.sentAt ?? now,
+  releasedAt: ticket.releasedAt,
+  readyAt: ticket.readyAt,
+  completedAt: ticket.completedAt,
+  manualRelease: ticket.manualRelease,
+  countdownMinutes: ticket.countdownMinutes,
+  sequence
+});
+
 export const demoSessions: OrderSession[] = [
   {
     id: "session-table-1",
@@ -344,6 +365,26 @@ export const demoSessions: OrderSession[] = [
         releasedAt: "2026-03-27T18:44:00.000Z"
       })
     },
+    kitchenTicketBatches: [
+      createKitchenBatch(
+        "kitchen-ticket-table-1-starter-1",
+        "starter",
+        ["item-2"],
+        createTicket("starter", "completed", {
+          sentAt: now,
+          completedAt: "2026-03-27T18:37:00.000Z"
+        })
+      ),
+      createKitchenBatch(
+        "kitchen-ticket-table-1-main-1",
+        "main",
+        ["item-3"],
+        createTicket("main", "countdown", {
+          sentAt: "2026-03-27T18:44:00.000Z",
+          releasedAt: "2026-03-27T18:44:00.000Z"
+        })
+      )
+    ],
     payments: [],
     partyGroups: [],
     receipt: {}
@@ -374,6 +415,7 @@ export const demoSessions: OrderSession[] = [
       }),
       starter: createTicket("starter", "skipped")
     },
+    kitchenTicketBatches: [],
     payments: [],
     partyGroups: [],
     receipt: {}
@@ -421,6 +463,18 @@ export const demoSessions: OrderSession[] = [
       }),
       dessert: createTicket("dessert", "skipped")
     },
+    kitchenTicketBatches: [
+      createKitchenBatch(
+        "kitchen-ticket-table-5-main-1",
+        "main",
+        ["item-closed-2"],
+        createTicket("main", "completed", {
+          sentAt: "2026-03-27T16:28:00.000Z",
+          releasedAt: "2026-03-27T16:28:00.000Z",
+          completedAt: "2026-03-27T16:42:00.000Z"
+        })
+      )
+    ],
     payments: [
       {
         id: "payment-closed-1",

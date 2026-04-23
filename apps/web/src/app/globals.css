@@ -1183,6 +1183,101 @@ button {
   flex: 0 0 auto;
 }
 
+.kiju-overview-fusion-panel {
+  display: grid;
+}
+
+.kiju-overview-fusion-panel > .kiju-card {
+  border-radius: 8px;
+}
+
+.kiju-linked-table-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.kiju-linked-table-list .kiju-inline-panel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.kiju-linked-table-list .kiju-inline-panel span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.kiju-table-action-overlay {
+  z-index: 75;
+}
+
+.kiju-table-action-dialog {
+  width: min(760px, calc(100vw - 2rem));
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.6rem);
+  border: 1px solid rgba(8, 145, 178, 0.34);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.34);
+}
+
+.kiju-table-action-dialog h2,
+.kiju-table-action-dialog p {
+  margin: 0;
+}
+
+.kiju-table-action-dialog p {
+  color: var(--muted);
+}
+
+.kiju-table-action-summary,
+.kiju-table-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kiju-table-action-summary > div,
+.kiju-table-action-choice {
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.kiju-table-action-summary > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.8rem 0.9rem;
+}
+
+.kiju-table-action-summary span,
+.kiju-table-action-choice span {
+  color: var(--muted);
+}
+
+.kiju-table-action-choice {
+  min-height: 132px;
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+  padding: 1rem;
+  color: var(--slate);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.kiju-table-action-choice:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(8, 145, 178, 0.75);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+}
+
+.kiju-table-action-choice:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .kiju-order-wizard-modal > .kiju-steps {
   grid-row: 3;
   grid-template-columns: repeat(var(--kiju-step-count, 7), minmax(7.5rem, 1fr));
@@ -1385,6 +1480,16 @@ button {
   min-width: 9rem;
   min-height: 46px;
   border-radius: 8px;
+}
+
+.kiju-wizard-footer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.kiju-wizard-footer__actions .kiju-button:only-child {
+  flex: 0 0 auto;
 }
 
 .kiju-wizard-footer__status {
@@ -1908,6 +2013,10 @@ button {
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
+.kiju-order-item-card.is-sent {
+  background: color-mix(in srgb, var(--surface) 88%, var(--success-soft));
+}
+
 .kiju-order-item-card__main {
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(92px, 0.55fr) auto auto;
@@ -1919,6 +2028,7 @@ button {
   display: grid;
   gap: 0.08rem;
   min-width: 0;
+  justify-items: start;
 }
 
 .kiju-order-item-card__title strong {
@@ -2030,6 +2140,31 @@ button {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding-right: 0.65rem;
+}
+
+.kiju-order-editor__groups,
+.kiju-order-editor__group {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.kiju-order-editor__group + .kiju-order-editor__group {
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  padding-top: 0.7rem;
+}
+
+.kiju-order-editor__group-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.kiju-order-editor__group-title strong {
+  color: var(--foreground);
+  font-size: 0.9rem;
 }
 
 .kiju-inline-field--compact,
@@ -2783,8 +2918,7 @@ html[data-theme="dark"] .kiju-kitchen-refresh-indicator {
   width: min(430px, calc(100vw - 2rem));
   max-height: min(72vh, 620px);
   overflow-y: auto;
-  display: flex;
-  flex-direction: column-reverse;
+  display: grid;
   gap: 0.75rem;
   padding: 0.1rem;
 }
@@ -2841,6 +2975,64 @@ html[data-theme="dark"] .kiju-kitchen-refresh-indicator {
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.kiju-service-drink-popup-more {
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14);
+}
+
+.kiju-service-drink-popup-more summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  color: var(--deep-navy);
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+}
+
+.kiju-service-drink-popup-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.kiju-service-drink-popup-more > div {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0 0.65rem 0.65rem;
+}
+
+.kiju-service-drink-popup-more button {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--slate);
+  text-align: left;
+}
+
+.kiju-service-drink-popup-more button span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.kiju-service-more-badge {
+  flex: 0 0 auto;
+  padding: 0.38rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(8, 145, 178, 0.12);
+  color: var(--deep-navy);
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .kiju-service-drink-delivery {
@@ -3012,6 +3204,100 @@ html[data-theme="dark"] .kiju-kitchen-refresh-indicator {
 .kiju-service-menu-section + .kiju-service-menu-section {
   padding-top: 0.85rem;
   border-top: 1px solid rgba(203, 213, 225, 0.75);
+}
+
+.kiju-service-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kiju-service-history__summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.8rem 0.95rem;
+  border-radius: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: var(--surface);
+  font-weight: 700;
+}
+
+.kiju-service-history__summary::-webkit-details-marker {
+  display: none;
+}
+
+.kiju-service-history__summary strong {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--deep-navy);
+  font-size: 0.82rem;
+}
+
+.kiju-service-history__list {
+  display: grid;
+  gap: 0.7rem;
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.kiju-service-history-item {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: var(--surface);
+}
+
+.kiju-service-history-item__head,
+.kiju-service-history-item__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.kiju-service-history-item__head > div,
+.kiju-service-history-item__payments {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.kiju-service-history-item__head span,
+.kiju-service-history-item__meta span,
+.kiju-service-history-payment span,
+.kiju-service-history-payment small {
+  color: var(--muted);
+}
+
+.kiju-service-history-item__meta {
+  flex-wrap: wrap;
+}
+
+.kiju-service-history-item__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.kiju-service-history-item__payments {
+  gap: 0.5rem;
+}
+
+.kiju-service-history-payment {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
 }
 
 .kiju-service-menu-theme {
@@ -3725,6 +4011,33 @@ html[data-theme="dark"] .kiju-admin-shell {
     padding: 0;
   }
 
+  .kiju-overview-fusion-panel > .kiju-card {
+    padding: 0.85rem;
+  }
+
+  .kiju-linked-table-list .kiju-inline-panel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .kiju-table-action-dialog {
+    width: 100%;
+    min-height: 100dvh;
+    align-content: center;
+    border: 0;
+    border-radius: 0;
+    padding: 1rem;
+  }
+
+  .kiju-table-action-summary,
+  .kiju-table-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-table-action-choice {
+    min-height: 104px;
+  }
+
   .kiju-service-section.kiju-order-wizard-overlay > .kiju-order-wizard-modal {
     width: 100%;
     height: 100dvh;
@@ -3809,6 +4122,16 @@ html[data-theme="dark"] .kiju-admin-shell {
     min-width: 0;
     flex: 1;
     min-height: 46px;
+  }
+
+  .kiju-order-wizard-modal .kiju-wizard-footer__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .kiju-order-wizard-modal .kiju-wizard-footer__actions .kiju-button:only-child {
+    grid-column: 1 / -1;
   }
 
   .kiju-wizard-footer__status {
@@ -3962,7 +4285,7 @@ html[data-theme="dark"] .kiju-admin-shell {
 
   .kiju-steps {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--kiju-step-count, 3), minmax(0, 1fr));
     gap: 0.4rem;
     overflow: visible;
     margin: 0;
