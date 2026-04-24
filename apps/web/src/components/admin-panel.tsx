@@ -32,12 +32,14 @@ import {
   type Role,
   type ServiceOrderMode
 } from "@kiju/domain";
+import { buildReceiptDocumentFromSessions } from "@kiju/print-bridge";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
 import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
+import { createPrintJob } from "../lib/print-client";
+import { PrinterAdminPanel } from "./printer-admin-panel";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
-import { ThermalReceiptPaper } from "./thermal-receipt-paper";
 
 const resetSteps = [
   "Schritt 1 von 3: Standarddaten wirklich vorbereiten?",
@@ -49,22 +51,43 @@ const roleLabels: Record<Role, string> = {
   admin: "Admin",
   waiter: "Kellner",
   kitchen: "Küche"
+  , bar: "Bar"
 };
 
-type StaffLoginRole = Extract<Role, "waiter" | "kitchen">;
+type StaffLoginRole = Extract<Role, "waiter" | "kitchen" | "bar">;
 
 const staffLoginRoleLabels: Record<StaffLoginRole, string> = {
   waiter: "Service",
   kitchen: "Küche"
+  , bar: "Bar"
 };
 
 const staffLoginRoleOrder: Record<StaffLoginRole, number> = {
   waiter: 0,
-  kitchen: 1
+  kitchen: 1,
+  bar: 2
+};
+
+const workspaceRouteByRole: Record<StaffLoginRole, string> = {
+  waiter: routeConfig.waiter,
+  kitchen: routeConfig.kitchen,
+  bar: routeConfig.bar
+};
+
+const workspaceMissingMessages: Record<StaffLoginRole, string> = {
+  waiter: "Es ist aktuell kein aktives Service-Konto vorhanden.",
+  kitchen: "Es ist aktuell kein aktives Küchenkonto vorhanden.",
+  bar: "Es ist aktuell kein aktives Bar-Konto vorhanden."
+};
+
+const workspaceOpenMessages: Record<StaffLoginRole, string> = {
+  waiter: "Service-Ansicht konnte nicht geöffnet werden.",
+  kitchen: "Küchenansicht konnte nicht geöffnet werden.",
+  bar: "Bar-Ansicht konnte nicht geöffnet werden."
 };
 
 const isStaffLoginRole = (role: Role): role is StaffLoginRole =>
-  role === "waiter" || role === "kitchen";
+  role === "waiter" || role === "kitchen" || role === "bar";
 
 const productionLabels: Record<ProductionTarget, string> = {
   service: "Service",
@@ -302,7 +325,12 @@ export const AdminPanel = () => {
     drinkSubcategory: "",
     price: "0.00",
     taxRate: "19",
-    productionTarget: "service" as ProductionTarget
+    productionTarget: "service" as ProductionTarget,
+    supportsExtraIngredients: false
+  });
+  const [extraIngredientForm, setExtraIngredientForm] = useState({
+    name: "",
+    price: "0.00"
   });
   const [userForm, setUserForm] = useState({
     name: "",
@@ -331,13 +359,7 @@ export const AdminPanel = () => {
     note: ""
   });
   const [dashboardProductByTable, setDashboardProductByTable] = useState<Record<string, string>>({});
-  const [adminPrintMode, setAdminPrintMode] = useState<"staff-logins" | "receipt" | null>(null);
-  const [adminReceiptPrint, setAdminReceiptPrint] = useState<{
-    tableId: string;
-    sessionId: string;
-    mode: "print" | "reprint";
-    openedAt: string;
-  } | null>(null);
+  const [adminPrintMode, setAdminPrintMode] = useState<"staff-logins" | null>(null);
   const playedReceiptAlarmIdsRef = useRef<Set<string>>(new Set());
 
   const productUsage = useMemo(() => {
@@ -408,6 +430,13 @@ export const AdminPanel = () => {
       ),
     [state.products]
   );
+  const extraIngredients = useMemo(
+    () =>
+      [...(state.extraIngredients ?? [])].sort((left, right) =>
+        left.name.localeCompare(right.name, "de")
+      ),
+    [state.extraIngredients]
+  );
 
   const adminCount = useMemo(
     () => state.users.filter((user) => user.role === "admin").length,
@@ -469,10 +498,6 @@ export const AdminPanel = () => {
     [unreadNotifications]
   );
   const activeReceiptAlarm = receiptAlarmNotifications[0] ?? null;
-  const adminReceiptSession = adminReceiptPrint
-    ? state.sessions.find((session) => session.id === adminReceiptPrint.sessionId) ??
-      getSessionForTable(state.sessions, adminReceiptPrint.tableId)
-    : undefined;
 
   useEffect(() => {
     if (!activeReceiptAlarm || playedReceiptAlarmIdsRef.current.has(activeReceiptAlarm.id)) {
@@ -486,22 +511,18 @@ export const AdminPanel = () => {
   useEffect(() => {
     const handleAfterPrint = () => {
       setAdminPrintMode(null);
-      setAdminReceiptPrint(null);
     };
 
     window.addEventListener("afterprint", handleAfterPrint);
     return () => window.removeEventListener("afterprint", handleAfterPrint);
   }, []);
 
-  const handleOpenWorkspace = (role: "waiter" | "kitchen") => {
+  const handleOpenWorkspace = (role: StaffLoginRole) => {
     const targetUser = state.users.find((user) => user.role === role && user.active);
     if (!targetUser) {
       setFeedback({
         tone: "alert",
-        message:
-          role === "waiter"
-            ? "Es ist aktuell kein aktives Service-Konto vorhanden."
-            : "Es ist aktuell kein aktives Küchenkonto vorhanden."
+        message: workspaceMissingMessages[role]
       });
       return;
     }
@@ -510,28 +531,23 @@ export const AdminPanel = () => {
     if (!result.ok) {
       setFeedback({
         tone: "alert",
-        message:
-          result.message ??
-          (role === "waiter"
-            ? "Service-Ansicht konnte nicht geöffnet werden."
-            : "Küchenansicht konnte nicht geöffnet werden.")
+        message: result.message ?? workspaceOpenMessages[role]
       });
       return;
     }
 
-    router.push(role === "waiter" ? routeConfig.waiter : routeConfig.kitchen);
+    router.push(workspaceRouteByRole[role]);
   };
 
   const handlePrintStaffLogins = () => {
     if (staffLoginUsers.length === 0) {
       setFeedback({
         tone: "alert",
-        message: "Es gibt aktuell keine Service- oder Küchenkonten für den Ausdruck."
+        message: "Es gibt aktuell keine Service-, Küchen- oder Barkonten für den Ausdruck."
       });
       return;
     }
 
-    setAdminReceiptPrint(null);
     setAdminPrintMode("staff-logins");
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => window.print());
@@ -544,7 +560,6 @@ export const AdminPanel = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
 
-    setAdminReceiptPrint(null);
     setAdminPrintMode(null);
     link.href = url;
     link.download = "mitarbeiter-logins-blanko.html";
@@ -579,7 +594,7 @@ export const AdminPanel = () => {
     setFeedback({ tone: "success", message: "Leistung wurde auf den Tisch gebucht." });
   };
 
-  const handleDashboardPrintReceipt = (session: OrderSession) => {
+  const handleDashboardPrintReceipt = async (session: OrderSession) => {
     if (session.items.length === 0) {
       setFeedback({
         tone: "alert",
@@ -588,23 +603,37 @@ export const AdminPanel = () => {
       return;
     }
 
-    const mode = session.receipt.printedAt ? "reprint" : "print";
-    setAdminPrintMode("receipt");
-    setAdminReceiptPrint({
-      tableId: session.tableId,
-      sessionId: session.id,
-      mode,
-      openedAt: new Date().toISOString()
+    const mode = session.receipt.printedAt ? "reprint" : "receipt";
+    const openedAt = new Date().toISOString();
+    const tableName =
+      state.tables.find((table) => table.id === session.tableId)?.name ??
+      session.tableId.replace("table-", "Tisch ");
+    const receipt = buildReceiptDocumentFromSessions({
+      sessions: [session],
+      products: state.products,
+      scope: "table",
+      tableLabelsById: { [session.tableId]: tableName },
+      openedAt
     });
 
     if (mode === "reprint") {
-      actions.reprintReceipt(session.tableId, session.id);
+      actions.reprintReceipt(session.tableId, [session.id]);
     } else {
-      actions.printReceipt(session.tableId);
+      actions.printReceipt(session.tableId, [session.id]);
     }
 
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => window.print());
+    const result = await createPrintJob({
+      type: mode,
+      receipt,
+      tableId: session.tableId,
+      tableLabel: tableName
+    });
+
+    setFeedback({
+      tone: result.ok ? "success" : "alert",
+      message: result.ok
+        ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
+        : result.message ?? "Bon konnte nicht an den Netzwerkdrucker gesendet werden."
     });
   };
 
@@ -695,7 +724,8 @@ export const AdminPanel = () => {
       drinkSubcategory: productForm.drinkSubcategory,
       priceCents: Math.round(Number(productForm.price || "0") * 100),
       taxRate: Number(productForm.taxRate || "0"),
-      productionTarget: productForm.productionTarget
+      productionTarget: productForm.productionTarget,
+      supportsExtraIngredients: productForm.supportsExtraIngredients
     });
 
     if (!result.ok) {
@@ -713,9 +743,33 @@ export const AdminPanel = () => {
       drinkSubcategory: "",
       price: "0.00",
       taxRate: "19",
-      productionTarget: "service"
+      productionTarget: "service",
+      supportsExtraIngredients: false
     });
     setFeedback({ tone: "success", message: "Leistung erfolgreich angelegt." });
+  };
+
+  const handleCreateExtraIngredient = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const result = actions.createExtraIngredient({
+      name: extraIngredientForm.name,
+      priceDeltaCents: Math.round(Number(extraIngredientForm.price || "0") * 100)
+    });
+
+    if (!result.ok) {
+      setFeedback({
+        tone: "alert",
+        message: result.message ?? "Extra-Zutat konnte nicht angelegt werden."
+      });
+      return;
+    }
+
+    setExtraIngredientForm({
+      name: "",
+      price: "0.00"
+    });
+    setFeedback({ tone: "success", message: "Extra-Zutat erfolgreich angelegt." });
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -917,6 +971,14 @@ export const AdminPanel = () => {
               <ChefHat size={18} />
               Küche
             </button>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={() => handleOpenWorkspace("bar")}
+            >
+              <Bell size={18} />
+              Bar
+            </button>
             <RoleSwitchPopover />
           </div>
         </section>
@@ -928,6 +990,9 @@ export const AdminPanel = () => {
             </a>
             <a className="kiju-admin-link-pill" href="#tisch-dashboard">
               Tisch-Dashboard
+            </a>
+            <a className="kiju-admin-link-pill" href="#drucker">
+              Drucker
             </a>
             <a className="kiju-admin-link-pill" href="#hinweise">
               Hinweise
@@ -1111,6 +1176,12 @@ export const AdminPanel = () => {
                 </span>
               </article>
               <article className="kiju-admin-focus-item">
+                <strong>Bar</strong>
+                <span>
+                  {state.users.filter((user) => user.role === "bar" && user.active).length} aktive Barkonten
+                </span>
+              </article>
+              <article className="kiju-admin-focus-item">
                 <strong>Reset-Schutz</strong>
                 <span>{zeroResetSteps.length - resetStep} Sicherheitsstufen verbleiben</span>
               </article>
@@ -1267,7 +1338,7 @@ export const AdminPanel = () => {
                       <button
                         type="button"
                         className="kiju-button kiju-button--primary"
-                        onClick={() => session && handleDashboardPrintReceipt(session)}
+                        onClick={() => session && void handleDashboardPrintReceipt(session)}
                         disabled={!session || session.items.length === 0}
                       >
                         <Printer size={16} />
@@ -1282,6 +1353,8 @@ export const AdminPanel = () => {
         </div>
 
         <div className="kiju-admin-stack">
+          <PrinterAdminPanel />
+
           <div id="hinweise">
             <AccordionSection
               title="Hinweise"
@@ -1355,114 +1428,235 @@ export const AdminPanel = () => {
               action={<StatusPill label={`${state.products.length} Einträge`} tone="navy" />}
             >
               <div className="kiju-admin-layout">
-                <form className="kiju-admin-panel" onSubmit={handleCreateProduct}>
-                  <strong>Neue Leistung anlegen</strong>
-                  <label className="kiju-inline-field">
-                    <span>Name</span>
-                    <input
-                      value={productForm.name}
-                      onChange={(event) =>
-                        setProductForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                    />
-                  </label>
-                  <label className="kiju-inline-field">
-                    <span>Beschreibung</span>
-                    <textarea
-                      value={productForm.description}
-                      onChange={(event) =>
-                        setProductForm((current) => ({
-                          ...current,
-                          description: event.target.value
-                        }))
-                      }
-                    />
-                  </label>
-                  <div className="kiju-admin-row">
+                <div className="kiju-admin-list">
+                  <form className="kiju-admin-panel" onSubmit={handleCreateProduct}>
+                    <strong>Neue Leistung anlegen</strong>
                     <label className="kiju-inline-field">
-                      <span>Kategorie</span>
-                      <select
-                        value={productForm.category}
+                      <span>Name</span>
+                      <input
+                        value={productForm.name}
+                        onChange={(event) =>
+                          setProductForm((current) => ({ ...current, name: event.target.value }))
+                        }
+                      />
+                    </label>
+                    <label className="kiju-inline-field">
+                      <span>Beschreibung</span>
+                      <textarea
+                        value={productForm.description}
                         onChange={(event) =>
                           setProductForm((current) => ({
                             ...current,
-                            category: event.target.value as ProductCategory
+                            description: event.target.value
                           }))
                         }
-                      >
-                        {productCategoryOrder.map((category) => (
-                          <option key={category} value={category}>
-                            {courseLabels[category]}
-                          </option>
+                      />
+                    </label>
+                    <div className="kiju-admin-row">
+                      <label className="kiju-inline-field">
+                        <span>Kategorie</span>
+                        <select
+                          value={productForm.category}
+                          onChange={(event) =>
+                            setProductForm((current) => ({
+                              ...current,
+                              category: event.target.value as ProductCategory
+                            }))
+                          }
+                        >
+                          {productCategoryOrder.map((category) => (
+                            <option key={category} value={category}>
+                              {courseLabels[category]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="kiju-inline-field">
+                        <span>Produktionsziel</span>
+                        <select
+                          value={productForm.productionTarget}
+                          onChange={(event) =>
+                            setProductForm((current) => ({
+                              ...current,
+                              productionTarget: event.target.value as ProductionTarget
+                            }))
+                          }
+                        >
+                          <option value="service">Service</option>
+                          <option value="bar">Bar</option>
+                          <option value="kitchen">Küche</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label className="kiju-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={productForm.supportsExtraIngredients}
+                        onChange={(event) =>
+                          setProductForm((current) => ({
+                            ...current,
+                            supportsExtraIngredients: event.target.checked
+                          }))
+                        }
+                      />
+                      <span>Extra-Zutaten-Popup aktivieren</span>
+                    </label>
+                    {productForm.category === "drinks" ? (
+                      <label className="kiju-inline-field">
+                        <span>Getränkegruppe</span>
+                        <input
+                          value={productForm.drinkSubcategory}
+                          placeholder="z. B. Alkoholfrei"
+                          onChange={(event) =>
+                            setProductForm((current) => ({
+                              ...current,
+                              drinkSubcategory: event.target.value
+                            }))
+                          }
+                        />
+                      </label>
+                    ) : null}
+                    <div className="kiju-admin-row">
+                      <label className="kiju-inline-field">
+                        <span>Preis EUR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.10"
+                          value={productForm.price}
+                          onChange={(event) =>
+                            setProductForm((current) => ({ ...current, price: event.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="kiju-inline-field">
+                        <span>Steuer %</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={productForm.taxRate}
+                          onChange={(event) =>
+                            setProductForm((current) => ({
+                              ...current,
+                              taxRate: event.target.value
+                            }))
+                          }
+                        />
+                      </label>
+                    </div>
+                    <button type="submit" className="kiju-button kiju-button--primary">
+                      <PlusCircle size={18} />
+                      Leistung anlegen
+                    </button>
+                  </form>
+
+                  <article className="kiju-admin-panel">
+                    <div className="kiju-admin-row kiju-admin-row--top">
+                      <div className="kiju-admin-heading-stack">
+                        <strong>Extra-Zutaten verwalten</strong>
+                        <span>
+                          Globaler Zutaten-Katalog für alle Artikel mit aktivem Extra-Zutaten-Popup.
+                        </span>
+                      </div>
+                      <StatusPill
+                        label={`${extraIngredients.length} ${
+                          extraIngredients.length === 1 ? "Zutat" : "Zutaten"
+                        }`}
+                        tone="navy"
+                      />
+                    </div>
+
+                    <form className="kiju-admin-list" onSubmit={handleCreateExtraIngredient}>
+                      <div className="kiju-admin-row">
+                        <label className="kiju-inline-field">
+                          <span>Name</span>
+                          <input
+                            value={extraIngredientForm.name}
+                            onChange={(event) =>
+                              setExtraIngredientForm((current) => ({
+                                ...current,
+                                name: event.target.value
+                              }))
+                            }
+                          />
+                        </label>
+                        <label className="kiju-inline-field">
+                          <span>Aufpreis EUR</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.10"
+                            value={extraIngredientForm.price}
+                            onChange={(event) =>
+                              setExtraIngredientForm((current) => ({
+                                ...current,
+                                price: event.target.value
+                              }))
+                            }
+                          />
+                        </label>
+                      </div>
+
+                      <button type="submit" className="kiju-button kiju-button--primary">
+                        <PlusCircle size={18} />
+                        Extra-Zutat anlegen
+                      </button>
+                    </form>
+
+                    {extraIngredients.length > 0 ? (
+                      <div className="kiju-admin-extra-ingredient-list">
+                        {extraIngredients.map((ingredient) => (
+                          <div key={ingredient.id} className="kiju-admin-extra-ingredient-row">
+                            <label className="kiju-inline-field">
+                              <span>Name</span>
+                              <input
+                                value={ingredient.name}
+                                onChange={(event) =>
+                                  actions.updateExtraIngredient(ingredient.id, {
+                                    name: event.target.value
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="kiju-inline-field">
+                              <span>Aufpreis EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.10"
+                                value={(ingredient.priceDeltaCents / 100).toFixed(2)}
+                                onChange={(event) =>
+                                  actions.updateExtraIngredient(ingredient.id, {
+                                    priceDeltaCents: Math.round(
+                                      Number(event.target.value || "0") * 100
+                                    )
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="kiju-checkbox-row">
+                              <input
+                                type="checkbox"
+                                checked={ingredient.active}
+                                onChange={(event) =>
+                                  actions.updateExtraIngredient(ingredient.id, {
+                                    active: event.target.checked
+                                  })
+                                }
+                              />
+                              <span>Aktiv</span>
+                            </label>
+                          </div>
                         ))}
-                      </select>
-                    </label>
-                    <label className="kiju-inline-field">
-                      <span>Produktionsziel</span>
-                      <select
-                        value={productForm.productionTarget}
-                        onChange={(event) =>
-                          setProductForm((current) => ({
-                            ...current,
-                            productionTarget: event.target.value as ProductionTarget
-                          }))
-                        }
-                      >
-                        <option value="service">Service</option>
-                        <option value="bar">Bar</option>
-                        <option value="kitchen">Küche</option>
-                      </select>
-                    </label>
-                  </div>
-                  {productForm.category === "drinks" ? (
-                    <label className="kiju-inline-field">
-                      <span>Getränkegruppe</span>
-                      <input
-                        value={productForm.drinkSubcategory}
-                        placeholder="z. B. Alkoholfrei"
-                        onChange={(event) =>
-                          setProductForm((current) => ({
-                            ...current,
-                            drinkSubcategory: event.target.value
-                          }))
-                        }
-                      />
-                    </label>
-                  ) : null}
-                  <div className="kiju-admin-row">
-                    <label className="kiju-inline-field">
-                      <span>Preis EUR</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.10"
-                        value={productForm.price}
-                        onChange={(event) =>
-                          setProductForm((current) => ({ ...current, price: event.target.value }))
-                        }
-                      />
-                    </label>
-                    <label className="kiju-inline-field">
-                      <span>Steuer %</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={productForm.taxRate}
-                        onChange={(event) =>
-                          setProductForm((current) => ({
-                            ...current,
-                            taxRate: event.target.value
-                          }))
-                        }
-                      />
-                    </label>
-                  </div>
-                  <button type="submit" className="kiju-button kiju-button--primary">
-                    <PlusCircle size={18} />
-                    Leistung anlegen
-                  </button>
-                </form>
+                      </div>
+                    ) : (
+                      <div className="kiju-inline-panel">
+                        <span>Aktuell ist noch keine Extra-Zutat angelegt.</span>
+                      </div>
+                    )}
+                  </article>
+                </div>
 
                 <div className="kiju-admin-list">
                   {groupedProducts.map(({ category, label, products }) => (
@@ -1621,6 +1815,19 @@ export const AdminPanel = () => {
                                   />
                                 </label>
                               </div>
+
+                              <label className="kiju-checkbox-row">
+                                <input
+                                  type="checkbox"
+                                  checked={product.supportsExtraIngredients === true}
+                                  onChange={(event) =>
+                                    actions.updateProduct(product.id, {
+                                      supportsExtraIngredients: event.target.checked
+                                    })
+                                  }
+                                />
+                                <span>Extra-Zutaten-Popup aktivieren</span>
+                              </label>
                             </AccordionSection>
                           );
                         })
@@ -1645,7 +1852,7 @@ export const AdminPanel = () => {
                   <div className="kiju-admin-heading-stack">
                     <strong>Mitarbeiter-Logins</strong>
                     <span>
-                      {staffLoginUsers.length} Service- und Küchenkonten, Admin-Konten ausgeschlossen.
+                      {staffLoginUsers.length} Service-, Küchen- und Barkonten, Admin-Konten ausgeschlossen.
                     </span>
                   </div>
                   <div className="kiju-admin-action-row">
@@ -1717,6 +1924,7 @@ export const AdminPanel = () => {
                       >
                         <option value="waiter">Kellner</option>
                         <option value="kitchen">Küche</option>
+                        <option value="bar">Bar</option>
                         <option value="admin">Admin</option>
                       </select>
                     </label>
@@ -1818,6 +2026,7 @@ export const AdminPanel = () => {
                             >
                               <option value="waiter">Kellner</option>
                               <option value="kitchen">Küche</option>
+                              <option value="bar">Bar</option>
                               <option value="admin">Admin</option>
                             </select>
                           </label>
@@ -2218,7 +2427,7 @@ export const AdminPanel = () => {
             <header className="kiju-staff-login-sheet__header">
               <span>KiJu Gastro Order System</span>
               <h1>Mitarbeiter-Logins</h1>
-              <p>Service und Küche ohne Admin-Konten · Stand {staffLoginPrintDate}</p>
+              <p>Service, Küche und Bar ohne Admin-Konten · Stand {staffLoginPrintDate}</p>
             </header>
 
             <table className="kiju-staff-login-sheet__table">
@@ -2246,7 +2455,7 @@ export const AdminPanel = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6}>Keine Service- oder Küchenkonten vorhanden.</td>
+                    <td colSpan={6}>Keine Service-, Küchen- oder Barkonten vorhanden.</td>
                   </tr>
                 )}
               </tbody>
@@ -2258,16 +2467,6 @@ export const AdminPanel = () => {
             </footer>
           </section>
         </div>
-        ) : null}
-        {adminPrintMode === "receipt" && adminReceiptPrint && adminReceiptSession ? (
-          <div className="kiju-print-root kiju-print-root--admin-receipt" aria-hidden="true">
-            <ThermalReceiptPaper
-              session={adminReceiptSession}
-              products={state.products}
-              openedAt={adminReceiptPrint.openedAt}
-              className="kiju-receipt-paper--print"
-            />
-          </div>
         ) : null}
       </main>
     </RouteGuard>

@@ -21,19 +21,23 @@ import {
 
 import { routeConfig, serviceLabels } from "@kiju/config";
 import {
+  EXTRA_INGREDIENTS_MODIFIER_GROUP_ID,
   buildClosedSessions,
   buildDashboardSummary,
   calculateGuestCount,
   calculatePaidItemQuantity,
   calculateItemTotal,
+  calculateSessionBillableTotal,
   calculateSessionOpenTotal,
   euro,
   getCheckoutTableIds,
   getLinkedTableGroupForTable,
   getOpenLineItems,
+  getProductById,
   getSeatItems,
   getTableTargetItems,
   type CourseKey,
+  type ExtraIngredient,
   type OrderItem,
   type OrderSession,
   type OrderTarget,
@@ -41,6 +45,12 @@ import {
   type Product,
   type TableSeat
 } from "@kiju/domain";
+import {
+  buildReceiptDocumentFromSessions,
+  buildReceiptPrintDocument,
+  type ReceiptDocumentInput,
+  type ReceiptDocumentMode
+} from "@kiju/print-bridge";
 import { AccordionSection, MetricCard, ProgressSteps, SectionCard, StatusPill } from "@kiju/ui";
 
 import {
@@ -52,6 +62,7 @@ import {
   resolveProductName,
   useDemoApp
 } from "../lib/app-state";
+import { createPrintJob } from "../lib/print-client";
 import { RouteGuard } from "./route-guard";
 import { ServiceTopbarMenu } from "./service-topbar-menu";
 import { ThermalReceiptPaper } from "./thermal-receipt-paper";
@@ -294,6 +305,21 @@ const describeCourseTicketStatus = (status: string, course?: CourseKey) => {
     return deliveredCourseStatusDescriptions[course];
   }
 
+  if (course === "drinks") {
+    switch (status) {
+      case "not-recorded":
+        return "Die Getränke sind erfasst, aber noch nicht an die Bar gesendet.";
+      case "ready":
+        return "Jetzt an der Bar. Noch nicht als fertig gemeldet.";
+      case "completed":
+        return "An der Bar als fertig markiert. Der Service kann ausliefern.";
+      case "skipped":
+        return "Die Getränkerunde wurde übersprungen.";
+      default:
+        return "Aktueller Getränkestand wird synchronisiert.";
+    }
+  }
+
   switch (status) {
     case "not-recorded":
       return "Der Gang ist erfasst, aber noch nicht an die Küche gesendet.";
@@ -310,6 +336,60 @@ const describeCourseTicketStatus = (status: string, course?: CourseKey) => {
     default:
       return "Aktueller Stand wird synchronisiert.";
   }
+};
+
+const resolveItemModifierLabels = (
+  item: Pick<OrderItem, "productId" | "modifiers">,
+  products: Product[]
+) => {
+  const product = getProductById(products, item.productId);
+  if (!product || item.modifiers.length === 0) {
+    return [];
+  }
+
+  return item.modifiers.flatMap((selection) => {
+    const group = product.modifierGroups.find((entry) => entry.id === selection.groupId);
+    if (!group) {
+      return [];
+    }
+
+    const optionNames = selection.optionIds
+      .map((optionId) => group.options.find((option) => option.id === optionId)?.name)
+      .filter((optionName): optionName is string => Boolean(optionName));
+
+    if (optionNames.length === 0) {
+      return [];
+    }
+
+    return [`${group.name}: ${optionNames.join(", ")}`];
+  });
+};
+
+const resolveExtraIngredientLabels = (
+  item: Pick<OrderItem, "modifiers">,
+  product: Product | undefined,
+  extraIngredients: ExtraIngredient[]
+) => {
+  const selectedIngredientIds =
+    item.modifiers.find((selection) => selection.groupId === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID)
+      ?.optionIds ?? [];
+  if (selectedIngredientIds.length === 0) {
+    return [];
+  }
+
+  const extraIngredientOptions = product?.modifierGroups.find(
+    (group) => group.id === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+  )?.options;
+  const ingredientNamesById = new globalThis.Map(
+    extraIngredients.map((ingredient) => [ingredient.id, ingredient.name])
+  );
+
+  return selectedIngredientIds.map(
+    (ingredientId) =>
+      extraIngredientOptions?.find((option) => option.id === ingredientId)?.name ??
+      ingredientNamesById.get(ingredientId) ??
+      ingredientId
+  );
 };
 
 const resolveServiceCourseStatus = (session: OrderSession, course: CourseKey) => {
@@ -400,13 +480,13 @@ export const WaiterWorkspace = () => {
   const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [receiptPreview, setReceiptPreview] = useState<{
-    mode: "print" | "reprint";
+    printMode: "receipt" | "reprint";
+    receiptMode: ReceiptDocumentMode;
     openedAt: string;
-    lineItems?: PaymentLineItem[];
-  } | null>(null);
-  const [historyReceiptPrint, setHistoryReceiptPrint] = useState<{
-    sessionId: string;
-    openedAt: string;
+    title: string;
+    tableSummary: string;
+    sessionIds: string[];
+    receipt: ReceiptDocumentInput;
   } | null>(null);
   const [serviceFeedback, setServiceFeedback] = useState<{
     tone: "success" | "alert" | "info";
@@ -416,12 +496,15 @@ export const WaiterWorkspace = () => {
   const [waitPlannerOpen, setWaitPlannerOpen] = useState(false);
   const [waitCourse, setWaitCourse] = useState<CourseKey>("main");
   const [waitMinutes, setWaitMinutes] = useState("10");
+  const [extraIngredientsItemId, setExtraIngredientsItemId] = useState<string | null>(null);
+  const [extraIngredientDraftIds, setExtraIngredientDraftIds] = useState<string[]>([]);
 
   const isWaiterView = currentUser?.role === "waiter";
   const selectedTable = state.tables.find((table) => table.id === selectedTableId) ?? null;
   const selectedSession = selectedTable
     ? getSessionForTable(state.sessions, selectedTable.id)
     : undefined;
+  const extraIngredientsCatalog = state.extraIngredients ?? [];
   const serviceOrderMode = state.serviceOrderMode ?? "table";
   const usesSeatMode = serviceOrderMode === "seat";
   const visibleSeats = useMemo(
@@ -450,6 +533,20 @@ export const WaiterWorkspace = () => {
     .filter((entry): entry is { table: NonNullable<typeof entry.table>; session: OrderSession } =>
       Boolean(entry.table && entry.session)
     );
+  const checkoutTableLabelsById = useMemo(
+    () => Object.fromEntries(checkoutSessions.map(({ table }) => [table.id, table.name])),
+    [checkoutSessions]
+  );
+  const extraIngredientsItem =
+    extraIngredientsItemId && selectedSession
+      ? selectedSession.items.find((item) => item.id === extraIngredientsItemId) ?? null
+      : null;
+  const extraIngredientsDialogOptions = useMemo(() => {
+    const selectedIds = new Set(extraIngredientDraftIds);
+    return extraIngredientsCatalog.filter(
+      (ingredient) => ingredient.active || selectedIds.has(ingredient.id)
+    );
+  }, [extraIngredientDraftIds, extraIngredientsCatalog]);
 
   useEffect(() => {
     if (!defaultTableId && selectedTableId) {
@@ -477,11 +574,25 @@ export const WaiterWorkspace = () => {
     }
   }, [selectedSeatId, selectedTable, usesSeatMode, visibleSeats]);
 
+  useEffect(() => {
+    if (extraIngredientsItemId && !extraIngredientsItem) {
+      setExtraIngredientsItemId(null);
+      setExtraIngredientDraftIds([]);
+    }
+  }, [extraIngredientsItem, extraIngredientsItemId]);
+
   const canReviseSentItem = (item: OrderItem) => {
     if (!item.sentAt) return true;
     if (!selectedSession) return false;
+    if (currentUser?.role === "admin") return true;
     if (item.servedAt) return false;
-    if (item.category !== "drinks" && item.preparedAt) return false;
+    if (
+      item.category !== "drinks" &&
+      (item.preparedAt ||
+        item.kitchenUnitStates?.some((unitState) => unitState.status !== "pending"))
+    ) {
+      return false;
+    }
 
     return calculatePaidItemQuantity(selectedSession, item.id) === 0;
   };
@@ -624,7 +735,12 @@ export const WaiterWorkspace = () => {
   }, [selectedSession]);
 
   const sessionTotal = calculateSessionTotal(selectedSession, state.products);
+  const sessionBillableTotal = calculateSessionBillableTotal(selectedSession, state.products);
   const sessionOpenTotal = calculateSessionOpenTotal(selectedSession, state.products);
+  const checkoutBillableTotal = checkoutSessions.reduce(
+    (sum, entry) => sum + calculateSessionBillableTotal(entry.session, state.products),
+    0
+  );
   const checkoutOpenTotal = checkoutSessions.reduce(
     (sum, entry) => sum + calculateSessionOpenTotal(entry.session, state.products),
     0
@@ -651,6 +767,25 @@ export const WaiterWorkspace = () => {
     );
     return sum + entry.unitTotal * quantity;
   }, 0);
+  const selectedPaymentQuantityTotal = selectedPaymentLineItems.reduce(
+    (sum, lineItem) => sum + lineItem.quantity,
+    0
+  );
+  const checkoutOpenGroups = checkoutSessions
+    .map(({ table, session }) => {
+      const entries = checkoutOpenEntries.filter((entry) => entry.table.id === table.id);
+      return {
+        table,
+        session,
+        entries,
+        openTotal: calculateSessionOpenTotal(session, state.products)
+      };
+    })
+    .filter((entry) => entry.entries.length > 0);
+  const canPreviewFullReceipt = checkoutBillableTotal > 0;
+  const canPreviewTableReceipt = sessionBillableTotal > 0;
+  const canPreviewPartialReceipt = selectedPaymentLineItems.length > 0;
+  const canReprintFullReceipt = checkoutSessions.some(({ session }) => Boolean(session.receipt.printedAt));
   const sessionItemCount =
     selectedSession?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
   const openServiceDeliveryNotifications = unreadNotifications.filter(
@@ -683,7 +818,7 @@ export const WaiterWorkspace = () => {
             state.users.find((user) => user.id === session.waiterId)?.name ?? "Unbekannt";
           const totalAmount =
             session.payments.reduce((sum, payment) => sum + payment.amountCents, 0) ||
-            calculateSessionTotal(session, state.products);
+            calculateSessionBillableTotal(session, state.products);
 
           return {
             sessionId: session.id,
@@ -722,10 +857,6 @@ export const WaiterWorkspace = () => {
         .sort((left, right) => right.closedAtSort - left.closedAtSort),
     [state]
   );
-  const historyReceiptSession = historyReceiptPrint
-    ? state.sessions.find((session) => session.id === historyReceiptPrint.sessionId) ?? null
-    : null;
-
   useEffect(() => {
     setServiceFeedback(null);
     setWaitPlannerOpen(false);
@@ -836,7 +967,7 @@ export const WaiterWorkspace = () => {
         detail:
           result.message ??
           (activeCourse === "drinks"
-            ? "Die Getränke konnten nicht gemeldet werden."
+            ? "Die Getränke konnten nicht an die Bar gesendet werden."
             : "Die Positionen konnten nicht an die Küche gesendet werden.")
       });
       return;
@@ -845,8 +976,8 @@ export const WaiterWorkspace = () => {
     const syncHint =
       activeCourse === "drinks"
         ? sharedSync.status === "online"
-          ? "Der Hinweis ist jetzt auf den Servicegeräten sichtbar."
-          : "Der Hinweis wurde lokal gespeichert. Für alle Servicegeräte muss der gemeinsame Sync erreichbar sein."
+          ? "Der Bon ist für die Bar und andere Geräte jetzt im gemeinsamen Stand."
+          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein."
         : sharedSync.status === "online"
           ? "Der Bon ist für Küche und andere Geräte jetzt im gemeinsamen Stand."
           : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein.";
@@ -854,8 +985,13 @@ export const WaiterWorkspace = () => {
     setServiceFeedback({
       tone: "success",
       title:
-        activeCourse === "drinks" ? "Getränke gemeldet" : `${courseLabels[activeCourse]} gesendet`,
-      detail: `${result.message ?? "Die Positionen wurden erfolgreich an die Küche gesendet."} ${syncHint}`
+        activeCourse === "drinks" ? "Getränke an Bar gesendet" : `${courseLabels[activeCourse]} gesendet`,
+      detail: `${
+        result.message ??
+        (activeCourse === "drinks"
+          ? "Die Getränke wurden erfolgreich an die Bar gesendet."
+          : "Die Positionen wurden erfolgreich an die Küche gesendet.")
+      } ${syncHint}`
     });
   };
 
@@ -909,15 +1045,63 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const openReceiptPreview = (mode: "print" | "reprint", lineItems?: PaymentLineItem[]) => {
-    if (!selectedTable || !selectedSession) return;
+  const buildReceiptPreviewState = (
+    receiptMode: ReceiptDocumentMode,
+    printMode: "receipt" | "reprint",
+    selectedLineItems?: PaymentLineItem[]
+  ) => {
+    if (!selectedTable || !selectedSession) return null;
 
-    setHistoryReceiptPrint(null);
-    setReceiptPreview({
-      mode,
-      openedAt: new Date().toISOString(),
-      lineItems
+    const sessions =
+      receiptMode === "table" ? [selectedSession] : checkoutSessions.map(({ session }) => session);
+    if (sessions.length === 0) return null;
+
+    const openedAt = new Date().toISOString();
+    const receipt = buildReceiptDocumentFromSessions({
+      sessions,
+      products: state.products,
+      scope: receiptMode,
+      selectedLineItems: receiptMode === "partial" ? selectedLineItems : undefined,
+      tableLabelsById: checkoutTableLabelsById,
+      openedAt
     });
+    if (receipt.sections.length === 0) return null;
+
+    const tableSummary =
+      receiptMode === "table"
+        ? selectedTable.name
+        : linkedTableGroup?.label ??
+          [...new Set(sessions.map((session) => checkoutTableLabelsById[session.tableId] ?? session.tableId))]
+            .join(", ");
+    const title =
+      printMode === "reprint"
+        ? "Letzten Gesamtbon prüfen"
+        : receiptMode === "full"
+          ? "Gesamtbon prüfen"
+          : receiptMode === "table"
+            ? "Tisch-Bon prüfen"
+            : "Teil-Bon prüfen";
+
+    return {
+      printMode,
+      receiptMode,
+      openedAt,
+      title,
+      tableSummary,
+      sessionIds: sessions.map((session) => session.id),
+      receipt
+    };
+  };
+
+  const openReceiptPreview = (
+    receiptMode: ReceiptDocumentMode,
+    printMode: "receipt" | "reprint",
+    selectedLineItems?: PaymentLineItem[]
+  ) => {
+    const nextPreview = buildReceiptPreviewState(receiptMode, printMode, selectedLineItems);
+    if (!nextPreview) return;
+
+    setReceiptPreview(nextPreview);
   };
 
   const toggleMobileFloorplan = () => {
@@ -936,33 +1120,74 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleReceiptPrint = () => {
+  const handleReceiptPrint = async () => {
     if (!selectedTable || !selectedSession || !receiptPreview) return;
+    const tableName = receiptPreview.tableSummary;
 
-    if (receiptPreview.mode === "reprint") {
-      actions.reprintReceipt(selectedTable.id);
+    if (receiptPreview.printMode === "reprint") {
+      actions.reprintReceipt(selectedTable.id, receiptPreview.sessionIds);
     } else {
-      actions.printReceipt(selectedTable.id);
+      actions.printReceipt(selectedTable.id, receiptPreview.sessionIds);
     }
 
-    window.requestAnimationFrame(() => {
-      window.print();
+    const result = await createPrintJob({
+      type: receiptPreview.printMode,
+      receipt: receiptPreview.receipt,
+      tableId: selectedTable.id,
+      tableLabel: tableName
     });
+
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title:
+        result.ok
+          ? receiptPreview.printMode === "reprint"
+            ? "Reprint gesendet"
+            : "Bon gesendet"
+          : receiptPreview.printMode === "reprint"
+            ? "Reprint nicht gesendet"
+            : "Bon nicht gesendet",
+      detail: result.ok
+        ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
+        : result.message ?? "Der Bon konnte nicht an den Netzwerkdrucker gesendet werden."
+    });
+
+    if (result.ok) {
+      setReceiptPreview(null);
+    }
   };
 
-  const handleHistoryReceiptPrint = (sessionId: string) => {
+  const handleHistoryReceiptPrint = async (sessionId: string) => {
     const session = state.sessions.find((entry) => entry.id === sessionId);
     if (!session) return;
 
     setReceiptPreview(null);
-    setHistoryReceiptPrint({
-      sessionId,
-      openedAt: new Date().toISOString()
+    const openedAt = new Date().toISOString();
+    const tableName =
+      state.tables.find((table) => table.id === session.tableId)?.name ??
+      session.tableId.replace("table-", "Tisch ");
+    const receipt = buildReceiptDocumentFromSessions({
+      sessions: [session],
+      products: state.products,
+      scope: "table",
+      tableLabelsById: { [session.tableId]: tableName },
+      openedAt
     });
-    actions.reprintReceipt(session.tableId, session.id);
+    actions.reprintReceipt(session.tableId, [session.id]);
 
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => window.print());
+    const result = await createPrintJob({
+      type: "reprint",
+      receipt,
+      tableId: session.tableId,
+      tableLabel: tableName
+    });
+
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Reprint gesendet" : "Reprint nicht gesendet",
+      detail: result.ok
+        ? `${tableName} wurde erneut an den Netzwerkdrucker gesendet.`
+        : result.message ?? "Der Reprint konnte nicht an den Netzwerkdrucker gesendet werden."
     });
   };
 
@@ -999,6 +1224,42 @@ export const WaiterWorkspace = () => {
     }
   };
 
+  const handleRecordInvoiceCancellation = () => {
+    if (!selectedTable || selectedPaymentLineItems.length === 0) return;
+
+    const selectedQuantity = selectedPaymentLineItems.reduce(
+      (sum, lineItem) => sum + lineItem.quantity,
+      0
+    );
+    const confirmed = window.confirm(
+      `${selectedQuantity} ${
+        selectedQuantity === 1 ? "Position" : "Positionen"
+      } im Wert von ${euro(selectedPaymentTotal)} wirklich stornieren?`
+    );
+    if (!confirmed) return;
+
+    const result = actions.recordInvoiceCancellation(
+      checkoutTableIds,
+      selectedPaymentLineItems,
+      "Rechnungsstorno"
+    );
+
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Storno gespeichert" : "Storno nicht gespeichert",
+      detail:
+        result.message ??
+        (result.ok
+          ? "Die ausgewählten Positionen wurden storniert."
+          : "Bitte Auswahl prüfen.")
+    });
+
+    if (result.ok) {
+      setSelectedPaymentQuantities({});
+      setReceiptPreview(null);
+    }
+  };
+
   const handleClosePaidOrder = () => {
     if (!selectedTable) return;
 
@@ -1006,7 +1267,11 @@ export const WaiterWorkspace = () => {
     setServiceFeedback({
       tone: result.ok ? "success" : "alert",
       title: result.ok ? "Tisch geschlossen" : "Noch nicht geschlossen",
-      detail: result.message ?? (result.ok ? "Alle Positionen sind bezahlt und der Tisch ist abgeschlossen." : "Es sind noch Positionen offen.")
+      detail:
+        result.message ??
+        (result.ok
+          ? "Es sind keine offenen Positionen mehr vorhanden und der Tisch ist abgeschlossen."
+          : "Es sind noch Positionen offen.")
     });
   };
 
@@ -1119,14 +1384,14 @@ export const WaiterWorkspace = () => {
         : true;
   const nextButtonLabel =
     currentStep === "checkout" ? "Abschließen" : "Weiter";
-  const sendCourseActionLabel =
-    activeCourse === "drinks"
-      ? sentEditableItems.length > 0
-        ? "Neue Getränke melden"
-        : "Getränke melden"
-      : sentEditableItems.length > 0
-        ? "Nachbestellung an Küche senden"
-        : "Alles an Küche senden";
+const sendCourseActionLabel =
+  activeCourse === "drinks"
+    ? sentEditableItems.length > 0
+      ? "Neue Getränke an Bar senden"
+      : "Getränke an Bar senden"
+    : sentEditableItems.length > 0
+      ? "Nachbestellung an Küche senden"
+      : "Alles an Küche senden";
 
   const toggleLinkTableSelection = (tableId: string) => {
     setLinkTableSelection((current) =>
@@ -1208,6 +1473,36 @@ export const WaiterWorkspace = () => {
     actions.removeItem(selectedTable.id, item.id);
   };
 
+  const handleOpenExtraIngredientsDialog = (item: OrderItem) => {
+    setExtraIngredientsItemId(item.id);
+    setExtraIngredientDraftIds(
+      item.modifiers.find((selection) => selection.groupId === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID)
+        ?.optionIds ?? []
+    );
+  };
+
+  const handleCloseExtraIngredientsDialog = () => {
+    setExtraIngredientsItemId(null);
+    setExtraIngredientDraftIds([]);
+  };
+
+  const handleToggleExtraIngredientDraft = (ingredientId: string, checked: boolean) => {
+    setExtraIngredientDraftIds((current) => {
+      if (checked) {
+        return current.includes(ingredientId) ? current : [...current, ingredientId];
+      }
+
+      return current.filter((currentIngredientId) => currentIngredientId !== ingredientId);
+    });
+  };
+
+  const handleSaveExtraIngredients = () => {
+    if (!selectedTable || !extraIngredientsItem) return;
+
+    actions.setItemExtraIngredients(selectedTable.id, extraIngredientsItem.id, extraIngredientDraftIds);
+    handleCloseExtraIngredientsDialog();
+  };
+
   const renderEditableItems = (items: OrderItem[], emptyMessage: string) => {
     if (!selectedTable) return null;
 
@@ -1223,6 +1518,13 @@ export const WaiterWorkspace = () => {
       const isSent = Boolean(item.sentAt);
       const canEditItem = canReviseSentItem(item);
       const isLocked = !canEditItem;
+      const product = getProductById(state.products, item.productId);
+      const supportsExtraIngredients = product?.supportsExtraIngredients === true;
+      const extraIngredientLabels = resolveExtraIngredientLabels(
+        item,
+        product,
+        extraIngredientsCatalog
+      );
       const itemTargetValue = item.target.type === "table" ? "table" : item.target.seatId;
       const hiddenSeat =
         item.target.type === "seat"
@@ -1236,11 +1538,11 @@ export const WaiterWorkspace = () => {
 
       return (
         <article key={item.id} className={`kiju-order-item-card${isSent ? " is-sent" : ""}`}>
-          <div className="kiju-order-item-card__main">
-            <div className="kiju-order-item-card__title">
-              <strong>{resolveProductName(state.products, item.productId)}</strong>
-              <small>{courseLabels[item.category]}</small>
-              {isSent ? (
+            <div className="kiju-order-item-card__main">
+              <div className="kiju-order-item-card__title">
+                <strong>{resolveProductName(state.products, item.productId)}</strong>
+                <small>{courseLabels[item.category]}</small>
+                {isSent ? (
                 <StatusPill
                   label={canEditItem ? "Korrektur möglich" : "Nicht mehr änderbar"}
                   tone={canEditItem ? "amber" : "slate"}
@@ -1310,16 +1612,36 @@ export const WaiterWorkspace = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="kiju-button kiju-button--danger kiju-order-item-card__delete"
-              onClick={() => handleItemRemoval(item)}
-              disabled={isLocked}
-            >
-              <Trash2 size={14} />
-              {isSent ? "Storno" : "Löschen"}
-            </button>
+            <div className="kiju-order-item-card__actions">
+              {supportsExtraIngredients ? (
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={() => handleOpenExtraIngredientsDialog(item)}
+                  disabled={isLocked}
+                >
+                  <Plus size={14} />
+                  Extra Zutat
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="kiju-button kiju-button--danger kiju-order-item-card__delete"
+                onClick={() => handleItemRemoval(item)}
+                disabled={isLocked}
+              >
+                <Trash2 size={14} />
+                {isSent ? "Storno" : "Löschen"}
+              </button>
+            </div>
           </div>
+
+          {extraIngredientLabels.length > 0 ? (
+            <div className="kiju-order-item-card__detail">
+              <span>Extra Zutaten</span>
+              <strong>{extraIngredientLabels.join(", ")}</strong>
+            </div>
+          ) : null}
 
           <label className="kiju-inline-field kiju-inline-field--note">
             <span>Notiz</span>
@@ -1372,18 +1694,129 @@ export const WaiterWorkspace = () => {
     );
   };
 
-  const receiptPreviewSession =
-    receiptPreview?.lineItems && selectedSession
-      ? {
-          ...selectedSession,
-          items: receiptPreview.lineItems
-            .map((lineItem) => {
-              const item = selectedSession.items.find((entry) => entry.id === lineItem.itemId);
-              return item ? { ...item, quantity: lineItem.quantity } : null;
-            })
-            .filter((item): item is OrderItem => Boolean(item))
-        }
-      : selectedSession;
+  const receiptPreviewDocument = receiptPreview
+    ? buildReceiptPrintDocument(receiptPreview.receipt)
+    : null;
+
+  const renderCheckoutOpenEntries = () => {
+    if (checkoutOpenGroups.length === 0) {
+      return (
+        <div className="kiju-inline-panel">
+          <span>Alle Positionen sind bezahlt oder storniert.</span>
+        </div>
+      );
+    }
+
+    return checkoutOpenGroups.map(({ table, entries, openTotal }) => (
+      <section key={table.id} className="kiju-checkout-table-group">
+        <div className="kiju-checkout-table-group__header">
+          <div>
+            <strong>{table.name}</strong>
+            <small>{entries.length} offene Einträge</small>
+          </div>
+          <strong>{euro(openTotal)}</strong>
+        </div>
+
+        <div className="kiju-review-list kiju-wizard-payment-list">
+          {entries.map(({ item, openQuantity, unitTotal }) => {
+            const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
+            const modifierLabels = resolveItemModifierLabels(item, state.products);
+
+            return (
+              <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
+                <label>
+                  <input
+                    name={`checkout-item-${item.id}`}
+                    type="checkbox"
+                    checked={selectedQuantity > 0}
+                    onChange={(event) =>
+                      togglePaymentItem(item.id, event.target.checked, openQuantity)
+                    }
+                  />
+                  <span>
+                    <strong>{resolveProductName(state.products, item.productId)}</strong>
+                    <small>
+                      {table.name} · {courseLabels[item.category]} · offen {openQuantity}
+                    </small>
+                    {modifierLabels.length > 0 || item.note ? (
+                      <small>
+                        {[...modifierLabels, ...(item.note ? [`Hinweis: ${item.note}`] : [])].join(
+                          " · "
+                        )}
+                      </small>
+                    ) : null}
+                  </span>
+                </label>
+                <input
+                  name={`payment-quantity-${item.id}`}
+                  type="number"
+                  min={0}
+                  max={openQuantity}
+                  value={selectedQuantity}
+                  aria-label="Anzahl für Zahlung"
+                  onChange={(event) =>
+                    setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
+                  }
+                />
+                <strong>{euro(unitTotal * selectedQuantity)}</strong>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    ));
+  };
+
+  const renderReceiptPreviewPanel = () => {
+    if (!receiptPreview || !receiptPreviewDocument) return null;
+
+    const receiptModeLabel =
+      receiptPreview.receiptMode === "full"
+        ? "Gesamtbon"
+        : receiptPreview.receiptMode === "table"
+          ? "Tisch-Bon"
+          : "Teil-Bon";
+
+    return (
+      <section className="kiju-receipt-preview-panel" aria-label="Bon-Vorschau">
+        <div className="kiju-receipt-preview-panel__header">
+          <div>
+            <span className="kiju-eyebrow">Bon-Vorschau</span>
+            <strong>{receiptPreview.title}</strong>
+            <small>
+              {receiptPreview.tableSummary} · {euro(receiptPreview.receipt.gesamt)}
+            </small>
+          </div>
+          <div className="kiju-receipt-preview-panel__meta">
+            <StatusPill label={receiptModeLabel} tone="navy" />
+            <StatusPill
+              label={receiptPreview.printMode === "reprint" ? "Reprint" : "Erstdruck"}
+              tone="slate"
+            />
+          </div>
+        </div>
+
+        <ThermalReceiptPaper document={receiptPreviewDocument} />
+
+        <div className="kiju-receipt-preview-panel__actions">
+          <button
+            type="button"
+            className="kiju-button kiju-button--secondary"
+            onClick={() => setReceiptPreview(null)}
+          >
+            Zurück bearbeiten
+          </button>
+          <button
+            type="button"
+            className="kiju-button kiju-button--primary"
+            onClick={handleReceiptPrint}
+          >
+            Bon drucken
+          </button>
+        </div>
+      </section>
+    );
+  };
 
   return (
     <RouteGuard allowedRoles={["waiter", "admin"]}>
@@ -1404,6 +1837,10 @@ export const WaiterWorkspace = () => {
                 <Link href={routeConfig.kitchen} className="kiju-button kiju-button--secondary">
                   <ChefHat size={18} />
                   Zur Küche
+                </Link>
+                <Link href={routeConfig.bar} className="kiju-button kiju-button--secondary">
+                  <Bell size={18} />
+                  Zur Bar
                 </Link>
                 <Link href={routeConfig.admin} className="kiju-button kiju-button--secondary">
                   <Receipt size={18} />
@@ -1804,11 +2241,11 @@ export const WaiterWorkspace = () => {
                   type="button"
                   className="kiju-table-action-choice"
                   onClick={() => openOrderWizard("checkout")}
-                  disabled={checkoutOpenTotal <= 0}
+                  disabled={checkoutSessions.length === 0}
                 >
                   <Receipt size={24} />
                   <strong>Abrechnen</strong>
-                  <span>Offene Positionen auswählen und bezahlen.</span>
+                  <span>Offene Positionen auswählen, bezahlen oder stornieren.</span>
                 </button>
               </div>
               <button
@@ -1951,48 +2388,7 @@ export const WaiterWorkspace = () => {
                         <StatusPill label={euro(checkoutOpenTotal)} tone={checkoutOpenTotal > 0 ? "amber" : "green"} />
                       </div>
                       <div className="kiju-review-list kiju-wizard-payment-list">
-                        {checkoutOpenEntries.length > 0 ? (
-                          checkoutOpenEntries.map(({ table, item, openQuantity, unitTotal }) => {
-                            const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
-
-                            return (
-                              <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
-                                <label>
-                                  <input
-                                    name={`checkout-item-${item.id}`}
-                                    type="checkbox"
-                                    checked={selectedQuantity > 0}
-                                    onChange={(event) =>
-                                      togglePaymentItem(item.id, event.target.checked, openQuantity)
-                                    }
-                                  />
-                                  <span>
-                                    <strong>{resolveProductName(state.products, item.productId)}</strong>
-                                    <small>
-                                      {table.name} · {courseLabels[item.category]} · offen {openQuantity}
-                                    </small>
-                                  </span>
-                                </label>
-                                <input
-                                  name={`payment-quantity-${item.id}`}
-                                  type="number"
-                                  min={0}
-                                  max={openQuantity}
-                                  value={selectedQuantity}
-                                  aria-label="Anzahl für Zahlung"
-                                  onChange={(event) =>
-                                    setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
-                                  }
-                                />
-                                <strong>{euro(unitTotal * selectedQuantity)}</strong>
-                              </article>
-                            );
-                          })
-                        ) : (
-                          <div className="kiju-inline-panel">
-                            <span>Alle Positionen sind bezahlt.</span>
-                          </div>
-                        )}
+                        {renderCheckoutOpenEntries()}
                       </div>
                     </section>
 
@@ -2001,7 +2397,7 @@ export const WaiterWorkspace = () => {
                         <div className="kiju-wizard-panel__header">
                           <div>
                             <span className="kiju-eyebrow">Verbuchen</span>
-                            <strong>Zahlung und Rechnung</strong>
+                            <strong>Zahlung und Storno</strong>
                           </div>
                           <StatusPill label={paymentMethodLabels[paymentMethod]} tone="navy" />
                         </div>
@@ -2022,18 +2418,25 @@ export const WaiterWorkspace = () => {
                         </div>
                         <div className="kiju-wizard-summary-grid">
                           <div className="kiju-inline-panel">
-                            <strong>Offen</strong>
+                            <strong>Offen gesamt</strong>
                             <span>{euro(checkoutOpenTotal)}</span>
                             <small>
                               {checkoutTableIds.length > 1
                                 ? `${checkoutTableIds.length} gekoppelte Tische`
-                                : `${euro(sessionTotal)} gesamt, ${euro(sessionOpenTotal)} offen am Tisch`}
+                                : `${euro(sessionBillableTotal)} gesamt, ${euro(sessionOpenTotal)} offen am Tisch`}
                             </small>
+                          </div>
+                          <div className="kiju-inline-panel">
+                            <strong>Aktueller Tisch</strong>
+                            <span>{euro(sessionOpenTotal)}</span>
+                            <small>{selectedTable?.name ?? "Kein Tisch gewählt"}</small>
                           </div>
                           <div className="kiju-inline-panel">
                             <strong>Auswahl</strong>
                             <span>{euro(selectedPaymentTotal)}</span>
-                            <small>{selectedPaymentLineItems.length} Positionen in dieser Zahlung</small>
+                            <small>
+                              {selectedPaymentQuantityTotal}x in {selectedPaymentLineItems.length} Einträgen
+                            </small>
                           </div>
                         </div>
                         <div className="kiju-wizard-action-grid">
@@ -2047,19 +2450,11 @@ export const WaiterWorkspace = () => {
                           </button>
                           <button
                             type="button"
-                            className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("print", selectedPaymentLineItems)}
+                            className="kiju-button kiju-button--danger"
+                            onClick={handleRecordInvoiceCancellation}
                             disabled={selectedPaymentLineItems.length === 0}
                           >
-                            Teil-Bon prüfen
-                          </button>
-                          <button
-                            type="button"
-                            className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("reprint")}
-                            disabled={!selectedSession?.receipt.printedAt}
-                          >
-                            {serviceLabels.reprintReceipt}
+                            Auswahl stornieren
                           </button>
                           <button
                             type="button"
@@ -2072,49 +2467,54 @@ export const WaiterWorkspace = () => {
                         </div>
                       </section>
 
-                      {receiptPreview ? (
-                        <section className="kiju-receipt-preview-panel" aria-label="Bon-Vorschau">
-                          <div className="kiju-receipt-preview-panel__header">
-                            <div>
-                              <span className="kiju-eyebrow">Bon-Vorschau</span>
-                              <strong>
-                                {receiptPreview.mode === "reprint"
-                                  ? "Erneuten Druck prüfen"
-                                  : "Rechnung prüfen"}
-                              </strong>
-                            </div>
-                            <StatusPill
-                              label={receiptPreview.mode === "reprint" ? "Reprint" : "Erstdruck"}
-                              tone="navy"
-                            />
+                      <section className="kiju-wizard-panel">
+                        <div className="kiju-wizard-panel__header">
+                          <div>
+                            <span className="kiju-eyebrow">Bons</span>
+                            <strong>Gesamt-, Tisch- und Teilbon</strong>
                           </div>
+                          <StatusPill
+                            label={checkoutTableIds.length > 1 ? "Gesamtverbund" : "Einzeltisch"}
+                            tone="slate"
+                          />
+                        </div>
+                        <div className="kiju-wizard-action-grid">
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("full", "receipt")}
+                            disabled={!canPreviewFullReceipt}
+                          >
+                            Gesamtbon prüfen
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("table", "receipt")}
+                            disabled={!canPreviewTableReceipt}
+                          >
+                            Tisch-Bon prüfen
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("partial", "receipt", selectedPaymentLineItems)}
+                            disabled={!canPreviewPartialReceipt}
+                          >
+                            Teil-Bon prüfen
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("full", "reprint")}
+                            disabled={!canReprintFullReceipt}
+                          >
+                            Reprint letzter Gesamtbon
+                          </button>
+                        </div>
+                      </section>
 
-                          {receiptPreviewSession ? (
-                            <ThermalReceiptPaper
-                              session={receiptPreviewSession}
-                              products={state.products}
-                              openedAt={receiptPreview.openedAt}
-                            />
-                          ) : null}
-
-                          <div className="kiju-receipt-preview-panel__actions">
-                            <button
-                              type="button"
-                              className="kiju-button kiju-button--secondary"
-                              onClick={() => setReceiptPreview(null)}
-                            >
-                              Zurück bearbeiten
-                            </button>
-                            <button
-                              type="button"
-                              className="kiju-button kiju-button--primary"
-                              onClick={handleReceiptPrint}
-                            >
-                              Bon drucken
-                            </button>
-                          </div>
-                        </section>
-                      ) : null}
+                      {renderReceiptPreviewPanel()}
                     </div>
                   </div>
                 ) : isCourseStep(currentStep) ? (
@@ -2485,49 +2885,11 @@ export const WaiterWorkspace = () => {
                   {currentStep === "checkout" ? (
                     <div className="kiju-review-grid">
                       <div className="kiju-review-list">
-                        {checkoutOpenEntries.length > 0 ? (
-                          checkoutOpenEntries.map(({ table, item, openQuantity, unitTotal }) => {
-                            const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
-
-                            return (
-                              <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
-                                <label>
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedQuantity > 0}
-                                    onChange={(event) =>
-                                      togglePaymentItem(item.id, event.target.checked, openQuantity)
-                                    }
-                                  />
-                                  <span>
-                                    <strong>{resolveProductName(state.products, item.productId)}</strong>
-                                    <small>
-                                      {table.name} · {courseLabels[item.category]} · offen {openQuantity}
-                                    </small>
-                                  </span>
-                                </label>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={openQuantity}
-                                  value={selectedQuantity}
-                                  onChange={(event) =>
-                                    setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
-                                  }
-                                />
-                                <strong>{euro(unitTotal * selectedQuantity)}</strong>
-                              </article>
-                            );
-                          })
-                        ) : (
-                          <div className="kiju-inline-panel">
-                            <span>Alle Positionen sind bezahlt.</span>
-                          </div>
-                        )}
+                        {renderCheckoutOpenEntries()}
                       </div>
 
                       <div className="kiju-review-actions">
-                        <SectionCard title="Zahlung und Rechnung" eyebrow="Verbuchen">
+                        <SectionCard title="Zahlung und Storno" eyebrow="Verbuchen">
                           <div className="kiju-inline-field">
                             <span>Zahlart</span>
                             <select
@@ -2542,18 +2904,25 @@ export const WaiterWorkspace = () => {
                             </select>
                           </div>
                           <div className="kiju-inline-panel">
-                            <strong>Offen</strong>
+                            <strong>Offen gesamt</strong>
                             <span>{euro(checkoutOpenTotal)}</span>
                             <small>
                               {checkoutTableIds.length > 1
                                 ? `${checkoutTableIds.length} gekoppelte Tische`
-                                : `${euro(sessionTotal)} gesamt, ${euro(sessionOpenTotal)} offen am Tisch`}
+                                : `${euro(sessionBillableTotal)} gesamt, ${euro(sessionOpenTotal)} offen am Tisch`}
                             </small>
+                          </div>
+                          <div className="kiju-inline-panel">
+                            <strong>Aktueller Tisch</strong>
+                            <span>{euro(sessionOpenTotal)}</span>
+                            <small>{selectedTable?.name ?? "Kein Tisch gewählt"}</small>
                           </div>
                           <div className="kiju-inline-panel">
                             <strong>Auswahl</strong>
                             <span>{euro(selectedPaymentTotal)}</span>
-                            <small>{selectedPaymentLineItems.length} Positionen in dieser Zahlung</small>
+                            <small>
+                              {selectedPaymentQuantityTotal}x in {selectedPaymentLineItems.length} Einträgen
+                            </small>
                           </div>
                           <button
                             className="kiju-button kiju-button--primary"
@@ -2563,18 +2932,11 @@ export const WaiterWorkspace = () => {
                             Auswahl bezahlt
                           </button>
                           <button
-                            className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("print", selectedPaymentLineItems)}
+                            className="kiju-button kiju-button--danger"
+                            onClick={handleRecordInvoiceCancellation}
                             disabled={selectedPaymentLineItems.length === 0}
                           >
-                            Teil-Bon prüfen
-                          </button>
-                          <button
-                            className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("reprint")}
-                            disabled={!selectedSession?.receipt.printedAt}
-                          >
-                            {serviceLabels.reprintReceipt}
+                            Auswahl stornieren
                           </button>
                           <button
                             className="kiju-button kiju-button--danger"
@@ -2585,49 +2947,38 @@ export const WaiterWorkspace = () => {
                           </button>
                         </SectionCard>
 
-                        {receiptPreview ? (
-                          <section className="kiju-receipt-preview-panel" aria-label="Bon-Vorschau">
-                            <div className="kiju-receipt-preview-panel__header">
-                              <div>
-                                <span className="kiju-eyebrow">Bon-Vorschau</span>
-                                <strong>
-                                  {receiptPreview.mode === "reprint"
-                                    ? "Erneuten Druck prüfen"
-                                    : "Rechnung prüfen"}
-                                </strong>
-                              </div>
-                              <StatusPill
-                                label={receiptPreview.mode === "reprint" ? "Reprint" : "Erstdruck"}
-                                tone="navy"
-                              />
-                            </div>
+                        <SectionCard title="Gesamt-, Tisch- und Teilbon" eyebrow="Bons">
+                          <button
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("full", "receipt")}
+                            disabled={!canPreviewFullReceipt}
+                          >
+                            Gesamtbon prüfen
+                          </button>
+                          <button
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("table", "receipt")}
+                            disabled={!canPreviewTableReceipt}
+                          >
+                            Tisch-Bon prüfen
+                          </button>
+                          <button
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("partial", "receipt", selectedPaymentLineItems)}
+                            disabled={!canPreviewPartialReceipt}
+                          >
+                            Teil-Bon prüfen
+                          </button>
+                          <button
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => openReceiptPreview("full", "reprint")}
+                            disabled={!canReprintFullReceipt}
+                          >
+                            Reprint letzter Gesamtbon
+                          </button>
+                        </SectionCard>
 
-                            {receiptPreviewSession ? (
-                              <ThermalReceiptPaper
-                                session={receiptPreviewSession}
-                                products={state.products}
-                                openedAt={receiptPreview.openedAt}
-                              />
-                            ) : null}
-
-                            <div className="kiju-receipt-preview-panel__actions">
-                              <button
-                                type="button"
-                                className="kiju-button kiju-button--secondary"
-                                onClick={() => setReceiptPreview(null)}
-                              >
-                                Zurück bearbeiten
-                              </button>
-                              <button
-                                type="button"
-                                className="kiju-button kiju-button--primary"
-                                onClick={handleReceiptPrint}
-                              >
-                                Bon drucken
-                              </button>
-                            </div>
-                          </section>
-                        ) : null}
+                        {renderReceiptPreviewPanel()}
                       </div>
                     </div>
                   ) : isCourseStep(currentStep) ? (
@@ -2950,25 +3301,87 @@ export const WaiterWorkspace = () => {
           </AccordionSection>
           ) : null}
         </div>
-        {receiptPreview && receiptPreviewSession ? (
-          <div className="kiju-print-root" aria-hidden="true">
-            <ThermalReceiptPaper
-              session={receiptPreviewSession}
-              products={state.products}
-              openedAt={receiptPreview.openedAt}
-              className="kiju-receipt-paper--print"
-            />
-          </div>
-        ) : null}
-        {historyReceiptPrint && historyReceiptSession ? (
-          <div className="kiju-print-root" aria-hidden="true">
-            <ThermalReceiptPaper
-              session={historyReceiptSession}
-              products={state.products}
-              openedAt={historyReceiptPrint.openedAt}
-              className="kiju-receipt-paper--print"
-            />
-          </div>
+
+        {extraIngredientsItem && selectedTable ? (
+          <section
+            className="kiju-service-section kiju-order-wizard-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kiju-extra-ingredients-title"
+          >
+            <div className="kiju-order-wizard-modal kiju-extra-ingredients-modal" tabIndex={-1}>
+              <div className="kiju-extra-ingredients-modal__header">
+                <div>
+                  <span className="kiju-eyebrow">Bestellposition bearbeiten</span>
+                  <h2 id="kiju-extra-ingredients-title">Extra Zutaten</h2>
+                  <p>
+                    {resolveProductName(state.products, extraIngredientsItem.productId)} für{" "}
+                    {selectedTable.name}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={handleCloseExtraIngredientsDialog}
+                  aria-label="Extra-Zutaten-Popup schließen"
+                >
+                  <X size={16} />
+                  Schließen
+                </button>
+              </div>
+
+              <div className="kiju-extra-ingredients-modal__body">
+                {extraIngredientsDialogOptions.length > 0 ? (
+                  <div className="kiju-extra-ingredients-modal__list">
+                    {extraIngredientsDialogOptions.map((ingredient) => {
+                      const checked = extraIngredientDraftIds.includes(ingredient.id);
+
+                      return (
+                        <label key={ingredient.id} className="kiju-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) =>
+                              handleToggleExtraIngredientDraft(ingredient.id, event.target.checked)
+                            }
+                          />
+                          <span className="kiju-extra-ingredients-modal__label">
+                            <strong>{ingredient.name}</strong>
+                            <small>
+                              {euro(ingredient.priceDeltaCents)}
+                              {!ingredient.active ? " · Inaktiv" : ""}
+                            </small>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="kiju-inline-panel">
+                    <strong>Keine Extra-Zutaten angelegt</strong>
+                    <span>Lege im Admin-Bereich zuerst Zutaten für dieses Popup an.</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="kiju-extra-ingredients-modal__actions">
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={handleCloseExtraIngredientsDialog}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--primary"
+                  onClick={handleSaveExtraIngredients}
+                >
+                  Speichern
+                </button>
+              </div>
+            </div>
+          </section>
         ) : null}
       </main>
     </RouteGuard>

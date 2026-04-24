@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  EXTRA_INGREDIENTS_MODIFIER_GROUP_ID,
   calculatePaidItemQuantity,
   calculateGuestCount,
   calculateLineItemsTotal,
+  calculateSessionBillableTotal,
   calculateSessionOpenTotal,
   calculateSessionTotal,
   courseLabels,
@@ -20,8 +22,11 @@ import {
   type CourseKey,
   type CourseTicket,
   type DesignMode,
+  type ExtraIngredient,
   type KitchenStatus,
   type KitchenTicketBatch,
+  type KitchenUnitState,
+  type KitchenUnitStatus,
   type OrderItem,
   type OrderTarget,
   type OrderSession,
@@ -47,6 +52,8 @@ import {
   type PropsWithChildren
 } from "react";
 
+import { createPrintJob } from "./print-client";
+
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-session-v1";
 const LEGACY_AUTH_KEY = "kiju-auth-v2";
@@ -61,8 +68,15 @@ type SharedSyncState = {
   usingSharedState: boolean;
 };
 
+type WorkspaceRole = Role;
+
 type DemoActions = {
   login: (identifier: string, secret: string) => {
+    ok: boolean;
+    user?: UserAccount;
+    message?: string;
+  };
+  startWorkspaceSession: (role: WorkspaceRole, name?: string) => {
     ok: boolean;
     user?: UserAccount;
     message?: string;
@@ -85,16 +99,28 @@ type DemoActions = {
     tableId: string,
     course: CourseKey
   ) => { ok: boolean; message?: string; ticketStatus?: CourseTicket["status"] | "ready" };
+  cycleKitchenItemUnitStatus: (
+    tableId: string,
+    batchId: string,
+    itemId: string,
+    unitIndex: number
+  ) => void;
+  reopenKitchenBatch: (tableId: string, batchId: string) => void;
   releaseCourse: (tableId: string, course: CourseKey, batchId?: string) => void;
   markCourseCompleted: (tableId: string, course: CourseKey, batchId?: string) => void;
-  printReceipt: (tableId: string) => void;
-  reprintReceipt: (tableId: string, sessionId?: string) => void;
+  printReceipt: (tableId: string, sessionIds?: string[]) => void;
+  reprintReceipt: (tableId: string, sessionIdOrIds?: string | string[]) => void;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
   closePaidOrder: (tableId: string) => { ok: boolean; message?: string };
   recordPartialPayment: (
     tableIds: string[],
     selectedLineItems: PaymentLineItem[],
     method: PaymentMethod,
+    label?: string
+  ) => { ok: boolean; message?: string };
+  recordInvoiceCancellation: (
+    tableIds: string[],
+    selectedLineItems: PaymentLineItem[],
     label?: string
   ) => { ok: boolean; message?: string };
   createPartyGroup: (tableId: string, label: string) => { ok: boolean; message?: string };
@@ -115,8 +141,18 @@ type DemoActions = {
     priceCents: number;
     taxRate: number;
     productionTarget: ProductionTarget;
+    supportsExtraIngredients?: boolean;
   }) => { ok: boolean; message?: string };
   updateProduct: (productId: string, patch: Partial<Product>) => void;
+  createExtraIngredient: (input: {
+    name: string;
+    priceDeltaCents: number;
+  }) => { ok: boolean; message?: string };
+  updateExtraIngredient: (
+    ingredientId: string,
+    patch: Partial<Pick<ExtraIngredient, "name" | "priceDeltaCents" | "active">>
+  ) => void;
+  setItemExtraIngredients: (tableId: string, itemId: string, ingredientIds: string[]) => void;
   deleteProduct: (productId: string) => { ok: boolean; message?: string };
   deleteSession: (sessionId: string) => { ok: boolean; message?: string };
   createUser: (input: {
@@ -212,6 +248,16 @@ const createSystemUsers = (): UserAccount[] => {
       pin: "2026",
       active: true,
       lastSeenAt: now
+    },
+    {
+      id: "user-bar",
+      name: "Bar",
+      username: "Bar",
+      role: "bar",
+      password: "Bar1234",
+      pin: "3030",
+      active: true,
+      lastSeenAt: now
     }
   ];
 };
@@ -226,6 +272,15 @@ const createClientId = (prefix: string) => {
 
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 };
+
+const normalizeLookupText = (value: string) => value.trim().toLocaleLowerCase("de-DE");
+
+const createUsernameFromName = (value: string) => {
+  const asciiValue = value.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  const compactValue = asciiValue.replace(/[^\p{Letter}\p{Number}]+/gu, "");
+  return compactValue.slice(0, 24) || "service";
+};
+
 const createSeats = (tableId: string, seatCount: number) =>
   Array.from({ length: seatCount }, (_, index) => ({
     id: `${tableId}-seat-${index + 1}`,
@@ -353,11 +408,186 @@ const kitchenTicketStatusRank: Record<KitchenStatus, number> = {
 const getKitchenBatchesForCourse = (session: OrderSession, course: CourseKey) =>
   session.kitchenTicketBatches.filter((batch) => batch.course === course);
 
+const getBarBatchesForCourse = (session: OrderSession, course: CourseKey) =>
+  session.barTicketBatches.filter((batch) => batch.course === course);
+
 const sortKitchenBatchesByNewest = (batches: KitchenTicketBatch[]) =>
   [...batches].sort((left, right) => {
     if (right.sequence !== left.sequence) return right.sequence - left.sequence;
     return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
   });
+
+const getKitchenUnitCount = (item: Pick<OrderItem, "quantity">) => Math.max(1, Math.floor(item.quantity));
+
+const tracksKitchenUnitProgress = (item: Pick<OrderItem, "category" | "sentAt">) =>
+  item.category !== "drinks" && Boolean(item.sentAt);
+
+const normalizeKitchenUnitState = (unitState: KitchenUnitState | undefined): KitchenUnitState => {
+  if (unitState?.status === "in-progress") {
+    return {
+      status: "in-progress",
+      startedAt: unitState.startedAt
+    };
+  }
+
+  if (unitState?.status === "completed") {
+    return {
+      status: "completed",
+      startedAt: unitState.startedAt,
+      completedAt: unitState.completedAt
+    };
+  }
+
+  return { status: "pending" };
+};
+
+const createKitchenUnitStates = (count: number, status: KitchenUnitStatus): KitchenUnitState[] =>
+  Array.from({ length: count }, () => ({ status }));
+
+const resolveLatestKitchenCompletionAt = (
+  unitStates: KitchenUnitState[],
+  fallback?: string
+) => {
+  let latestValue = fallback;
+  let latestTime = fallback ? Date.parse(fallback) : Number.NEGATIVE_INFINITY;
+
+  unitStates.forEach((unitState) => {
+    if (!unitState.completedAt) return;
+
+    const completedTime = Date.parse(unitState.completedAt);
+    if (!Number.isFinite(completedTime)) {
+      latestValue ??= unitState.completedAt;
+      return;
+    }
+
+    if (completedTime > latestTime) {
+      latestTime = completedTime;
+      latestValue = unitState.completedAt;
+    }
+  });
+
+  return latestValue;
+};
+
+const getNormalizedKitchenUnitStates = (item: OrderItem): KitchenUnitState[] | undefined => {
+  if (!tracksKitchenUnitProgress(item)) {
+    return undefined;
+  }
+
+  const unitCount = getKitchenUnitCount(item);
+  if (item.preparedAt) {
+    return Array.from({ length: unitCount }, () => ({
+      status: "completed" as const,
+      completedAt: item.preparedAt
+    }));
+  }
+
+  const existingStates = Array.isArray(item.kitchenUnitStates) ? item.kitchenUnitStates : [];
+  if (existingStates.length === 0) {
+    return createKitchenUnitStates(unitCount, "pending");
+  }
+
+  return Array.from({ length: unitCount }, (_, index) =>
+    normalizeKitchenUnitState(existingStates[index])
+  );
+};
+
+const syncKitchenItemProgress = (item: OrderItem) => {
+  const unitStates = getNormalizedKitchenUnitStates(item);
+  if (!unitStates) {
+    delete item.kitchenUnitStates;
+    return;
+  }
+
+  item.kitchenUnitStates = unitStates;
+  if (unitStates.every((unitState) => unitState.status === "completed")) {
+    item.preparedAt =
+      resolveLatestKitchenCompletionAt(unitStates, item.preparedAt ?? item.sentAt) ??
+      item.preparedAt ??
+      item.sentAt;
+    return;
+  }
+
+  delete item.preparedAt;
+};
+
+const getKitchenItemUnitStates = (item: OrderItem) => {
+  syncKitchenItemProgress(item);
+  return item.kitchenUnitStates;
+};
+
+const hasKitchenItemProgress = (item: OrderItem) =>
+  getNormalizedKitchenUnitStates(item)?.some((unitState) => unitState.status !== "pending") ?? false;
+
+const isKitchenItemCompleted = (item: OrderItem) => {
+  const unitStates = getNormalizedKitchenUnitStates(item);
+  if (!unitStates || unitStates.length === 0) {
+    return false;
+  }
+
+  return unitStates.every((unitState) => unitState.status === "completed");
+};
+
+const setKitchenItemCompleted = (item: OrderItem, completedAt: string) => {
+  const unitStates = getNormalizedKitchenUnitStates(item);
+  if (!unitStates) return;
+
+  item.kitchenUnitStates = unitStates.map((unitState) => ({
+    status: "completed" as const,
+    startedAt: unitState.startedAt,
+    completedAt: unitState.completedAt ?? completedAt
+  }));
+  item.preparedAt = resolveLatestKitchenCompletionAt(item.kitchenUnitStates, completedAt) ?? completedAt;
+};
+
+const cycleKitchenUnitState = (item: OrderItem, unitIndex: number, changedAt: string) => {
+  const unitStates = getKitchenItemUnitStates(item);
+  if (!unitStates || !unitStates[unitIndex]) {
+    return null;
+  }
+
+  const nextStates = [...unitStates];
+  const currentState = nextStates[unitIndex];
+  if (!currentState) {
+    return null;
+  }
+
+  if (currentState.status === "pending") {
+    nextStates[unitIndex] = {
+      status: "in-progress",
+      startedAt: changedAt
+    };
+  } else if (currentState.status === "in-progress") {
+    nextStates[unitIndex] = {
+      status: "completed",
+      startedAt: currentState.startedAt ?? changedAt,
+      completedAt: changedAt
+    };
+  } else {
+    nextStates[unitIndex] = {
+      status: "pending"
+    };
+  }
+
+  item.kitchenUnitStates = nextStates;
+  if (nextStates.every((unitState) => unitState.status === "completed")) {
+    item.preparedAt = resolveLatestKitchenCompletionAt(nextStates, changedAt) ?? changedAt;
+  } else {
+    delete item.preparedAt;
+  }
+
+  return nextStates[unitIndex]?.status ?? null;
+};
+
+const getBatchItems = (session: OrderSession, batch: KitchenTicketBatch) => {
+  const itemIds = new Set(batch.itemIds);
+  return session.items.filter((item) => itemIds.has(item.id));
+};
+
+const isKitchenBatchCompletedByUnits = (session: OrderSession, batch: KitchenTicketBatch) => {
+  const batchItems = getBatchItems(session, batch);
+  return batchItems.length > 0 && batchItems.every((item) => isKitchenItemCompleted(item));
+};
 
 const syncCourseTicketFromKitchenBatches = (session: OrderSession, course: CourseKey) => {
   if (course === "drinks") return;
@@ -394,6 +624,39 @@ const syncCourseTicketFromKitchenBatches = (session: OrderSession, course: Cours
   };
 };
 
+const syncDrinkTicketFromBarBatches = (session: OrderSession) => {
+  const batches = getBarBatchesForCourse(session, "drinks");
+  if (batches.length === 0) {
+    const hasItems = session.items.some((item) => item.category === "drinks");
+    if (!hasItems && !session.skippedCourses.includes("drinks")) {
+      session.courseTickets.drinks = createBaseTicket("drinks");
+    }
+    return;
+  }
+
+  const activeBatch = [...batches]
+    .filter((batch) => batch.status !== "completed" && batch.status !== "skipped")
+    .sort((left, right) => {
+      const rankDelta = kitchenTicketStatusRank[left.status] - kitchenTicketStatusRank[right.status];
+      if (rankDelta !== 0) return rankDelta;
+      if (right.sequence !== left.sequence) return right.sequence - left.sequence;
+      return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
+    })[0];
+  const latestBatch = activeBatch ?? sortKitchenBatchesByNewest(batches)[0];
+  if (!latestBatch) return;
+
+  session.courseTickets.drinks = {
+    course: "drinks",
+    status: latestBatch.status,
+    sentAt: latestBatch.sentAt,
+    releasedAt: latestBatch.releasedAt,
+    readyAt: latestBatch.readyAt,
+    completedAt: latestBatch.completedAt,
+    manualRelease: false,
+    countdownMinutes: latestBatch.countdownMinutes
+  };
+};
+
 const createKitchenTicketBatch = (
   session: OrderSession,
   tableId: string,
@@ -419,6 +682,25 @@ const createKitchenTicketBatch = (
     sequence
   };
 };
+
+const createBarTicketBatch = (
+  session: OrderSession,
+  tableId: string,
+  items: OrderSession["items"],
+  sentAt: string
+): KitchenTicketBatch => ({
+  id: createClientId(`bar-ticket-${tableId}-drinks`),
+  course: "drinks",
+  itemIds: items.map((item) => item.id),
+  status: "ready",
+  sentAt,
+  releasedAt: sentAt,
+  readyAt: sentAt,
+  completedAt: undefined,
+  manualRelease: false,
+  countdownMinutes: 0,
+  sequence: getBarBatchesForCourse(session, "drinks").length + 1
+});
 
 const tableOrderTarget: OrderTarget = { type: "table" };
 
@@ -447,7 +729,9 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
   skippedCourses: [],
   courseTickets: createBaseTickets(),
   kitchenTicketBatches: [],
+  barTicketBatches: [],
   payments: [],
+  cancellations: [],
   partyGroups: [],
   receipt: {}
 });
@@ -487,7 +771,7 @@ const emitOperatorFeedback = () => {
 
 const getClosedSessionAmount = (session: OrderSession, products: Product[]) => {
   const paymentTotal = session.payments.reduce((sum, payment) => sum + payment.amountCents, 0);
-  return paymentTotal > 0 ? paymentTotal : calculateSessionTotal(session, products);
+  return paymentTotal > 0 ? paymentTotal : calculateSessionBillableTotal(session, products);
 };
 
 const normalizePaymentSelection = (session: OrderSession, selectedLineItems: PaymentLineItem[]) => {
@@ -509,6 +793,60 @@ const normalizePaymentSelection = (session: OrderSession, selectedLineItems: Pay
   return [...selectedByItemId.entries()].map(([itemId, quantity]) => ({ itemId, quantity }));
 };
 
+const resolveOrderModifierLabels = (
+  item: Pick<OrderItem, "productId" | "modifiers">,
+  products: Product[]
+) => {
+  const product = getProductById(products, item.productId);
+  if (!product || item.modifiers.length === 0) {
+    return [];
+  }
+
+  return item.modifiers.flatMap((selection) => {
+    const group = product.modifierGroups.find((entry) => entry.id === selection.groupId);
+    if (!group) {
+      return [];
+    }
+
+    const optionNames = selection.optionIds
+      .map((optionId) => group.options.find((option) => option.id === optionId)?.name)
+      .filter((optionName): optionName is string => Boolean(optionName));
+
+    if (optionNames.length === 0) {
+      return [];
+    }
+
+    return [`${group.name}: ${optionNames.join(", ")}`];
+  });
+};
+
+const getItemExtraIngredientIds = (item: Pick<OrderItem, "modifiers">) =>
+  item.modifiers.find((selection) => selection.groupId === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID)
+    ?.optionIds ?? [];
+
+const replaceItemModifierSelection = (
+  modifiers: OrderItem["modifiers"],
+  groupId: string,
+  optionIds: string[]
+) => {
+  const nextOptionIds = [...new Set(optionIds.map((optionId) => optionId.trim()).filter(Boolean))];
+  const nextModifiers = modifiers.filter((selection) => selection.groupId !== groupId);
+
+  if (nextOptionIds.length === 0) {
+    return nextModifiers;
+  }
+
+  nextModifiers.push({
+    groupId,
+    optionIds: nextOptionIds
+  });
+
+  return nextModifiers;
+};
+
+const areStringListsEqual = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
+
 const summarizeServiceItems = (
   items: OrderSession["items"],
   products: Product[],
@@ -521,6 +859,7 @@ const summarizeServiceItems = (
       quantity: number;
       productName: string;
       note?: string;
+      modifierLabels: string[];
       targetLabel?: string;
     }
   >();
@@ -529,7 +868,13 @@ const summarizeServiceItems = (
     const productName = resolveProductName(products, item.productId);
     const targetLabel =
       item.target.type === "seat" ? seatLabels.get(item.target.seatId) ?? "Sitzplatz" : undefined;
-    const key = [item.productId, item.note ?? "", targetLabel ?? "table"].join("|");
+    const modifierLabels = resolveOrderModifierLabels(item, products);
+    const key = [
+      item.productId,
+      item.note ?? "",
+      modifierLabels.join("|"),
+      targetLabel ?? "table"
+    ].join("|");
     const current = groupedItems.get(key);
 
     if (current) {
@@ -541,12 +886,16 @@ const summarizeServiceItems = (
       quantity: item.quantity,
       productName,
       note: item.note,
+      modifierLabels,
       targetLabel
     });
   });
 
   const labels = [...groupedItems.values()].map((item) => {
-    const drinkLabel = `${item.quantity}x ${item.productName}${item.note ? ` (${item.note})` : ""}`;
+    const modifierSuffix =
+      item.modifierLabels.length > 0 ? ` · ${item.modifierLabels.join(" · ")}` : "";
+    const noteSuffix = item.note ? ` (${item.note})` : "";
+    const drinkLabel = `${item.quantity}x ${item.productName}${modifierSuffix}${noteSuffix}`;
     return item.targetLabel ? `${item.targetLabel}: ${drinkLabel}` : drinkLabel;
   });
 
@@ -638,11 +987,13 @@ const summarizeCourseItems = (items: OrderSession["items"], products: Product[])
       quantity: number;
       productName: string;
       note?: string;
+      modifierLabels: string[];
     }
   >();
 
   items.forEach((item) => {
-    const key = [item.productId, item.note ?? ""].join("|");
+    const modifierLabels = resolveOrderModifierLabels(item, products);
+    const key = [item.productId, item.note ?? "", modifierLabels.join("|")].join("|");
     const current = groupedItems.get(key);
 
     if (current) {
@@ -653,13 +1004,17 @@ const summarizeCourseItems = (items: OrderSession["items"], products: Product[])
     groupedItems.set(key, {
       quantity: item.quantity,
       productName: resolveProductName(products, item.productId),
-      note: item.note
+      note: item.note,
+      modifierLabels
     });
   });
 
-  const labels = [...groupedItems.values()].map(
-    (item) => `${item.quantity}x ${item.productName}${item.note ? ` (${item.note})` : ""}`
-  );
+  const labels = [...groupedItems.values()].map((item) => {
+    const modifierSuffix =
+      item.modifierLabels.length > 0 ? ` · ${item.modifierLabels.join(" · ")}` : "";
+    const noteSuffix = item.note ? ` (${item.note})` : "";
+    return `${item.quantity}x ${item.productName}${modifierSuffix}${noteSuffix}`;
+  });
 
   if (labels.length <= 4) {
     return labels.join(", ");
@@ -677,12 +1032,16 @@ const resolveItemTargetLabel = (item: OrderItem, table?: TableLayout) => {
   return table?.seats.find((seat) => seat.id === target.seatId)?.label ?? "Sitzplatz";
 };
 
-const formatItemCorrectionSummary = (
-  item: Pick<OrderItem, "productId" | "quantity" | "note" | "target">,
+const legacyFormatItemCorrectionSummary = (
+  item: Pick<OrderItem, "productId" | "quantity" | "note" | "target" | "modifiers">,
   products: Product[],
   table?: TableLayout
 ) => {
   const parts = [`${item.quantity}x ${resolveProductName(products, item.productId)}`];
+  const modifierLabels = resolveOrderModifierLabels(item, products);
+  if (modifierLabels.length > 0) {
+    parts.push(modifierLabels.join(" · "));
+  }
   if (item.note?.trim()) {
     parts.push(`(${item.note.trim()})`);
   }
@@ -691,10 +1050,32 @@ const formatItemCorrectionSummary = (
   return parts.join(" ");
 };
 
-const canReviseSentItem = (session: OrderSession, item: OrderItem) => {
+const formatItemCorrectionSummary = (
+  item: Pick<OrderItem, "productId" | "quantity" | "note" | "target" | "modifiers">,
+  products: Product[],
+  table?: TableLayout
+) => {
+  const parts = [`${item.quantity}x ${resolveProductName(products, item.productId)}`];
+  const modifierLabels = resolveOrderModifierLabels(item, products);
+  if (modifierLabels.length > 0) {
+    parts.push(modifierLabels.join(" · "));
+  }
+  if (item.note?.trim()) {
+    parts.push(`(${item.note.trim()})`);
+  }
+
+  parts.push(`· ${resolveItemTargetLabel(item as OrderItem, table)}`);
+  return parts.join(" ");
+};
+
+const canReviseSentItem = (session: OrderSession, item: OrderItem, actorRole?: Role) => {
+  if (actorRole === "admin") {
+    return true;
+  }
+
   if (!item.sentAt) return false;
   if (item.servedAt) return false;
-  if (item.category !== "drinks" && item.preparedAt) return false;
+  if (item.category !== "drinks" && hasKitchenItemProgress(item)) return false;
 
   return calculatePaidItemQuantity(session, item.id) === 0;
 };
@@ -736,7 +1117,10 @@ const notifySentItemCorrection = (
   state: AppState,
   tableId: string,
   nextItem: OrderItem | null,
-  previousItem: Pick<OrderItem, "category" | "productId" | "quantity" | "note" | "target">,
+  previousItem: Pick<
+    OrderItem,
+    "category" | "productId" | "quantity" | "note" | "target" | "modifiers"
+  >,
   action: "updated" | "removed"
 ) => {
   const table = state.tables.find((entry) => entry.id === tableId);
@@ -744,7 +1128,10 @@ const notifySentItemCorrection = (
   const course = previousItem.category;
   const previousLabel = formatItemCorrectionSummary(previousItem, state.products, table);
   const nextLabel = nextItem ? formatItemCorrectionSummary(nextItem, state.products, table) : null;
-  const targetRoles = course === "drinks" ? (["waiter"] as const) : (["kitchen", "waiter"] as const);
+  const targetRoles =
+    course === "drinks"
+      ? (["bar", "waiter"] as const)
+      : (["kitchen", "waiter"] as const);
 
   withNotification(state, {
     title:
@@ -776,6 +1163,12 @@ const normalizeSessionAfterItemRemoval = (session: OrderSession) => {
       itemIds: batch.itemIds.filter((itemId) => itemIds.has(itemId))
     }))
     .filter((batch) => batch.itemIds.length > 0);
+  session.barTicketBatches = session.barTicketBatches
+    .map((batch) => ({
+      ...batch,
+      itemIds: batch.itemIds.filter((itemId) => itemIds.has(itemId))
+    }))
+    .filter((batch) => batch.itemIds.length > 0);
 
   for (const course of serviceCourseOrder) {
     const hasItems = session.items.some((item) => item.category === course);
@@ -784,10 +1177,141 @@ const normalizeSessionAfterItemRemoval = (session: OrderSession) => {
       continue;
     }
 
-    if (course !== "drinks") {
-      syncCourseTicketFromKitchenBatches(session, course);
+    if (course === "drinks") {
+      syncDrinkTicketFromBarBatches(session);
+      continue;
     }
+
+    syncCourseTicketFromKitchenBatches(session, course);
   }
+};
+
+const completeCourseOrBatch = (
+  next: AppState,
+  session: OrderSession,
+  tableId: string,
+  course: CourseKey,
+  completedAt: string,
+  batch?: KitchenTicketBatch
+) => {
+  const ticket = session.courseTickets[course];
+  const table = next.tables.find((entry) => entry.id === tableId);
+  const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+  const courseItems = batch ? getBatchItems(session, batch) : session.items.filter((item) => item.category === course);
+
+  if (course === "drinks") {
+    courseItems.forEach((item) => {
+      item.preparedAt = completedAt;
+    });
+  } else {
+    courseItems.forEach((item) => {
+      setKitchenItemCompleted(item, completedAt);
+    });
+  }
+
+  if (batch) {
+    batch.status = "completed";
+    batch.completedAt = completedAt;
+  } else {
+    ticket.status = "completed";
+    ticket.completedAt = completedAt;
+  }
+
+  if (course === "drinks") {
+    syncDrinkTicketFromBarBatches(session);
+  } else {
+    syncCourseTicketFromKitchenBatches(session, course);
+  }
+
+  if (course !== "drinks" && (course === "dessert" || course === "main")) {
+    session.status = "ready-to-bill";
+  }
+
+  if (course === "drinks") {
+    withNotification(next, {
+      kind: "service-drinks",
+      course,
+      itemIds: courseItems.map((item) => item.id),
+      title: "Getränke an den Tisch",
+      body: `${tableName}: ${summarizeServiceItems(courseItems, next.products, table)}.`,
+      tone: "info",
+      tableId
+    });
+    return;
+  }
+
+  withNotification(next, {
+    kind: "service-course-ready",
+    course,
+    itemIds: courseItems.map((item) => item.id),
+    title: `${courseLabels[course]} fertig`,
+    body: `${summarizeCourseItems(courseItems, next.products)} für ${tableName} ist fertig.`,
+    tone: "success",
+    tableId
+  });
+};
+
+const removeKitchenReadyNotifications = (
+  state: AppState,
+  tableId: string,
+  course: CourseKey,
+  itemIds: string[]
+) => {
+  const itemIdSet = new Set(itemIds);
+  const removableIds = new Set<string>();
+
+  state.notifications.forEach((notification) => {
+    if (notification.tableId !== tableId) return;
+    if (
+      notification.kind !== "service-course-ready" &&
+      notification.kind !== "service-course-ready-accepted"
+    ) {
+      return;
+    }
+    if (notification.course && notification.course !== course) return;
+
+    const hasMatchingItems =
+      !notification.itemIds?.length || notification.itemIds.some((itemId) => itemIdSet.has(itemId));
+    if (hasMatchingItems) {
+      removableIds.add(notification.id);
+    }
+  });
+
+  if (removableIds.size === 0) {
+    return;
+  }
+
+  state.notifications = state.notifications.filter(
+    (notification) =>
+      !removableIds.has(notification.id) &&
+      (!notification.sourceNotificationId || !removableIds.has(notification.sourceNotificationId))
+  );
+};
+
+const reopenCompletedKitchenBatch = (
+  next: AppState,
+  session: OrderSession,
+  tableId: string,
+  batch: KitchenTicketBatch
+) => {
+  const batchItems = getBatchItems(session, batch);
+  if (batchItems.length === 0) return false;
+  if (batchItems.some((item) => item.servedAt)) return false;
+
+  batch.status = "ready";
+  batch.completedAt = undefined;
+  batch.readyAt = new Date().toISOString();
+
+  batchItems.forEach((item) => {
+    const unitCount = getKitchenUnitCount(item);
+    item.kitchenUnitStates = createKitchenUnitStates(unitCount, "pending");
+    delete item.preparedAt;
+  });
+
+  removeKitchenReadyNotifications(next, tableId, batch.course, batch.itemIds);
+  session.status = "waiting";
+  syncCourseTicketFromKitchenBatches(session, batch.course);
+  return true;
 };
 
 const commitStorage = (state: AppState) => {
@@ -1247,6 +1771,95 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, state]
   );
 
+  const startWorkspaceSession = useCallback(
+    (role: WorkspaceRole, name?: string) => {
+      const next = structuredClone(state);
+
+      if (role === "waiter") {
+        const normalizedName = name?.trim() ?? "";
+        if (!normalizedName) {
+          return {
+            ok: false,
+            message: "Bitte gib deinen Namen für den Service ein."
+          };
+        }
+
+        const lookupName = normalizeLookupText(normalizedName);
+        const activeWaiters = next.users.filter((user) => user.role === "waiter" && user.active);
+        const matchingUsers = activeWaiters.filter((user) => {
+          const normalizedUserName = normalizeLookupText(user.name);
+          const normalizedUsername = normalizeLookupText(user.username);
+          return normalizedUserName === lookupName || normalizedUsername === lookupName;
+        });
+
+        const usernameMatch = matchingUsers.find(
+          (user) => normalizeLookupText(user.username) === lookupName
+        );
+        const exactNameMatches = matchingUsers.filter(
+          (user) => normalizeLookupText(user.name) === lookupName
+        );
+
+        if (!usernameMatch && exactNameMatches.length > 1) {
+          return {
+            ok: false,
+            message:
+              "Der Name ist mehrfach vorhanden. Bitte im Admin einen eindeutigen Service-Namen anlegen."
+          };
+        }
+
+        const matchedUser = usernameMatch ?? exactNameMatches[0];
+        if (matchedUser) {
+          matchedUser.lastSeenAt = new Date().toISOString();
+          commit(next, matchedUser.id);
+          return { ok: true, user: matchedUser };
+        }
+
+        const baseUsername = createUsernameFromName(normalizedName);
+        const existingUsernames = new Set(
+          next.users.map((user) => normalizeLookupText(user.username))
+        );
+        let username = baseUsername;
+        let suffix = 2;
+
+        while (existingUsernames.has(normalizeLookupText(username))) {
+          username = `${baseUsername}${suffix}`;
+          suffix += 1;
+        }
+
+        const user: UserAccount = {
+          id: createClientId("user"),
+          name: normalizedName,
+          username,
+          role: "waiter",
+          password: "",
+          active: true,
+          lastSeenAt: new Date().toISOString()
+        };
+        next.users.unshift(user);
+        commit(next, user.id);
+        return { ok: true, user };
+      }
+
+      const user = next.users.find((candidate) => candidate.role === role && candidate.active);
+      if (!user) {
+        return {
+          ok: false,
+          message:
+            role === "kitchen"
+              ? "Es ist aktuell kein aktives Küchenkonto vorhanden."
+              : role === "bar"
+                ? "Es ist aktuell kein aktives Barkonto vorhanden."
+                : "Es ist aktuell kein aktives Admin-Konto vorhanden."
+        };
+      }
+
+      user.lastSeenAt = new Date().toISOString();
+      commit(next, user.id);
+      return { ok: true, user };
+    },
+    [commit, state]
+  );
+
   const logout = useCallback(() => {
     commit(state, null);
   }, [commit, state]);
@@ -1294,6 +1907,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       itemId: string,
       patch: Partial<Pick<OrderSession["items"][number], "target" | "quantity" | "note">>
     ) => {
+      const actorRole = state.users.find((user) => user.id === currentUserId)?.role;
       const next = structuredClone(state);
       const table = next.tables.find((entry) => entry.id === tableId);
       const session = getSessionForTable(next.sessions, tableId);
@@ -1307,10 +1921,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
             productId: item.productId,
             quantity: item.quantity,
             note: item.note,
-            target: structuredClone(item.target)
+            target: structuredClone(item.target),
+            modifiers: structuredClone(item.modifiers)
           }
         : null;
-      if (item.sentAt && !canReviseSentItem(session, item)) return;
+      if (item.sentAt && !canReviseSentItem(session, item, actorRole)) return;
 
       if (patch.target !== undefined) {
         item.target = resolveOrderTargetForTable(table, patch.target);
@@ -1340,24 +1955,78 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       commit(next);
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
-  const removeItem = useCallback(
-    (tableId: string, itemId: string) => {
+  const setItemExtraIngredients = useCallback(
+    (tableId: string, itemId: string, ingredientIds: string[]) => {
+      const actorRole = state.users.find((user) => user.id === currentUserId)?.role;
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
       if (!session || session.status === "closed") return;
 
       const item = session.items.find((entry) => entry.id === itemId);
       if (!item) return;
-      if (item.sentAt && !canReviseSentItem(session, item)) return;
+      if (item.sentAt && !canReviseSentItem(session, item, actorRole)) return;
+
+      const product = getProductById(next.products, item.productId);
+      const availableIngredientIds = new Set(
+        product?.modifierGroups
+          .find((group) => group.id === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID)
+          ?.options.map((option) => option.id) ?? []
+      );
+      const nextIngredientIds = [...new Set(ingredientIds.map((ingredientId) => ingredientId.trim()))]
+        .filter((ingredientId) => ingredientId.length > 0)
+        .filter((ingredientId) => availableIngredientIds.has(ingredientId));
+      const currentIngredientIds = getItemExtraIngredientIds(item);
+
+      if (areStringListsEqual(currentIngredientIds, nextIngredientIds)) {
+        return;
+      }
+
+      const previousItem = item.sentAt
+        ? {
+            category: item.category,
+            productId: item.productId,
+            quantity: item.quantity,
+            note: item.note,
+            target: structuredClone(item.target),
+            modifiers: structuredClone(item.modifiers)
+          }
+        : null;
+
+      item.modifiers = replaceItemModifierSelection(
+        item.modifiers,
+        EXTRA_INGREDIENTS_MODIFIER_GROUP_ID,
+        nextIngredientIds
+      );
+
+      if (previousItem) {
+        notifySentItemCorrection(next, tableId, item, previousItem, "updated");
+      }
+
+      commit(next);
+    },
+    [commit, currentUserId, state]
+  );
+
+  const removeItem = useCallback(
+    (tableId: string, itemId: string) => {
+      const actorRole = state.users.find((user) => user.id === currentUserId)?.role;
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      if (!session || session.status === "closed") return;
+
+      const item = session.items.find((entry) => entry.id === itemId);
+      if (!item) return;
+      if (item.sentAt && !canReviseSentItem(session, item, actorRole)) return;
       const previousItem = {
         category: item.category,
         productId: item.productId,
         quantity: item.quantity,
         note: item.note,
-        target: structuredClone(item.target)
+        target: structuredClone(item.target),
+        modifiers: structuredClone(item.modifiers)
       };
 
       session.items = session.items.filter((entry) => entry.id !== itemId);
@@ -1373,7 +2042,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       commit(next);
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const skipCourse = useCallback(
@@ -1404,7 +2073,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (course === "drinks") {
         return {
           ok: false,
-          message: "Getränke werden an den Service gemeldet und können nicht für die Küche warten."
+          message: "Getränke gehen direkt an die Bar und können dort nicht auf Wartezeit gesetzt werden."
         };
       }
 
@@ -1476,6 +2145,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const sentAt = new Date().toISOString();
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+      const kitchenPrintRequests: Parameters<typeof createPrintJob>[0][] = [];
       const pendingDrinkItems = session.items.filter(
         (item) => item.category === "drinks" && !item.sentAt
       );
@@ -1494,45 +2164,34 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         };
       }
 
-      const sendPendingDrinksToService = () => {
+      const sendPendingDrinksToBar = () => {
         if (pendingDrinkItems.length === 0) return false;
 
-        const drinkTicket = session.courseTickets.drinks;
-        drinkTicket.sentAt = sentAt;
-        drinkTicket.status = "completed";
-        drinkTicket.completedAt = sentAt;
+        const drinkBatch = createBarTicketBatch(session, tableId, pendingDrinkItems, sentAt);
+        session.barTicketBatches.push(drinkBatch);
 
         pendingDrinkItems.forEach((item) => {
           item.sentAt = sentAt;
         });
         session.skippedCourses = session.skippedCourses.filter((entry) => entry !== "drinks");
-
-        withNotification(next, {
-          kind: "service-drinks",
-          course: "drinks",
-          itemIds: pendingDrinkItems.map((item) => item.id),
-          title: "Getränke an den Tisch",
-          body: `${tableName}: ${summarizeServiceItems(pendingDrinkItems, next.products, table)}.`,
-          tone: "info",
-          tableId
-        });
+        syncDrinkTicketFromBarBatches(session);
 
         return true;
       };
 
       if (course === "drinks") {
-        sendPendingDrinksToService();
+        sendPendingDrinksToBar();
         session.status = "waiting";
         emitOperatorFeedback();
         commit(next);
         return {
           ok: true,
-          message: "Neue Getränke wurden gespeichert und an alle im Service gemeldet.",
+          message: "Neue Getränke wurden an die Bar gesendet.",
           ticketStatus: session.courseTickets.drinks.status
         };
       }
 
-      const drinksWereSent = sendPendingDrinksToService();
+      const drinksWereSent = sendPendingDrinksToBar();
       const sentKitchenCourseLabels: string[] = [];
       const waitingKitchenCourseLabels: string[] = [];
 
@@ -1552,6 +2211,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
         items.forEach((item) => {
           item.sentAt = sentAt;
+          syncKitchenItemProgress(item);
         });
         session.skippedCourses = session.skippedCourses.filter((entry) => entry !== kitchenCourse);
 
@@ -1564,6 +2224,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         sentKitchenCourseLabels.push(batchLabel);
         if (shouldWait) {
           waitingKitchenCourseLabels.push(batchLabel);
+        }
+        if (table) {
+          kitchenPrintRequests.push({
+            type: "kitchen-ticket",
+            session: structuredClone(session),
+            table: structuredClone(table),
+            products: structuredClone(next.products),
+            batch: structuredClone(batch)
+          });
         }
 
         withNotification(next, {
@@ -1581,6 +2250,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.status = "waiting";
       emitOperatorFeedback();
       commit(next);
+      if (kitchenPrintRequests.length > 0) {
+        void Promise.all(kitchenPrintRequests.map((request) => createPrintJob(request)));
+      }
       return {
         ok: true,
         message:
@@ -1592,15 +2264,65 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
                 waitingKitchenCourseLabels.length === 1 ? "läuft" : "laufen"
               } dort erst nach der Wartezeit frei.`
             : " Alle offenen Speisen sind direkt frei.") +
-          (drinksWereSent ? " Offene Getränke wurden gleichzeitig an den Service gemeldet." : ""),
+          (drinksWereSent ? " Offene Getränke wurden gleichzeitig an die Bar gesendet." : ""),
         ticketStatus: waitingKitchenCourseLabels.length > 0 ? ("countdown" as const) : ("ready" as const)
       };
     },
     [commit, state]
   );
 
+  const cycleKitchenItemUnitStatus = useCallback(
+    (tableId: string, batchId: string, itemId: string, unitIndex: number) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      if (!session) return;
+
+      const batch = session.kitchenTicketBatches.find((entry) => entry.id === batchId);
+      if (!batch || batch.status !== "ready") return;
+
+      const item = getBatchItems(session, batch).find((entry) => entry.id === itemId);
+      if (!item) return;
+
+      const changedAt = new Date().toISOString();
+      const nextStatus = cycleKitchenUnitState(item, unitIndex, changedAt);
+      if (!nextStatus) return;
+
+      if (isKitchenBatchCompletedByUnits(session, batch)) {
+        completeCourseOrBatch(next, session, tableId, batch.course, changedAt, batch);
+      } else {
+        syncCourseTicketFromKitchenBatches(session, batch.course);
+      }
+
+      emitOperatorFeedback();
+      commit(next);
+    },
+    [commit, state]
+  );
+
+  const reopenKitchenBatch = useCallback(
+    (tableId: string, batchId: string) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      if (!session) return;
+
+      const batch = session.kitchenTicketBatches.find((entry) => entry.id === batchId);
+      if (!batch || batch.status !== "completed") return;
+
+      const reopened = reopenCompletedKitchenBatch(next, session, tableId, batch);
+      if (!reopened) return;
+
+      emitOperatorFeedback();
+      commit(next);
+    },
+    [commit, state]
+  );
+
   const releaseCourse = useCallback(
     (tableId: string, course: CourseKey, batchId?: string) => {
+      if (course === "drinks") {
+        return;
+      }
+
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
       if (!session) return;
@@ -1647,53 +2369,26 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const completedAt = new Date().toISOString();
       const ticket = session.courseTickets[course];
-      const table = next.tables.find((entry) => entry.id === tableId);
-      const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+      const batchPool =
+        course === "drinks" ? session.barTicketBatches : session.kitchenTicketBatches;
       const batch = batchId
-        ? session.kitchenTicketBatches.find((entry) => entry.id === batchId)
+        ? batchPool.find((entry) => entry.id === batchId)
         : sortKitchenBatchesByNewest(
-            getKitchenBatchesForCourse(session, course).filter((entry) => entry.status === "ready")
+            (course === "drinks"
+              ? getBarBatchesForCourse(session, course)
+              : getKitchenBatchesForCourse(session, course)
+            ).filter((entry) => entry.status === "ready")
           )[0];
-      const batchItemIds = new Set(batch?.itemIds);
-      const courseItems = batch
-        ? session.items.filter((item) => batchItemIds.has(item.id))
-        : session.items.filter((item) => item.category === course);
 
       if (batch && (batch.course !== course || batch.status !== "ready")) {
         return;
       }
 
-      if (!batch && ticket.status !== "ready") {
+      if (!batch && (course === "drinks" || ticket.status !== "ready")) {
         return;
       }
 
-      if (batch) {
-        batch.status = "completed";
-        batch.completedAt = completedAt;
-      } else {
-        ticket.status = "completed";
-        ticket.completedAt = completedAt;
-      }
-
-      courseItems.forEach((item) => {
-        item.preparedAt = completedAt;
-      });
-
-      syncCourseTicketFromKitchenBatches(session, course);
-
-      if (course === "dessert" || course === "main") {
-        session.status = "ready-to-bill";
-      }
-
-      withNotification(next, {
-        kind: "service-course-ready",
-        course,
-        itemIds: courseItems.map((item) => item.id),
-        title: `${courseLabels[course]} fertig`,
-        body: `${summarizeCourseItems(courseItems, next.products)} für ${tableName} ist fertig.`,
-        tone: "success",
-        tableId
-      });
+      completeCourseOrBatch(next, session, tableId, course, completedAt, batch);
       emitOperatorFeedback();
       commit(next);
     },
@@ -1701,13 +2396,23 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const printReceipt = useCallback(
-    (tableId: string) => {
+    (tableId: string, sessionIds?: string[]) => {
       const next = structuredClone(state);
-      const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
+      const sessions =
+        sessionIds && sessionIds.length > 0
+          ? next.sessions.filter((entry) => sessionIds.includes(entry.id))
+          : getCheckoutTableIds(next, tableId)
+              .map((checkoutTableId) => getSessionForTable(next.sessions, checkoutTableId))
+              .filter((session): session is OrderSession => Boolean(session));
+      if (sessions.length === 0) return;
 
-      session.receipt.printedAt = new Date().toISOString();
-      session.status = "ready-to-bill";
+      const printedAt = new Date().toISOString();
+
+      sessions.forEach((session) => {
+        session.receipt.printedAt = printedAt;
+        session.status = "ready-to-bill";
+      });
+
       withNotification(next, {
         kind: "admin-receipt-alarm",
         title: "Rechnung gedruckt",
@@ -1723,26 +2428,39 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const reprintReceipt = useCallback(
-    (tableId: string, sessionId?: string) => {
+    (tableId: string, sessionIdOrIds?: string | string[]) => {
       const next = structuredClone(state);
-      const session =
-        (sessionId
-          ? next.sessions.find((entry) => entry.id === sessionId)
-          : undefined) ??
-        getSessionForTable(next.sessions, tableId) ??
-        [...next.sessions]
-          .filter((entry) => entry.tableId === tableId)
-          .sort((left, right) => {
-            const leftClosedAt = Date.parse(left.receipt.closedAt ?? left.receipt.printedAt ?? "0");
-            const rightClosedAt = Date.parse(
-              right.receipt.closedAt ?? right.receipt.printedAt ?? "0"
-            );
-            return rightClosedAt - leftClosedAt;
-          })[0];
-      if (!session) return;
+      const sessions = Array.isArray(sessionIdOrIds)
+        ? next.sessions.filter((entry) => sessionIdOrIds.includes(entry.id))
+        : sessionIdOrIds
+          ? next.sessions.filter((entry) => entry.id === sessionIdOrIds)
+          : getCheckoutTableIds(next, tableId)
+              .map((checkoutTableId) => getSessionForTable(next.sessions, checkoutTableId))
+              .filter((session): session is OrderSession => Boolean(session));
+      const targetSessions =
+        sessions.length > 0
+          ? sessions
+          : [
+              [...next.sessions]
+                .filter((entry) => entry.tableId === tableId)
+                .sort((left, right) => {
+                  const leftClosedAt = Date.parse(
+                    left.receipt.closedAt ?? left.receipt.reprintedAt ?? left.receipt.printedAt ?? "0"
+                  );
+                  const rightClosedAt = Date.parse(
+                    right.receipt.closedAt ?? right.receipt.reprintedAt ?? right.receipt.printedAt ?? "0"
+                  );
+                  return rightClosedAt - leftClosedAt;
+                })[0]
+            ].filter((session): session is OrderSession => Boolean(session));
+      if (targetSessions.length === 0) return;
 
-      session.receipt.printedAt ??= new Date().toISOString();
-      session.receipt.reprintedAt = new Date().toISOString();
+      const reprintedAt = new Date().toISOString();
+      targetSessions.forEach((session) => {
+        session.receipt.printedAt ??= reprintedAt;
+        session.receipt.reprintedAt = reprintedAt;
+      });
+
       withNotification(next, {
         kind: "admin-receipt-alarm",
         title: "Rechnung erneut gedruckt",
@@ -1862,6 +2580,63 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       return { ok: true };
     },
     [commit, state]
+  );
+
+  const recordInvoiceCancellation = useCallback(
+    (tableIds: string[], selectedLineItems: PaymentLineItem[], label = "Rechnungsstorno") => {
+      const uniqueTableIds = [...new Set(tableIds)];
+      const next = structuredClone(state);
+      const sessions = uniqueTableIds
+        .map((tableId) => getSessionForTable(next.sessions, tableId))
+        .filter((session): session is OrderSession => Boolean(session));
+
+      if (sessions.length === 0) {
+        return { ok: false, message: "Keine offene Bestellung für diese Auswahl gefunden." };
+      }
+
+      let canceledAmount = 0;
+      const canceledAt = new Date().toISOString();
+
+      sessions.forEach((session) => {
+        const sessionLineItems = normalizePaymentSelection(
+          session,
+          selectedLineItems.filter((lineItem) =>
+            session.items.some((item) => item.id === lineItem.itemId)
+          )
+        );
+        if (sessionLineItems.length === 0) return;
+
+        const amountCents = calculateLineItemsTotal(session, next.products, sessionLineItems);
+        if (amountCents <= 0) return;
+
+        session.receipt.printedAt ??= canceledAt;
+        session.cancellations.push({
+          id: createClientId("cancellation"),
+          label: label.trim() || "Rechnungsstorno",
+          createdAt: canceledAt,
+          createdByUserId: currentUserId ?? undefined,
+          lineItems: sessionLineItems
+        });
+        session.status =
+          calculateSessionOpenTotal(session, next.products) <= 0 ? "ready-to-bill" : "serving";
+        canceledAmount += amountCents;
+      });
+
+      if (canceledAmount <= 0) {
+        return { ok: false, message: "Bitte mindestens eine offene Position auswählen." };
+      }
+
+      withNotification(next, {
+        title: "Rechnungsstorno gespeichert",
+        body: `${euro(canceledAmount)} wurden als ${label.trim() || "Rechnungsstorno"} markiert.`,
+        tone: "alert",
+        tableId: uniqueTableIds[0]
+      });
+      emitOperatorFeedback();
+      commit(next);
+      return { ok: true };
+    },
+    [commit, currentUserId, state]
   );
 
   const closePaidOrder = useCallback(
@@ -2043,6 +2818,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       priceCents: number;
       taxRate: number;
       productionTarget: ProductionTarget;
+      supportsExtraIngredients?: boolean;
     }) => {
       const name = input.name.trim();
       if (!name) {
@@ -2063,7 +2839,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         allergens: [],
         showInKitchen: input.productionTarget === "kitchen",
         productionTarget: input.productionTarget,
-        modifierGroups: []
+        modifierGroups: [],
+        ...(input.supportsExtraIngredients ? { supportsExtraIngredients: true } : {})
       });
 
       withNotification(next, {
@@ -2074,6 +2851,51 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const createExtraIngredient = useCallback(
+    (input: { name: string; priceDeltaCents: number }) => {
+      const name = input.name.trim();
+      if (!name) {
+        return { ok: false, message: "Bitte einen Zutatennamen eingeben." };
+      }
+
+      const next = structuredClone(state);
+      next.extraIngredients ??= [];
+      next.extraIngredients.push({
+        id: createClientId("ingredient"),
+        name,
+        priceDeltaCents: Math.max(0, Math.round(input.priceDeltaCents)),
+        active: true
+      });
+      commit(next);
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const updateExtraIngredient = useCallback(
+    (
+      ingredientId: string,
+      patch: Partial<Pick<ExtraIngredient, "name" | "priceDeltaCents" | "active">>
+    ) => {
+      const next = structuredClone(state);
+      const ingredient = next.extraIngredients?.find((entry) => entry.id === ingredientId);
+      if (!ingredient) return;
+
+      if (patch.name !== undefined) {
+        ingredient.name = patch.name;
+      }
+      if (patch.priceDeltaCents !== undefined) {
+        ingredient.priceDeltaCents = Math.max(0, Math.round(patch.priceDeltaCents));
+      }
+      if (patch.active !== undefined) {
+        ingredient.active = patch.active;
+      }
+
+      commit(next);
     },
     [commit, state]
   );
@@ -2122,6 +2944,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const next = structuredClone(state);
       next.products = next.products.filter((entry) => entry.id !== productId);
+      next.deletedProductIds = [...new Set([...(next.deletedProductIds ?? []), productId])];
       next.sessions = next.sessions.flatMap((session) => {
         session.items = session.items.filter((item) => item.productId !== productId);
         normalizeSessionAfterItemRemoval(session);
@@ -2159,6 +2982,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const removedClosedSessionIds: string[] = [];
 
       next.products = next.products.filter((entry) => entry.id !== productId);
+      next.deletedProductIds = [...new Set([...(next.deletedProductIds ?? []), productId])];
       next.sessions = next.sessions.flatMap((session) => {
         const containsProduct = session.items.some((item) => item.productId === productId);
         if (!containsProduct) {
@@ -2671,13 +3495,17 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       sharedSync,
       actions: {
         login,
+        startWorkspaceSession,
         logout,
         addItem,
         updateItem,
+        setItemExtraIngredients,
         removeItem,
         skipCourse,
         setCourseWait,
         sendCourseToKitchen,
+        cycleKitchenItemUnitStatus,
+        reopenKitchenBatch,
         releaseCourse,
         markCourseCompleted,
         printReceipt,
@@ -2685,6 +3513,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         closeOrder,
         closePaidOrder,
         recordPartialPayment,
+        recordInvoiceCancellation,
         createPartyGroup,
         updatePartyGroup,
         deletePartyGroup,
@@ -2692,6 +3521,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         linkTables,
         unlinkTables,
         createProduct,
+        createExtraIngredient,
+        updateExtraIngredient,
         updateProduct,
         deleteProduct: deleteProductHard,
         deleteSession,
@@ -2714,10 +3545,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       assignItemsToPartyGroup,
       closeOrder,
       closePaidOrder,
+      createExtraIngredient,
       createPartyGroup,
       createProduct,
       createTable,
       createUser,
+      cycleKitchenItemUnitStatus,
+      reopenKitchenBatch,
       deletePartyGroup,
       currentUser,
       deleteProductHard,
@@ -2725,17 +3559,21 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       deleteUser,
       hydrated,
       login,
+      startWorkspaceSession,
       logout,
       markCourseCompleted,
       markNotificationRead,
       printReceipt,
       releaseCourse,
+      reopenKitchenBatch,
       removeItem,
       reprintReceipt,
       recordPartialPayment,
+      recordInvoiceCancellation,
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
+      setItemExtraIngredients,
       setCourseWait,
       setDesignMode,
       setSeatVisible,
@@ -2746,6 +3584,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       toggleTableActive,
       unlinkTables,
       unreadNotifications,
+      updateExtraIngredient,
       updatePartyGroup,
       updateTable,
       updateItem,
@@ -2773,6 +3612,26 @@ export const resolveCourseStatus = (session: OrderSession | undefined, course: C
       status: "not-recorded" as const,
       minutesLeft: 0
     };
+  }
+
+  if (session && course === "drinks") {
+    const batches = getBarBatchesForCourse(session, course);
+    if (batches.length > 0) {
+      const activeBatch = [...batches]
+        .filter((batch) => batch.status !== "completed" && batch.status !== "skipped")
+        .sort((left, right) => {
+          const rankDelta = kitchenTicketStatusRank[left.status] - kitchenTicketStatusRank[right.status];
+          if (rankDelta !== 0) return rankDelta;
+          if (right.sequence !== left.sequence) return right.sequence - left.sequence;
+          return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
+        })[0];
+      const latestBatch = activeBatch ?? sortKitchenBatchesByNewest(batches)[0];
+
+      return {
+        status: latestBatch?.status ?? ("not-recorded" as const),
+        minutesLeft: 0
+      };
+    }
   }
 
   if (session && course !== "drinks") {

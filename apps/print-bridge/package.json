@@ -5,15 +5,27 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "dev": "tsup src/index.ts --format esm --dts --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsup src/index.ts src/server.ts --format esm --dts",
+    "dev": "tsup src/index.ts src/server.ts --format esm --dts --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "corepack pnpm build && node --test test/**/*.test.mjs"
   },
   "dependencies": {
     "@kiju/domain": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3"
   }
