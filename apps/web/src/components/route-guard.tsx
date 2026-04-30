@@ -23,10 +23,10 @@ export const RouteGuard = ({
   if (!currentUser) {
     return (
       <main className="kiju-empty-state">
-        <h1>Bitte zuerst anmelden</h1>
-        <p>Die Rolle ist noch nicht aktiv. Gehe zur Startseite und melde dich an.</p>
+        <h1>Bitte zuerst einen Bereich wählen</h1>
+        <p>Gehe zur Startseite und öffne Küche, Getränke oder Service.</p>
         <Link href={routeConfig.login} className="kiju-button kiju-button--primary">
-          Zum Login
+          Zur Startseite
         </Link>
       </main>
     );
@@ -38,7 +38,7 @@ export const RouteGuard = ({
         <h1>Kein Zugriff</h1>
         <p>Diese Ansicht ist für deine Rolle aktuell nicht freigeschaltet.</p>
         <Link href={routeConfig.login} className="kiju-button kiju-button--secondary">
-          Rolle wechseln
+          Bereich wechseln
         </Link>
       </main>
     );

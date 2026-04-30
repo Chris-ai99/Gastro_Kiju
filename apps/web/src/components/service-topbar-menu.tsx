@@ -12,7 +12,8 @@ import { useTheme } from "./theme-provider";
 const roleLabels: Record<Role, string> = {
   admin: "Admin",
   waiter: "Service",
-  kitchen: "Küche"
+  kitchen: "Küche",
+  bar: "Bar"
 };
 
 type ServiceHistoryEntry = {

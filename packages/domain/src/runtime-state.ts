@@ -1,8 +1,14 @@
+import { EXTRA_INGREDIENTS_MODIFIER_GROUP_ID } from "./types";
+
 import type {
   AppState,
   CourseKey,
+  ExtraIngredient,
+  KitchenUnitState,
+  KitchenUnitStatus,
   KitchenTicketBatch,
   OrderItem,
+  OrderModifierSelection,
   OrderSession,
   OrderTarget,
   Product,
@@ -12,6 +18,15 @@ import { demoProducts, demoTables } from "./demo-data";
 
 const SYSTEM_CATALOG_VERSION = 1;
 const drinkSubcategoryFallback = "Sonstiges";
+const LEGACY_EXTRA_INGREDIENTS_GROUP_ID = "extra-cheese";
+const legacyExtraIngredientCatalog: ExtraIngredient[] = [
+  { id: "extra-cheese", name: "Extra Käse", priceDeltaCents: 120, active: true },
+  { id: "no-onion", name: "Ohne Zwiebeln", priceDeltaCents: 0, active: true },
+  { id: "mild", name: "Mild statt scharf", priceDeltaCents: 0, active: true }
+];
+const legacyExtraIngredientById = new Map(
+  legacyExtraIngredientCatalog.map((ingredient) => [ingredient.id, ingredient])
+);
 
 const inferDrinkSubcategory = (productName: string) => {
   const normalizedName = productName.toLocaleLowerCase("de-DE");
@@ -37,20 +52,265 @@ const inferDrinkSubcategory = (productName: string) => {
   return drinkSubcategoryFallback;
 };
 
-const normalizeProduct = (product: Product): Product => {
-  if (product.category !== "drinks") {
-    const { drinkSubcategory: _drinkSubcategory, ...rest } = product;
-    return rest;
+const normalizeExtraIngredient = (
+  ingredient: Partial<ExtraIngredient> | undefined
+): ExtraIngredient | null => {
+  const id = typeof ingredient?.id === "string" ? ingredient.id.trim() : "";
+  if (!id) {
+    return null;
   }
 
-  const hasDrinkSubcategory = Object.prototype.hasOwnProperty.call(product, "drinkSubcategory");
-  const drinkSubcategory =
-    typeof product.drinkSubcategory === "string" ? product.drinkSubcategory.trim() : "";
+  return {
+    id,
+    name: typeof ingredient?.name === "string" && ingredient.name.trim() ? ingredient.name.trim() : id,
+    priceDeltaCents: Number.isFinite(ingredient?.priceDeltaCents)
+      ? Math.max(0, Math.round(ingredient?.priceDeltaCents ?? 0))
+      : 0,
+    active: ingredient?.active !== false
+  };
+};
+
+const collectLegacyExtraIngredientsFromProducts = (products: AppState["products"]) => {
+  const ingredients = new Map<string, ExtraIngredient>();
+
+  products.forEach((product) => {
+    product.modifierGroups.forEach((group) => {
+      if (
+        group.id !== LEGACY_EXTRA_INGREDIENTS_GROUP_ID &&
+        group.id !== EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+      ) {
+        return;
+      }
+
+      group.options.forEach((option) => {
+        const normalizedIngredient = normalizeExtraIngredient({
+          id: option.id,
+          name: option.name,
+          priceDeltaCents: option.priceDeltaCents,
+          active: true
+        });
+        if (!normalizedIngredient || ingredients.has(normalizedIngredient.id)) {
+          return;
+        }
+
+        ingredients.set(normalizedIngredient.id, normalizedIngredient);
+      });
+    });
+  });
+
+  return [...ingredients.values()];
+};
+
+const collectSelectedExtraIngredientIds = (sessions: AppState["sessions"]) => {
+  const selectedIds = new Set<string>();
+
+  sessions.forEach((session) => {
+    session.items.forEach((item) => {
+      item.modifiers.forEach((selection) => {
+        if (
+          selection.groupId !== LEGACY_EXTRA_INGREDIENTS_GROUP_ID &&
+          selection.groupId !== EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+        ) {
+          return;
+        }
+
+        selection.optionIds.forEach((optionId) => {
+          const normalizedOptionId = optionId.trim();
+          if (normalizedOptionId) {
+            selectedIds.add(normalizedOptionId);
+          }
+        });
+      });
+    });
+  });
+
+  return selectedIds;
+};
+
+const normalizeExtraIngredients = (
+  extraIngredients: AppState["extraIngredients"],
+  products: AppState["products"],
+  sessions: AppState["sessions"]
+) => {
+  const normalizedIngredients = new Map<string, ExtraIngredient>();
+
+  (extraIngredients ?? []).forEach((ingredient) => {
+    const normalizedIngredient = normalizeExtraIngredient(ingredient);
+    if (!normalizedIngredient) {
+      return;
+    }
+
+    normalizedIngredients.set(normalizedIngredient.id, normalizedIngredient);
+  });
+
+  collectLegacyExtraIngredientsFromProducts(products).forEach((ingredient) => {
+    if (!normalizedIngredients.has(ingredient.id)) {
+      normalizedIngredients.set(ingredient.id, ingredient);
+    }
+  });
+
+  collectSelectedExtraIngredientIds(sessions).forEach((ingredientId) => {
+    if (normalizedIngredients.has(ingredientId)) {
+      return;
+    }
+
+    normalizedIngredients.set(
+      ingredientId,
+      legacyExtraIngredientById.get(ingredientId) ?? {
+        id: ingredientId,
+        name: ingredientId,
+        priceDeltaCents: 0,
+        active: false
+      }
+    );
+  });
+
+  return [...normalizedIngredients.values()].sort((left, right) =>
+    left.name.localeCompare(right.name, "de")
+  );
+};
+
+const createExtraIngredientsModifierGroup = (extraIngredients: ExtraIngredient[]) => ({
+  id: EXTRA_INGREDIENTS_MODIFIER_GROUP_ID,
+  name: "Extra Zutaten",
+  required: false,
+  min: 0,
+  max: extraIngredients.length,
+  options: extraIngredients.map((ingredient) => ({
+    id: ingredient.id,
+    name: ingredient.name,
+    priceDeltaCents: ingredient.priceDeltaCents
+  }))
+});
+
+const collectProductIdsWithSelectedExtraIngredients = (sessions: OrderSession[]) => {
+  const productIds = new Set<string>();
+
+  sessions.forEach((session) => {
+    session.items.forEach((item) => {
+      if (
+        item.modifiers.some(
+          (selection) => selection.groupId === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+        )
+      ) {
+        productIds.add(item.productId);
+      }
+    });
+  });
+
+  return productIds;
+};
+
+const normalizeProduct = (
+  product: Product,
+  extraIngredients: ExtraIngredient[],
+  productIdsWithSelectedExtraIngredients: Set<string>
+): Product => {
+  const supportsExtraIngredients =
+    product.supportsExtraIngredients === true ||
+    product.modifierGroups.some((group) => group.id === LEGACY_EXTRA_INGREDIENTS_GROUP_ID);
+  const shouldAttachExtraIngredientsGroup =
+    supportsExtraIngredients || productIdsWithSelectedExtraIngredients.has(product.id);
+  const modifierGroups = product.modifierGroups.filter(
+    (group) =>
+      group.id !== LEGACY_EXTRA_INGREDIENTS_GROUP_ID &&
+      group.id !== EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+  );
+  const normalizedBaseProduct =
+    product.category !== "drinks"
+      ? (() => {
+          const { drinkSubcategory: _drinkSubcategory, ...rest } = product;
+          return rest;
+        })()
+      : (() => {
+          const hasDrinkSubcategory = Object.prototype.hasOwnProperty.call(
+            product,
+            "drinkSubcategory"
+          );
+          const drinkSubcategory =
+            typeof product.drinkSubcategory === "string" ? product.drinkSubcategory.trim() : "";
+
+          return {
+            ...product,
+            drinkSubcategory: hasDrinkSubcategory
+              ? drinkSubcategory
+              : inferDrinkSubcategory(product.name)
+          };
+        })();
 
   return {
-    ...product,
-    drinkSubcategory: hasDrinkSubcategory ? drinkSubcategory : inferDrinkSubcategory(product.name)
+    ...normalizedBaseProduct,
+    modifierGroups: shouldAttachExtraIngredientsGroup
+      ? [...modifierGroups, createExtraIngredientsModifierGroup(extraIngredients)]
+      : modifierGroups,
+    ...(supportsExtraIngredients ? { supportsExtraIngredients: true } : {})
   };
+};
+
+const normalizeOrderModifiers = (
+  modifiers: OrderModifierSelection[] | undefined
+): OrderModifierSelection[] => {
+  const groupedModifiers = new Map<string, Set<string>>();
+
+  (modifiers ?? []).forEach((selection) => {
+    const rawGroupId = typeof selection?.groupId === "string" ? selection.groupId.trim() : "";
+    if (!rawGroupId) {
+      return;
+    }
+
+    const groupId =
+      rawGroupId === LEGACY_EXTRA_INGREDIENTS_GROUP_ID
+        ? EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+        : rawGroupId;
+    const optionIds = groupedModifiers.get(groupId) ?? new Set<string>();
+
+    (selection.optionIds ?? []).forEach((optionId) => {
+      const normalizedOptionId = optionId.trim();
+      if (normalizedOptionId) {
+        optionIds.add(normalizedOptionId);
+      }
+    });
+
+    if (optionIds.size > 0) {
+      groupedModifiers.set(groupId, optionIds);
+    }
+  });
+
+  return [...groupedModifiers.entries()].map(([groupId, optionIds]) => ({
+    groupId,
+    optionIds: [...optionIds]
+  }));
+};
+
+const normalizeLegacyExtraIngredientNote = (
+  note: string | undefined,
+  modifiers: OrderModifierSelection[]
+) => {
+  const trimmedNote = note?.trim();
+  if (!trimmedNote) {
+    return undefined;
+  }
+
+  const extraSelection = modifiers.find(
+    (selection) => selection.groupId === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+  );
+  if (!extraSelection) {
+    return trimmedNote;
+  }
+
+  const normalizedSelectedLabel = extraSelection.optionIds
+    .map((optionId) => legacyExtraIngredientById.get(optionId)?.name)
+    .filter((optionName): optionName is string => Boolean(optionName))
+    .join(", ")
+    .toLocaleLowerCase("de-DE");
+
+  if (!normalizedSelectedLabel) {
+    return trimmedNote;
+  }
+
+  return trimmedNote.toLocaleLowerCase("de-DE") === normalizedSelectedLabel
+    ? undefined
+    : trimmedNote;
 };
 
 const createSystemUsers = (): UserAccount[] => {
@@ -83,6 +343,16 @@ const createSystemUsers = (): UserAccount[] => {
       role: "kitchen",
       password: "Kitchen1234",
       pin: "2026",
+      active: true,
+      lastSeenAt: now
+    },
+    {
+      id: "user-bar",
+      name: "Bar",
+      username: "Bar",
+      role: "bar",
+      password: "Bar1234",
+      pin: "3030",
       active: true,
       lastSeenAt: now
     }
@@ -138,7 +408,8 @@ const mergeSeededTables = (tables: AppState["tables"], deletedTableIds: Set<stri
 const mergeSeededProducts = (
   products: AppState["products"],
   sessions: AppState["sessions"],
-  forceCanonicalSeed: boolean
+  forceCanonicalSeed: boolean,
+  deletedProductIds: Set<string>
 ) => {
   const canonicalProductIds = new Set(demoProducts.map((product) => product.id));
   const managedProductIds = new Set([...canonicalProductIds, ...legacySeedProductIds]);
@@ -148,23 +419,29 @@ const mergeSeededProducts = (
   const existingById = new Map(products.map((product) => [product.id, product]));
 
   return [
-    ...demoProducts.map((seededProduct) =>
+    ...demoProducts
+      .filter((seededProduct) => !deletedProductIds.has(seededProduct.id))
+      .map((seededProduct) =>
       forceCanonicalSeed
         ? structuredClone(seededProduct)
         : {
             ...structuredClone(seededProduct),
             ...structuredClone(existingById.get(seededProduct.id) ?? {})
           }
-    ),
+      ),
     ...products
       .filter((product) => {
+        if (deletedProductIds.has(product.id)) {
+          return false;
+        }
+
         if (!managedProductIds.has(product.id)) {
           return true;
         }
 
         return !canonicalProductIds.has(product.id) && referencedProductIds.has(product.id);
       })
-      .map((product) => normalizeProduct(structuredClone(product)))
+      .map((product) => structuredClone(product))
   ];
 };
 
@@ -178,8 +455,14 @@ type LegacyOrderSession = Omit<OrderSession, "items" | "status" | "kitchenTicket
   holdReason?: string;
   items: LegacyOrderItem[];
   payments?: (OrderSession["payments"][number] & { lineItems?: OrderSession["payments"][number]["lineItems"] })[];
+  cancellations?: (
+    OrderSession["cancellations"][number] & {
+      lineItems?: OrderSession["cancellations"][number]["lineItems"];
+    }
+  )[];
   partyGroups?: OrderSession["partyGroups"];
   kitchenTicketBatches?: OrderSession["kitchenTicketBatches"];
+  barTicketBatches?: OrderSession["barTicketBatches"];
 };
 
 const normalizeOrderTarget = (item: LegacyOrderItem): OrderTarget => {
@@ -202,6 +485,55 @@ const normalizeSessionStatus = (status: LegacyOrderSession["status"]): OrderSess
   status === "hold" ? "serving" : status ?? "serving";
 
 const kitchenBatchCourses: CourseKey[] = ["starter", "main", "dessert"];
+
+const normalizeKitchenUnitState = (
+  unitState: KitchenUnitState | undefined,
+  fallbackStatus: KitchenUnitStatus = "pending"
+): KitchenUnitState => {
+  const status =
+    unitState?.status === "in-progress" || unitState?.status === "completed"
+      ? unitState.status
+      : fallbackStatus;
+
+  if (status === "pending") {
+    return { status };
+  }
+
+  if (status === "in-progress") {
+    return {
+      status,
+      startedAt: unitState?.startedAt
+    };
+  }
+
+  return {
+    status,
+    startedAt: unitState?.startedAt,
+    completedAt: unitState?.completedAt
+  };
+};
+
+const normalizeKitchenUnitStates = (item: LegacyOrderItem): OrderItem["kitchenUnitStates"] => {
+  if (item.category === "drinks" || !item.sentAt) {
+    return undefined;
+  }
+
+  if (item.preparedAt) {
+    return Array.from({ length: item.quantity }, () => ({
+      status: "completed" as const,
+      completedAt: item.preparedAt
+    }));
+  }
+
+  const existingStates = Array.isArray(item.kitchenUnitStates) ? item.kitchenUnitStates : [];
+  if (existingStates.length === 0) {
+    return Array.from({ length: item.quantity }, () => ({ status: "pending" as const }));
+  }
+
+  return Array.from({ length: item.quantity }, (_, index) =>
+    normalizeKitchenUnitState(existingStates[index])
+  );
+};
 
 const createLegacyKitchenTicketBatches = (
   session: LegacyOrderSession,
@@ -267,17 +599,32 @@ const normalizeSessions = (sessions: AppState["sessions"]) =>
       status,
       items,
       payments,
+      cancellations,
       partyGroups,
+      barTicketBatches,
       kitchenTicketBatches: _legacyKitchenTicketBatches,
       ...sessionFields
     } = legacySession;
     const normalizedItems = items.map((item) => {
       const legacyItem = item as LegacyOrderItem;
-      const { seatId: _legacySeatId, target: _legacyTarget, ...itemFields } = legacyItem;
+      const {
+        seatId: _legacySeatId,
+        target: _legacyTarget,
+        kitchenUnitStates: _legacyKitchenUnitStates,
+        modifiers: legacyModifiers,
+        note: legacyNote,
+        ...itemFields
+      } = legacyItem;
+      const kitchenUnitStates = normalizeKitchenUnitStates(legacyItem);
+      const modifiers = normalizeOrderModifiers(legacyModifiers);
+      const note = normalizeLegacyExtraIngredientNote(legacyNote, modifiers);
 
       return {
         ...itemFields,
-        target: normalizeOrderTarget(legacyItem)
+        target: normalizeOrderTarget(legacyItem),
+        modifiers,
+        ...(note ? { note } : {}),
+        ...(kitchenUnitStates ? { kitchenUnitStates } : {})
       };
     });
 
@@ -294,7 +641,16 @@ const normalizeSessions = (sessions: AppState["sessions"]) =>
             quantity: item.quantity
           }))
       })),
+      cancellations: (cancellations ?? []).map((cancellation) => ({
+        ...cancellation,
+        lineItems:
+          cancellation.lineItems?.map((lineItem) => ({
+            itemId: lineItem.itemId,
+            quantity: Math.max(0, Math.floor(lineItem.quantity))
+          })) ?? []
+      })),
       kitchenTicketBatches: createLegacyKitchenTicketBatches(legacySession, normalizedItems),
+      barTicketBatches: barTicketBatches ?? [],
       partyGroups: partyGroups ?? []
     };
   });
@@ -307,8 +663,28 @@ export const normalizeOperationalState = (state: AppState): AppState => {
   const deletedUserIds = [
     ...new Set((state.deletedUserIds ?? []).map((userId) => userId.trim()).filter(Boolean))
   ];
+  const deletedProductIds = [
+    ...new Set((state.deletedProductIds ?? []).map((productId) => productId.trim()).filter(Boolean))
+  ];
   const deletedTableIdSet = new Set(deletedTableIds);
   const deletedUserIdSet = new Set(deletedUserIds);
+  const deletedProductIdSet = new Set(deletedProductIds);
+  const normalizedSessions = normalizeSessions(
+    state.sessions.filter((session) => !deletedTableIdSet.has(session.tableId))
+  );
+  const mergedProducts = mergeSeededProducts(
+    state.products,
+    normalizedSessions,
+    forceCanonicalSeed,
+    deletedProductIdSet
+  );
+  const extraIngredients = normalizeExtraIngredients(
+    state.extraIngredients,
+    mergedProducts,
+    normalizedSessions
+  );
+  const productIdsWithSelectedExtraIngredients =
+    collectProductIdsWithSelectedExtraIngredients(normalizedSessions);
 
   return {
     ...state,
@@ -323,10 +699,14 @@ export const normalizeOperationalState = (state: AppState): AppState => {
     ),
     deletedTableIds,
     deletedUserIds,
+    deletedProductIds,
+    extraIngredients,
     users: mergeSeededUsers(state.users, deletedUserIdSet),
     tables: normalizeTables(mergeSeededTables(state.tables, deletedTableIdSet)),
-    products: mergeSeededProducts(state.products, state.sessions, forceCanonicalSeed).map(normalizeProduct),
-    sessions: normalizeSessions(state.sessions.filter((session) => !deletedTableIdSet.has(session.tableId))),
+    products: mergedProducts.map((product) =>
+      normalizeProduct(product, extraIngredients, productIdsWithSelectedExtraIngredients)
+    ),
+    sessions: normalizedSessions,
     notifications: state.notifications.filter(
       (notification) => !notification.tableId || !deletedTableIdSet.has(notification.tableId)
     )
@@ -340,6 +720,8 @@ export const createDefaultOperationalState = (): AppState =>
     linkedTableGroups: [],
     deletedTableIds: [],
     deletedUserIds: [],
+    deletedProductIds: [],
+    extraIngredients: [],
     users: createSystemUsers(),
     tables: structuredClone(demoTables),
     products: structuredClone(demoProducts),

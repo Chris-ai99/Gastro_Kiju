@@ -19,6 +19,8 @@
       "@kiju/config/*": ["packages/config/src/*"],
       "@kiju/domain": ["packages/domain/src/index.ts"],
       "@kiju/domain/*": ["packages/domain/src/*"],
+      "@kiju/print-bridge": ["apps/print-bridge/src/index.ts"],
+      "@kiju/print-bridge/*": ["apps/print-bridge/src/*"],
       "@kiju/ui": ["packages/ui/src/index.ts"],
       "@kiju/ui/*": ["packages/ui/src/*"]
     }

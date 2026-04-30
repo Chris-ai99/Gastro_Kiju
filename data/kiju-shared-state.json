@@ -1,6 +1,6 @@
 {
-  "version": 697,
-  "updatedAt": "2026-04-22T20:39:01.130Z",
+  "version": 1127,
+  "updatedAt": "2026-04-24T19:57:57.457Z",
   "state": {
     "users": [
       {
@@ -10,7 +10,7 @@
         "role": "admin",
         "password": "Admin1234",
         "active": true,
-        "lastSeenAt": "2026-03-30T16:55:27.952Z",
+        "lastSeenAt": "2026-04-24T19:57:47.542Z",
         "pin": "123456"
       },
       {
@@ -21,7 +21,53 @@
         "password": "Kitchen1234",
         "pin": "12345",
         "active": true,
-        "lastSeenAt": "2026-03-30T16:55:27.952Z"
+        "lastSeenAt": "2026-04-24T19:57:39.222Z"
+      },
+      {
+        "id": "user-bar",
+        "name": "Bar",
+        "username": "Bar",
+        "role": "bar",
+        "password": "Bar1234",
+        "pin": "3030",
+        "active": true,
+        "lastSeenAt": "2026-04-24T19:57:57.447Z"
+      },
+      {
+        "id": "user-1777047345814-234ae314",
+        "name": "test",
+        "username": "test",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-04-24T16:24:18.973Z"
+      },
+      {
+        "id": "user-1777047264635-d80d4d91",
+        "name": "Vivien",
+        "username": "Vivien",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-04-24T16:19:46.199Z"
+      },
+      {
+        "id": "user-1777047187764-b562157e",
+        "name": "Maik",
+        "username": "Maik",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-04-24T16:13:07.764Z"
+      },
+      {
+        "id": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "name": "Chris",
+        "username": "Chris",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-04-24T12:36:54.293Z"
       },
       {
         "id": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
@@ -31,7 +77,7 @@
         "password": "1234",
         "pin": "1234",
         "active": true,
-        "lastSeenAt": "2026-04-19T14:47:11.996Z"
+        "lastSeenAt": "2026-04-24T19:56:53.224Z"
       }
     ],
     "tables": [
@@ -257,21 +303,152 @@
             "visible": true
           }
         ]
+      },
+      {
+        "id": "table-7",
+        "name": "Sicherheitstisch 7",
+        "seatCount": 4,
+        "active": false,
+        "plannedOnly": true,
+        "x": 45,
+        "y": 49,
+        "width": 16,
+        "height": 13,
+        "note": "Nur über das Menü auswählbar",
+        "seats": [
+          {
+            "id": "table-7-seat-1",
+            "label": "P1",
+            "visible": true
+          },
+          {
+            "id": "table-7-seat-2",
+            "label": "P2",
+            "visible": true
+          },
+          {
+            "id": "table-7-seat-3",
+            "label": "P3",
+            "visible": true
+          },
+          {
+            "id": "table-7-seat-4",
+            "label": "P4",
+            "visible": true
+          }
+        ]
+      },
+      {
+        "id": "table-8",
+        "name": "Tisch 8 draußen",
+        "seatCount": 6,
+        "active": true,
+        "plannedOnly": false,
+        "seats": [
+          {
+            "id": "table-8-seat-1",
+            "label": "P1",
+            "visible": true
+          },
+          {
+            "id": "table-8-seat-2",
+            "label": "P2",
+            "visible": true
+          },
+          {
+            "id": "table-8-seat-3",
+            "label": "P3",
+            "visible": true
+          },
+          {
+            "id": "table-8-seat-4",
+            "label": "P4",
+            "visible": true
+          },
+          {
+            "id": "table-8-seat-5",
+            "label": "P5",
+            "visible": true
+          },
+          {
+            "id": "table-8-seat-6",
+            "label": "P6",
+            "visible": true
+          }
+        ],
+        "x": 10,
+        "y": 82,
+        "width": 20,
+        "height": 20
+      },
+      {
+        "id": "table-9",
+        "name": "Tisch 9 draußen",
+        "seatCount": 4,
+        "active": true,
+        "plannedOnly": false,
+        "seats": [
+          {
+            "id": "table-9-seat-1",
+            "label": "P1",
+            "visible": true
+          },
+          {
+            "id": "table-9-seat-2",
+            "label": "P2",
+            "visible": true
+          },
+          {
+            "id": "table-9-seat-3",
+            "label": "P3",
+            "visible": true
+          },
+          {
+            "id": "table-9-seat-4",
+            "label": "P4",
+            "visible": true
+          }
+        ],
+        "x": 35,
+        "y": 82,
+        "width": 20,
+        "height": 20
+      },
+      {
+        "id": "table-10",
+        "name": "Tisch 10 abholung 1",
+        "seatCount": 4,
+        "active": true,
+        "plannedOnly": false,
+        "seats": [
+          {
+            "id": "table-10-seat-1",
+            "label": "P1",
+            "visible": true
+          },
+          {
+            "id": "table-10-seat-2",
+            "label": "P2",
+            "visible": true
+          },
+          {
+            "id": "table-10-seat-3",
+            "label": "P3",
+            "visible": true
+          },
+          {
+            "id": "table-10-seat-4",
+            "label": "P4",
+            "visible": true
+          }
+        ],
+        "x": 60,
+        "y": 82,
+        "width": 20,
+        "height": 20
       }
     ],
     "products": [
-      {
-        "id": "starter-greeting",
-        "name": "Gruss aus der Küche",
-        "category": "starter",
-        "description": "Kleiner Gruss aus der Küche als Einstieg.",
-        "priceCents": 800,
-        "taxRate": 7,
-        "allergens": [],
-        "showInKitchen": true,
-        "productionTarget": "kitchen",
-        "modifierGroups": []
-      },
       {
         "id": "starter-pizza-bread-aioli",
         "name": "Pizza Brot mit Aioli",
@@ -289,9 +466,9 @@
       },
       {
         "id": "main-pasta-pesto",
-        "name": "Nudeln mit grüner Pesto",
+        "name": "Nudeln mit gr?ner Pesto",
         "category": "main",
-        "description": "Pasta mit würziger grüner Pesto.",
+        "description": "Pasta mit w?rziger gr?ner Pesto.",
         "priceCents": 700,
         "taxRate": 7,
         "allergens": [
@@ -311,6 +488,21 @@
         "taxRate": 7,
         "allergens": [
           "Gluten"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pizza-margherita",
+        "name": "Pizza Margherita",
+        "category": "main",
+        "description": "Pizza mit Tomate, Käse und Basilikum.",
+        "priceCents": 700,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Milch"
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
@@ -378,6 +570,21 @@
         "modifierGroups": []
       },
       {
+        "id": "main-pizza-veggi",
+        "name": "Pizza Veggi",
+        "category": "main",
+        "description": "Pizza mit Tomate, Käse und Gemüse.",
+        "priceCents": 800,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Milch"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
         "id": "drink-beer",
         "name": "Bier",
         "category": "drinks",
@@ -413,7 +620,7 @@
         "category": "drinks",
         "drinkSubcategory": "Alkoholfrei",
         "description": "Stilles Wasser.",
-        "priceCents": 200,
+        "priceCents": 100,
         "taxRate": 19,
         "allergens": [],
         "showInKitchen": false,
@@ -449,6 +656,31 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
+        "name": "Gruß aus der Küche",
+        "description": "Neu angelegtes Produkt.",
+        "category": "starter",
+        "priceCents": 0,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "product-ccbe5f04-b204-4215-b4f8-16c1ae33aff3",
+        "name": "Alk. Freies Bier",
+        "description": "Neu angelegtes Produkt.",
+        "category": "drinks",
+        "drinkSubcategory": "",
+        "priceCents": 300,
+        "taxRate": 19,
+        "allergens": [],
+        "showInKitchen": false,
+        "productionTarget": "bar",
         "modifierGroups": []
       },
       {
@@ -505,7 +737,7 @@
       },
       {
         "id": "product-0a4de488-dbce-42d7-9e20-ef203d1d85fe",
-        "name": "Weißwein",
+        "name": "Wei?wein",
         "description": "Hauswein im Glas.",
         "category": "drinks",
         "priceCents": 400,
@@ -556,9 +788,106 @@
     ],
     "sessions": [
       {
-        "id": "session-table-1-2c2f07b2-03c1-4b87-ba0e-10302ec4500b",
-        "tableId": "table-1",
-        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "id": "session-table-3-11b16617-c868-4686-b012-444d53eaa67f",
+        "tableId": "table-3",
+        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "completed",
+            "sentAt": "2026-04-24T12:37:55.479Z",
+            "releasedAt": "2026-04-24T12:37:55.479Z",
+            "completedAt": "2026-04-24T16:14:41.693Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {
+          "printedAt": "2026-04-24T13:12:34.736Z",
+          "reprintedAt": "2026-04-24T13:12:49.543Z"
+        },
+        "status": "ready-to-bill",
+        "items": [
+          {
+            "id": "item-5d32a822-0021-4efe-bf08-ab18b6f4bd97",
+            "productId": "main-pizza-tuna",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-24T12:37:55.479Z",
+            "preparedAt": "2026-04-24T16:14:41.693Z",
+            "servedAt": "2026-04-24T16:15:53.276Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-24T16:14:41.693Z"
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "id": "payment-098fe9b4-c4e0-4288-98f5-20a6c786d273",
+            "label": "Restzahlung",
+            "amountCents": 800,
+            "method": "cash",
+            "lineItems": [
+              {
+                "itemId": "item-5d32a822-0021-4efe-bf08-ab18b6f4bd97",
+                "quantity": 1
+              }
+            ],
+            "tableIds": [
+              "table-3"
+            ]
+          }
+        ],
+        "cancellations": [],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-3-main-d68ada7f-1904-4df1-814b-eee8fdc6590e",
+            "course": "main",
+            "itemIds": [
+              "item-5d32a822-0021-4efe-bf08-ab18b6f4bd97"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-24T12:37:55.479Z",
+            "releasedAt": "2026-04-24T12:37:55.479Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-04-24T16:14:41.693Z"
+          }
+        ],
+        "barTicketBatches": [],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-2-3ce074b8-bd72-415b-a4f9-754d7f492dd0",
+        "tableId": "table-2",
+        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
         "skippedCourses": [],
         "courseTickets": {
           "drinks": {
@@ -590,41 +919,2196 @@
         "status": "serving",
         "items": [
           {
-            "id": "item-97f9720d-49f5-490d-b2d9-4d02e3107a80",
-            "productId": "product-a48a5a12-1d92-470c-930d-28f67f768317",
-            "category": "drinks",
+            "id": "item-6061194b-531f-4373-af41-6345a5207e17",
+            "productId": "main-pizza-ham",
+            "category": "main",
             "quantity": 1,
-            "modifiers": [],
             "target": {
               "type": "table"
-            }
-          },
-          {
-            "id": "item-b2c9a87a-dbf0-4223-9f55-8ad55f80b1b4",
-            "productId": "product-2cc1384c-d881-4689-9958-7227125ce77a",
-            "category": "drinks",
-            "quantity": 1,
-            "modifiers": [],
-            "target": {
-              "type": "table"
-            }
-          },
-          {
-            "id": "item-6b3cbf55-16d2-4038-846e-7dbe8de8a240",
-            "productId": "product-edb37013-532a-4023-a1d4-da120cd98a05",
-            "category": "drinks",
-            "quantity": 1,
-            "modifiers": [],
-            "target": {
-              "type": "table"
-            }
+            },
+            "modifiers": []
           }
         ],
         "payments": [],
+        "cancellations": [],
+        "kitchenTicketBatches": [],
+        "barTicketBatches": [],
         "partyGroups": []
+      },
+      {
+        "id": "session-table-2-83eb079b-1675-4be5-bf5b-e4a3402e7c2d",
+        "tableId": "table-2",
+        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "completed",
+            "countdownMinutes": 15,
+            "manualRelease": false,
+            "sentAt": "2026-04-23T06:45:09.395Z",
+            "completedAt": "2026-04-23T06:45:09.395Z"
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {
+          "printedAt": "2026-04-23T10:57:28.731Z",
+          "closedAt": "2026-04-23T10:57:35.202Z"
+        },
+        "status": "closed",
+        "items": [
+          {
+            "id": "item-bb73436d-3305-40b2-9914-039a7d5c51fd",
+            "productId": "drink-cola",
+            "category": "drinks",
+            "quantity": 1,
+            "sentAt": "2026-04-23T06:45:09.395Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          }
+        ],
+        "payments": [
+          {
+            "id": "payment-0e8e4fe9-b50c-4a64-b2f4-beb9af817fed",
+            "label": "Restzahlung",
+            "amountCents": 250,
+            "method": "cash",
+            "lineItems": [
+              {
+                "itemId": "item-bb73436d-3305-40b2-9914-039a7d5c51fd",
+                "quantity": 1
+              }
+            ],
+            "tableIds": [
+              "table-2"
+            ]
+          }
+        ],
+        "cancellations": [],
+        "kitchenTicketBatches": [],
+        "barTicketBatches": [],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-3-f331dca6-24d4-421c-8b00-018d50a02fc5",
+        "tableId": "table-3",
+        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "completed",
+            "sentAt": "2026-04-23T06:08:08.174Z",
+            "releasedAt": "2026-04-23T06:08:08.174Z",
+            "completedAt": "2026-04-23T06:08:11.714Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {
+          "printedAt": "2026-04-23T06:33:12.050Z",
+          "reprintedAt": "2026-04-23T11:29:34.537Z",
+          "closedAt": "2026-04-23T06:33:26.263Z"
+        },
+        "status": "closed",
+        "items": [
+          {
+            "id": "item-074969fa-3505-4886-93ca-9c80fef4f538",
+            "productId": "main-pasta-tomato",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-23T06:08:08.174Z",
+            "preparedAt": "2026-04-23T06:08:11.714Z",
+            "servedAt": "2026-04-23T06:31:35.457Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-23T06:08:11.714Z"
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "id": "payment-f4a7efdb-52b0-464f-b1d7-788813b48263",
+            "label": "Restzahlung",
+            "amountCents": 3600,
+            "method": "cash",
+            "lineItems": [
+              {
+                "itemId": "item-074969fa-3505-4886-93ca-9c80fef4f538",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-13b01d51-107e-4409-be7c-b12fb9e9fa22",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-8cd13b4f-c24a-4923-b2d9-d2adfc9a77c5",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-8740194d-7513-4309-9833-f6634e91f1cb",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-81aa5319-66f1-4ed7-a221-09190a1159b1",
+                "quantity": 1
+              }
+            ],
+            "tableIds": [
+              "table-3"
+            ]
+          }
+        ],
+        "cancellations": [],
+        "kitchenTicketBatches": [
+          {
+            "id": "session-table-3-f331dca6-24d4-421c-8b00-018d50a02fc5-main-batch-1",
+            "course": "main",
+            "itemIds": [
+              "item-074969fa-3505-4886-93ca-9c80fef4f538"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-23T06:08:08.174Z",
+            "releasedAt": "2026-04-23T06:08:08.174Z",
+            "completedAt": "2026-04-23T06:08:11.714Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1
+          }
+        ],
+        "barTicketBatches": [],
+        "partyGroups": [
+          {
+            "id": "party-ec10799a-797d-483f-a142-59ea8f7eff03",
+            "label": "Person 1+2",
+            "itemIds": [],
+            "createdAt": "2026-04-23T06:09:59.537Z",
+            "updatedAt": "2026-04-23T06:09:59.537Z"
+          }
+        ]
       }
     ],
     "notifications": [
+      {
+        "id": "notification-1777047353811-98395686",
+        "createdAt": "2026-04-24T16:15:53.811Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "dessert",
+        "itemIds": [
+          "item-b6366295-9253-432e-a31e-dc2949fe828e"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 2: 1x Dessert des Tages für Tisch 2 ist fertig.",
+        "tone": "success",
+        "tableId": "table-2",
+        "acceptedByUserId": "user-1777047345814-234ae314",
+        "acceptedByName": "test",
+        "sourceNotificationId": "notification-77342b72-2170-419a-b30d-16a7cbeba7bf"
+      },
+      {
+        "id": "notification-1777047353004-faad320e",
+        "createdAt": "2026-04-24T16:15:53.004Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-5d32a822-0021-4efe-bf08-ab18b6f4bd97"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 3: 1x Pizza Thunfisch für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-1777047345814-234ae314",
+        "acceptedByName": "test",
+        "sourceNotificationId": "notification-1777047281694-f54f1a4f"
+      },
+      {
+        "id": "notification-1777047281694-f54f1a4f",
+        "createdAt": "2026-04-24T16:14:41.694Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-5d32a822-0021-4efe-bf08-ab18b6f4bd97"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Pizza Thunfisch für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-1777047192997-694c9721",
+        "createdAt": "2026-04-24T16:13:12.997Z",
+        "read": false,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-c615c790-e0e5-4de4-8816-fd21b0b2c400",
+          "item-b7b31f91-b17f-499c-854c-139af87f4bff",
+          "item-c687072c-5110-4bac-b646-5527e4b9d25f"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 2: 1x Pizza Speziale, 1x Nudeln mit grüner Pesto, 1x Nudeln mit Tomatensauce für Tisch 2 ist fertig.",
+        "tone": "success",
+        "tableId": "table-2",
+        "acceptedByUserId": "user-1777047187764-b562157e",
+        "acceptedByName": "Maik",
+        "sourceNotificationId": "notification-6b363a4a-5a89-4b4f-bec5-8a3d2279629e"
+      },
+      {
+        "id": "notification-75e28ad1-b562-4498-808b-009f4e1cf1f4",
+        "createdAt": "2026-04-24T15:45:39.161Z",
+        "read": false,
+        "title": "Tisch angelegt",
+        "body": "Tisch 10 abholung 1 wurde zur Raumansicht hinzugefügt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-d76e4e41-353f-41ec-983f-0b396b4513d7",
+        "createdAt": "2026-04-24T15:45:26.783Z",
+        "read": false,
+        "title": "Tisch angelegt",
+        "body": "Tisch 9 draußen wurde zur Raumansicht hinzugefügt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-cd7f13fc-21f6-4d34-8a14-63f9e2fafd7d",
+        "createdAt": "2026-04-24T15:45:15.578Z",
+        "read": false,
+        "title": "Tisch angelegt",
+        "body": "Tisch 8 draußen wurde zur Raumansicht hinzugefügt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-fe195628-b991-49e8-a520-e5f861c1b830",
+        "createdAt": "2026-04-24T15:44:49.711Z",
+        "read": false,
+        "title": "Tisch angelegt",
+        "body": "Tisch7 kleiner tisch wurde zur Raumansicht hinzugefügt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-141783bb-d2c7-4c40-b08f-9482eef07dae",
+        "createdAt": "2026-04-24T13:12:49.543Z",
+        "read": true,
+        "kind": "admin-receipt-alarm",
+        "title": "Rechnung erneut gedruckt",
+        "body": "Tisch 3 hat gerade einen Rechnungs-Reprint gedruckt. Bitte Abrechnung prüfen.",
+        "tone": "alert",
+        "tableId": "table-3",
+        "targetRoles": [
+          "admin"
+        ]
+      },
+      {
+        "id": "notification-dbacadf4-9d22-497c-b34c-b97f8e696f0f",
+        "createdAt": "2026-04-24T13:12:34.737Z",
+        "read": false,
+        "title": "Teilzahlung verbucht",
+        "body": "8,00 € wurden als Restzahlung gespeichert.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-a16d71fb-e1c7-4b7d-a332-d59f94d4e02c",
+        "createdAt": "2026-04-24T12:37:55.480Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 3 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-afe04562-538d-46d1-914c-eb731c3dfa47",
+        "createdAt": "2026-04-24T12:02:03.438Z",
+        "read": false,
+        "title": "Produkt angelegt",
+        "body": "Gruß aus der Küche wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-fa7a3fa5-d893-4ab5-8124-fc839dfa5926",
+        "createdAt": "2026-04-24T12:01:43.021Z",
+        "read": false,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-5882352c-4d31-4a8e-88e4-5e428813effb",
+        "createdAt": "2026-04-24T11:58:51.326Z",
+        "read": false,
+        "title": "Produkt gelöscht",
+        "body": "Nudeln mit grüner Pesto wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-e88226c4-29e8-4a55-ba95-a3cc8668182c",
+        "createdAt": "2026-04-24T11:58:42.309Z",
+        "read": false,
+        "title": "Produkt gelöscht",
+        "body": "Pizza Brot mit Aioli wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-9c9f0370-a831-472c-924b-63f8a3f3fe41",
+        "createdAt": "2026-04-24T11:57:59.590Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-d84a72c2-e204-43e0-9475-002c804083c3",
+        "createdAt": "2026-04-24T11:57:59.413Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-9b9e7f64-6542-456f-ba0a-62d331d6e6ae",
+        "createdAt": "2026-04-24T11:57:59.305Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-56bcf767-7216-4ee7-9fc4-d7e7e30b8756",
+        "createdAt": "2026-04-24T11:57:59.203Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-bd58568e-36fc-48ea-b6e4-d4742a553d17",
+        "createdAt": "2026-04-24T11:57:59.011Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-828cdf4b-a4e5-4467-94dd-00baa8dd4c67",
+        "createdAt": "2026-04-24T11:57:58.572Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-3eeca87a-fec3-4f55-a0d7-96a429b93909",
+        "createdAt": "2026-04-24T11:57:58.403Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-b73fa858-a874-4859-a6ae-f9cf05382da8",
+        "createdAt": "2026-04-24T11:57:58.293Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-a99a1533-733b-42d3-b545-55c158d18e3e",
+        "createdAt": "2026-04-24T11:57:58.161Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-13c0f331-b5ad-4d33-afa8-b2301552dc39",
+        "createdAt": "2026-04-24T11:57:57.889Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-12f626df-66ce-41e9-8261-d928b601ca02",
+        "createdAt": "2026-04-24T11:57:57.502Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-3b05d60e-e5fb-4c09-88b7-4c4e8c93d7aa",
+        "createdAt": "2026-04-24T11:57:57.311Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-d3fbc010-5d87-4274-9ade-fb8a8d71d9bd",
+        "createdAt": "2026-04-24T11:57:57.207Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-a5797f9c-f802-4df1-af0a-e120f988e8c7",
+        "createdAt": "2026-04-24T11:57:57.110Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-412fa8b3-ff45-4583-ac48-720ece5c83d2",
+        "createdAt": "2026-04-24T11:57:56.853Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-3a75824d-2fed-44b0-8d77-c9355455e26e",
+        "createdAt": "2026-04-24T11:57:56.475Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-8186d4e6-dbd2-4304-8ba9-32600564a78d",
+        "createdAt": "2026-04-24T11:57:56.271Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-1363e6e3-5781-4dab-b8ae-a0d8fee607fa",
+        "createdAt": "2026-04-24T11:57:56.173Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-ad27f000-ba41-49af-9026-19c10f3ca7d8",
+        "createdAt": "2026-04-24T11:57:56.080Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-79505060-e3ee-4f05-9360-783c330ba45d",
+        "createdAt": "2026-04-24T11:57:55.983Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-b9a2424c-38a0-493f-93ee-06a7fa5421b7",
+        "createdAt": "2026-04-24T11:57:55.762Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-1bf360a1-9ef7-4e9e-a306-b0d61da305e7",
+        "createdAt": "2026-04-24T11:57:55.217Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-0fb67c8f-ccf0-4688-a070-87a4280cc244",
+        "createdAt": "2026-04-24T11:57:54.963Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-930d48f3-c8bf-4527-9e00-8a7e80e9dfb9",
+        "createdAt": "2026-04-24T11:57:54.843Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-382ad334-2dd6-4174-942d-d845815d9d20",
+        "createdAt": "2026-04-24T11:57:54.612Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-608503b0-111b-45f7-b0cf-c6b430a983fa",
+        "createdAt": "2026-04-24T11:57:54.258Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-d542b0cd-2023-4b8f-bcdd-5c6fb0cfdbfd",
+        "createdAt": "2026-04-24T11:57:53.704Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-ce0e2370-62c4-4705-98bc-4a470c3439b7",
+        "createdAt": "2026-04-24T11:57:53.065Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-8e7664f6-e41d-42ce-9239-ba5c747ed19d",
+        "createdAt": "2026-04-24T11:57:47.943Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-f64fc2e9-08b0-4fd8-be8f-7aae848322e9",
+        "createdAt": "2026-04-24T11:57:47.840Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-c9ff88a5-2fcb-4c7d-880c-cb443569d44a",
+        "createdAt": "2026-04-24T11:57:47.736Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-35325b43-b6fa-477a-99f8-ed207c372e36",
+        "createdAt": "2026-04-24T11:57:47.633Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-a212731d-736b-4e56-93d5-f91bb5da7d63",
+        "createdAt": "2026-04-24T11:57:47.536Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-08e74c2d-f3b5-4c75-9714-07e5c8647bc7",
+        "createdAt": "2026-04-24T11:57:47.231Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-5f3b57ae-20c9-4e7d-87ab-9eb6d68c8762",
+        "createdAt": "2026-04-24T11:57:46.864Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-0de02841-8083-4bcf-9b36-8f8d2c79c8f5",
+        "createdAt": "2026-04-24T11:57:46.765Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-2cb47429-539c-4b34-b6fa-5ea7f458ebec",
+        "createdAt": "2026-04-24T11:57:46.672Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-d2fec5e0-a14d-42e1-bbe8-a2a387d6bef3",
+        "createdAt": "2026-04-24T11:57:46.585Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-3479ca46-9936-49a0-bc67-3c8940342b6b",
+        "createdAt": "2026-04-24T11:57:46.324Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-4864ea4b-abd9-4ad5-8cdf-588e972c1d00",
+        "createdAt": "2026-04-24T11:57:45.850Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-102d3718-a8e4-4969-adea-68eba509f4c0",
+        "createdAt": "2026-04-24T11:57:45.711Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-1f235d1f-f786-4082-917e-82bb9d556b6d",
+        "createdAt": "2026-04-24T11:57:45.577Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-de9face6-1157-4a5c-abf0-4d8b44e56693",
+        "createdAt": "2026-04-24T11:57:45.291Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-c49894c5-b763-418f-8cda-628d114eaadd",
+        "createdAt": "2026-04-24T11:57:44.835Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-a2ef6810-e9e4-462e-9fc9-9ce14478ccef",
+        "createdAt": "2026-04-24T11:57:44.638Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-3c594518-25e2-44bb-881a-9007d38d5457",
+        "createdAt": "2026-04-24T11:57:44.530Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-9f8401a8-7f39-41f0-bf56-aad2884beb47",
+        "createdAt": "2026-04-24T11:57:44.419Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-b40aa0a8-ac5b-415d-a131-3584788ade9c",
+        "createdAt": "2026-04-24T11:57:43.772Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-c3d9b01b-be66-4bc0-af88-0acecc7c6a90",
+        "createdAt": "2026-04-24T11:57:42.152Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-b04b93ff-f7b3-46a8-a510-e1964df9de73",
+        "createdAt": "2026-04-24T11:57:38.010Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-42f661e3-2799-4592-a841-54f0d57f910b",
+        "createdAt": "2026-04-24T11:57:22.185Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-887aed86-13c7-49b6-b82b-ec1baab49cff",
+        "createdAt": "2026-04-24T11:57:21.834Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-26374699-a37f-4bd0-9e56-f78ebe85ffa9",
+        "createdAt": "2026-04-24T11:57:21.725Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-3abc9103-bd7a-4730-acc0-5fee4f457cdb",
+        "createdAt": "2026-04-24T11:57:21.629Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-6aac455e-cb5a-4863-bf6a-c1acd9180968",
+        "createdAt": "2026-04-24T11:57:21.523Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-2f536cf1-7de9-4a2a-95a8-d51a1365ad7f",
+        "createdAt": "2026-04-24T11:57:21.393Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-83975042-ab44-44ab-abd4-a7ec0d9d830e",
+        "createdAt": "2026-04-24T11:57:21.154Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-259d59d8-0267-4c43-a093-b569f2204f1b",
+        "createdAt": "2026-04-24T11:57:20.810Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-73404a5f-be46-41fc-9649-56d858da5a50",
+        "createdAt": "2026-04-24T11:57:20.710Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-8abe2ce8-1359-4481-9e67-eab92da2222d",
+        "createdAt": "2026-04-24T11:57:20.621Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-608e46b3-b082-4816-ae47-2b77e2a5b310",
+        "createdAt": "2026-04-24T11:57:20.512Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-f920308f-b139-4811-8359-babd6bb86e0f",
+        "createdAt": "2026-04-24T11:57:20.422Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-af700cc9-a730-4ce9-b8d7-757c333d1a98",
+        "createdAt": "2026-04-24T11:57:20.292Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-98da7656-e4c6-4c35-952f-f1d642a636df",
+        "createdAt": "2026-04-24T11:57:20.059Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-de380f4e-9716-4f70-9712-c65614e2f79d",
+        "createdAt": "2026-04-24T11:57:19.731Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-83bb8e0f-887c-437d-a409-c95e019c51a8",
+        "createdAt": "2026-04-24T11:57:19.634Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-051da120-f99c-4001-9547-9e0fa69cc3d1",
+        "createdAt": "2026-04-24T11:57:19.520Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-b748c504-e0ef-4b45-bdbf-e0b0a66c2363",
+        "createdAt": "2026-04-24T11:57:19.399Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-f31e54b7-b284-481f-b59a-601510ab614c",
+        "createdAt": "2026-04-24T11:57:19.310Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-bca89632-8136-4811-a852-6dfb6698e6f0",
+        "createdAt": "2026-04-24T11:57:19.040Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-c9776ef7-ad94-40ca-a168-8c781ea7d72d",
+        "createdAt": "2026-04-24T11:57:18.698Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-da36fcf7-7a56-4d73-a522-85113bfa6e1c",
+        "createdAt": "2026-04-24T11:57:18.611Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-c4d009b6-190f-4fd6-b7c8-852ffb38d7fc",
+        "createdAt": "2026-04-24T11:57:18.519Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-234158db-18e9-4052-82d8-7631ad9bc97c",
+        "createdAt": "2026-04-24T11:57:18.429Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-989bb0b1-3db9-43ef-8950-361e928081f1",
+        "createdAt": "2026-04-24T11:57:18.329Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-9cc5d389-782c-414d-bf42-e95bd4927583",
+        "createdAt": "2026-04-24T11:57:18.211Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-1c182905-d383-4e83-aa58-f00b6643c5b0",
+        "createdAt": "2026-04-24T11:57:17.964Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-f5ff1aa8-e16b-4815-ba5c-1ffddac2b025",
+        "createdAt": "2026-04-24T11:57:17.614Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-5756dd9f-0d4d-4d4d-957a-494a383d1898",
+        "createdAt": "2026-04-24T11:57:17.476Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-6d2041e0-bee7-4193-954c-dfc705fc8712",
+        "createdAt": "2026-04-24T11:57:17.348Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-24a080d3-25ce-4131-afaf-68ccda3751ec",
+        "createdAt": "2026-04-24T11:57:17.259Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-af6ee203-83e0-48e6-951e-04294dd20cd9",
+        "createdAt": "2026-04-24T11:57:17.178Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-a02c6f97-11bd-4121-a266-72db6a21fac9",
+        "createdAt": "2026-04-24T11:57:17.098Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-e218118b-75a7-44c1-b8ef-5d4b5a2c7ae1",
+        "createdAt": "2026-04-24T11:57:16.844Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-f9d4b6b0-a42a-4c64-85d6-98217945d64c",
+        "createdAt": "2026-04-24T11:57:16.383Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-de59618d-d3c7-48a2-adaa-984b656d7c89",
+        "createdAt": "2026-04-24T11:57:16.129Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-88a41198-9877-441d-b3fc-b679585b6011",
+        "createdAt": "2026-04-24T11:57:16.008Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-77bbcf05-08f9-42ac-bec1-956019567a66",
+        "createdAt": "2026-04-24T11:57:15.935Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-281523a0-47d6-4c42-ac3a-48fb93ed9765",
+        "createdAt": "2026-04-24T11:57:15.696Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-939aebfb-c1b1-42bb-a32b-edceb872267a",
+        "createdAt": "2026-04-24T11:57:15.437Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-ae805c3a-2c3a-45bc-bf2b-397a1a6e05e1",
+        "createdAt": "2026-04-24T11:57:15.230Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-2c4ca1d7-d61d-437b-a4af-c091267c6f6a",
+        "createdAt": "2026-04-24T11:57:14.355Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-8f4eddbc-5ad5-4343-bc0e-615380fa4577",
+        "createdAt": "2026-04-24T11:57:13.018Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-bb9b55a1-3d4b-42e2-9d44-e477ba92216c",
+        "createdAt": "2026-04-24T11:57:09.386Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-1149264f-7e27-4a5f-ac7b-6fb67c82e2e6",
+        "createdAt": "2026-04-24T11:57:02.707Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-4a875bb1-b82b-44f2-9143-9d1441cb7ea5",
+        "createdAt": "2026-04-24T11:56:39.131Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 4: 1x Pizza Salami · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-4",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-56f67d32-272f-4f30-b694-38ceb97ad599",
+        "createdAt": "2026-04-24T11:56:39.043Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 4: 1x Pizza Thunfisch · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-4",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c68476fd-a1d0-4d5a-9997-c0fda9ace0c4",
+        "createdAt": "2026-04-24T11:56:38.946Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 4: 1x Pizza Speziale · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-4",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-38c0b694-150f-46e0-b019-ef5c51e24bce",
+        "createdAt": "2026-04-24T11:56:38.258Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 4: 1x Pizza Kochschinken · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-4",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8756b568-f176-43c3-8404-ab90fd2424cc",
+        "createdAt": "2026-04-24T11:56:35.840Z",
+        "read": false,
+        "title": "Getränke storniert",
+        "body": "Tisch 1: 1x Sprite · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-1",
+        "targetRoles": [
+          "bar",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-65922b46-7157-4956-84d7-5ce64f5df06b",
+        "createdAt": "2026-04-24T11:56:35.584Z",
+        "read": false,
+        "title": "Getränke storniert",
+        "body": "Tisch 1: 1x Sprite · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-1",
+        "targetRoles": [
+          "bar",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b18ca89a-2e90-4d98-9ab7-d453595a1b45",
+        "createdAt": "2026-04-24T11:56:34.900Z",
+        "read": false,
+        "title": "Getränke storniert",
+        "body": "Tisch 1: 1x Wasser Still · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-1",
+        "targetRoles": [
+          "bar",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-47a10782-5e57-4175-af4b-0e327d3a3dae",
+        "createdAt": "2026-04-24T11:56:33.603Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 2: 1x Nudeln mit Tomatensauce · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-08803625-62fd-4af2-8c51-9539cdcea1eb",
+        "createdAt": "2026-04-24T11:56:31.797Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-81d2cffd-c9e7-4c9a-aae4-210b30a51762",
+        "createdAt": "2026-04-24T11:56:29.821Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 2: 1x Pizza Speziale · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3fd061fc-b712-41c6-9463-8b86f002eef4",
+        "createdAt": "2026-04-24T11:56:29.366Z",
+        "read": false,
+        "title": "Nachtisch storniert",
+        "body": "Tisch 2: 1x Dessert des Tages · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b034caf2-967a-4688-b95d-5ae151f48fa6",
+        "createdAt": "2026-04-24T11:56:29.105Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 2: 1x Pizza Thunfisch · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-dcdaef52-fbb5-4e56-bba5-8d2ea1b38e5d",
+        "createdAt": "2026-04-24T11:56:28.335Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-207177ca-5059-4a77-9b45-5ca5ac507432",
+        "createdAt": "2026-04-24T11:56:27.408Z",
+        "read": false,
+        "title": "Getränke storniert",
+        "body": "Tisch 2: 1x Cola · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "bar",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-70f3c962-1ee4-499f-9545-82ae4f12b857",
+        "createdAt": "2026-04-24T11:54:54.129Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Alk. Freies Bier wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-41d4d648-8de2-4da9-980b-5fa9a1696be6",
+        "createdAt": "2026-04-24T11:53:52.353Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-603031ec-7ea8-4060-8cf3-0fbd62560d5d",
+        "createdAt": "2026-04-24T11:53:52.122Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-0718a241-bc39-4acd-b7f0-b0ddbb5e731c",
+        "createdAt": "2026-04-24T11:53:51.774Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-81235f95-7d26-4867-b82e-8a1f886531a3",
+        "createdAt": "2026-04-24T11:53:51.581Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-5ffa1190-37fc-4589-9a15-13a38f317494",
+        "createdAt": "2026-04-24T11:53:50.686Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-30fd4e2c-95e0-4936-a612-29964a275c80",
+        "createdAt": "2026-04-24T11:53:45.102Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-7283cb59-d4ad-4e1f-9ede-0fcf28b3f5b1",
+        "createdAt": "2026-04-24T11:53:41.686Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-174e0700-145c-455b-b901-e9d7def4dcee",
+        "createdAt": "2026-04-24T11:52:59.796Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-e12c43db-e1fa-46e3-8f99-b3c91b103666",
+        "createdAt": "2026-04-24T11:52:54.567Z",
+        "read": true,
+        "title": "Produkt angelegt",
+        "body": "Gruß aus der Küche wurde in den Stammdaten ergänzt.",
+        "tone": "success"
+      },
+      {
+        "id": "notification-ba6e1fa6-7683-4a5e-ad69-8c47167e9bbb",
+        "createdAt": "2026-04-24T11:52:23.629Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruß aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-d6a1f278-459a-41b0-b4a4-db779b6b98f3",
+        "createdAt": "2026-04-24T11:52:16.261Z",
+        "read": true,
+        "title": "Produkt gelöscht",
+        "body": "Gruss aus der Küche wurde aus den Stammdaten entfernt.",
+        "tone": "alert"
+      },
+      {
+        "id": "notification-6b363a4a-5a89-4b4f-bec5-8a3d2279629e",
+        "createdAt": "2026-04-24T11:49:31.083Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-c615c790-e0e5-4de4-8816-fd21b0b2c400",
+          "item-b7b31f91-b17f-499c-854c-139af87f4bff",
+          "item-c687072c-5110-4bac-b646-5527e4b9d25f"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Pizza Speziale, 1x Nudeln mit grüner Pesto, 1x Nudeln mit Tomatensauce für Tisch 2 ist fertig.",
+        "tone": "success",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-77342b72-2170-419a-b30d-16a7cbeba7bf",
+        "createdAt": "2026-04-24T11:49:26.487Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "dessert",
+        "itemIds": [
+          "item-b6366295-9253-432e-a31e-dc2949fe828e"
+        ],
+        "title": "Nachtisch fertig",
+        "body": "1x Dessert des Tages für Tisch 2 ist fertig.",
+        "tone": "success",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-e8927db0-75fd-4d3a-9f30-15ee2d18837d",
+        "createdAt": "2026-04-24T11:49:15.379Z",
+        "read": false,
+        "title": "Nachtisch gesendet",
+        "body": "Tisch 2 wartet auf nachtisch.",
+        "tone": "info",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-2daa9b2b-3a0c-4598-90af-2e30d7ddedc0",
+        "createdAt": "2026-04-24T11:49:15.379Z",
+        "read": false,
+        "title": "Hauptspeise · Nachbestellung 2 gesendet",
+        "body": "Tisch 2 wartet auf hauptspeise · nachbestellung 2.",
+        "tone": "info",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-3eadd33b-5572-4d18-9bf5-9ae56d3c8829",
+        "createdAt": "2026-04-24T10:42:05.427Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-1bc06a35-edb5-42b8-ae43-62dbda355795",
+          "item-d4c3e442-c59d-4b4e-bbc1-9d91eb027ab1"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 2: 1x Nudeln mit grüner Pesto, 1x Pizza Thunfisch für Tisch 2 ist fertig.",
+        "tone": "success",
+        "tableId": "table-2",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-10cff404-b030-4e97-b987-de792dff5742"
+      },
+      {
+        "id": "notification-10cff404-b030-4e97-b987-de792dff5742",
+        "createdAt": "2026-04-24T10:41:44.161Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-1bc06a35-edb5-42b8-ae43-62dbda355795",
+          "item-d4c3e442-c59d-4b4e-bbc1-9d91eb027ab1"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Nudeln mit grüner Pesto, 1x Pizza Thunfisch für Tisch 2 ist fertig.",
+        "tone": "success",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-60005f36-2eb6-4aba-9590-ca35c045a44b",
+        "createdAt": "2026-04-24T10:41:27.841Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icprobieaus) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3d459f4d-912f-44ac-84ca-f7cbf8f860e9",
+        "createdAt": "2026-04-24T10:41:22.055Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icprobieau) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icprobieaus) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-cb522fc9-511a-44bb-ab57-96858a6fec48",
+        "createdAt": "2026-04-24T10:41:21.881Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icprobiea) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icprobieau) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-acfa96d5-1883-44a2-a680-d16285ce5072",
+        "createdAt": "2026-04-24T10:41:21.782Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icprobie) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icprobiea) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-9f34f7b8-18e2-4790-85ed-2a591d383158",
+        "createdAt": "2026-04-24T10:41:20.460Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icprobi) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icprobie) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5d0ac2ba-f33a-404b-9abe-895fdebca03c",
+        "createdAt": "2026-04-24T10:41:20.362Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icprob) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icprobi) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2c380813-06fc-4931-b98f-f9c9fcecf44e",
+        "createdAt": "2026-04-24T10:41:20.139Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icpro) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icprob) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-bd5d3411-6896-444f-b48a-4a366d39d89a",
+        "createdAt": "2026-04-24T10:41:19.829Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icpr) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icpro) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-093540bc-2f33-4d32-8ed0-2ffa1f1b7ae9",
+        "createdAt": "2026-04-24T10:41:19.293Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (icp) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icpr) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-81aa20f4-1e35-4b1e-9ee1-721a57b8a4af",
+        "createdAt": "2026-04-24T10:41:19.092Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (ic) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (icp) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3cd6b89d-d480-4d1b-8755-cf2abdea1cac",
+        "createdAt": "2026-04-24T10:41:18.427Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (i) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (ic) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-f946273e-8620-4cb1-9bcc-ee01bf038221",
+        "createdAt": "2026-04-24T10:41:17.695Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (ib) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (i) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8a776cee-611d-4396-89d1-cefe15b448a8",
+        "createdAt": "2026-04-24T10:41:17.500Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (ibp) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (ib) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-aa214d4f-6ad4-4aa6-917f-b33ec987f8dc",
+        "createdAt": "2026-04-24T10:41:16.890Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (ib) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (ibp) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8f0c48f3-3258-47dd-b1fb-77cd69a6c920",
+        "createdAt": "2026-04-24T10:41:16.019Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (i) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (ib) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0224d25e-1e6b-4d4c-8002-c80e1c807580",
+        "createdAt": "2026-04-24T10:41:15.398Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (i) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-fb59cdd9-ef6e-47be-be33-024b4d61cc78",
+        "createdAt": "2026-04-24T10:41:15.116Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (o) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-6bd4fb7f-dcb1-4f3f-9e32-a06007122245",
+        "createdAt": "2026-04-24T10:41:15.006Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (oi) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (o) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-24723679-e8f9-4a0d-92bc-ccfec72615f2",
+        "createdAt": "2026-04-24T10:41:14.791Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (oic) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (oi) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2be69c24-6520-4609-907d-70b4fba2fdaf",
+        "createdAt": "2026-04-24T10:41:14.613Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (oich) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (oic) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-391a697f-781a-475c-a2d8-18ca2200d2b4",
+        "createdAt": "2026-04-24T10:41:14.163Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (oic) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (oich) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-63589b98-3c67-45d1-b691-09a7e9229cdb",
+        "createdAt": "2026-04-24T10:41:13.975Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (oi) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (oic) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-7792ad06-aaa4-4631-a2f8-6e0333dbeff9",
+        "createdAt": "2026-04-24T10:41:13.790Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (o) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (oi) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-02121fb4-6539-4995-b4e3-b5060d65d0d9",
+        "createdAt": "2026-04-24T10:41:13.113Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (o) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d603089a-498e-4cb3-b604-464ec5420833",
+        "createdAt": "2026-04-24T10:41:12.343Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (test) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5f6b64c9-a218-458c-afb4-6c7a73ad712b",
+        "createdAt": "2026-04-24T10:40:59.349Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (tes) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (test) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3453939d-36ef-4e36-ac75-d5793365c3fe",
+        "createdAt": "2026-04-24T10:40:59.259Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (te) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (tes) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-de688ff0-de9f-4944-b1e4-5c7d2d9f24fb",
+        "createdAt": "2026-04-24T10:40:58.980Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto (t) · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (te) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a1743be4-695a-483e-be8e-db72f17f86b7",
+        "createdAt": "2026-04-24T10:40:58.878Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 2: 1x Nudeln mit grüner Pesto · Tisch wurde geändert zu 1x Nudeln mit grüner Pesto (t) · Tisch.",
+        "tone": "info",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-50736d65-4745-490e-add1-3f26f2941872",
+        "createdAt": "2026-04-24T10:40:47.340Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 2: 1x Pizza Salami · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-2",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b65c30d6-c7e7-4b67-9abf-588813b637df",
+        "createdAt": "2026-04-24T10:38:46.719Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 2 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-39ed95bd-7aac-46de-a31e-fc2faeeb52e2",
+        "createdAt": "2026-04-24T10:37:17.136Z",
+        "read": true,
+        "kind": "service-drinks-accepted",
+        "course": "drinks",
+        "itemIds": [
+          "item-6a2513ff-9912-423d-8f7f-f30edc28d812"
+        ],
+        "title": "Getränke ausliefern",
+        "body": "Bringe die Getränke 1x Cola zu Tisch 2.",
+        "tone": "success",
+        "tableId": "table-2",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-c652cae4-c9e3-44b4-87f6-d45702d57430"
+      },
+      {
+        "id": "notification-c652cae4-c9e3-44b4-87f6-d45702d57430",
+        "createdAt": "2026-04-24T10:37:05.754Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-6a2513ff-9912-423d-8f7f-f30edc28d812"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 2: 1x Cola.",
+        "tone": "info",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-cd071b31-23e3-417d-851c-ccd9d484fae2",
+        "createdAt": "2026-04-23T11:29:34.537Z",
+        "read": true,
+        "kind": "admin-receipt-alarm",
+        "title": "Rechnung erneut gedruckt",
+        "body": "Tisch 3 hat gerade einen Rechnungs-Reprint gedruckt. Bitte Abrechnung prüfen.",
+        "tone": "alert",
+        "tableId": "table-3",
+        "targetRoles": [
+          "admin"
+        ]
+      },
+      {
+        "id": "notification-b55b9ca2-24c8-4d05-b881-7aa7a4ac9889",
+        "createdAt": "2026-04-23T10:57:35.202Z",
+        "read": false,
+        "title": "Bestellung geschlossen",
+        "body": "Tisch 2 wurden abgeschlossen.",
+        "tone": "success",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-9f74f0c7-2849-4973-94c1-082a06475c3d",
+        "createdAt": "2026-04-23T10:57:28.732Z",
+        "read": false,
+        "title": "Teilzahlung verbucht",
+        "body": "2,50 € wurden als Restzahlung gespeichert.",
+        "tone": "success",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-fc7ba612-214a-4da8-abd9-6094f7abe03d",
+        "createdAt": "2026-04-23T10:55:52.488Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-9a64dfc0-fef9-490c-b502-d4148abc8cbb"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 1: 1x Sprite.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-4f0168b7-666e-450a-9e85-60d4e229d311",
+        "createdAt": "2026-04-23T10:55:44.656Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-a688b69b-36ff-423c-a25e-bdedaef79971"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 1: 1x Wasser Still.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-7f66d8d5-3b78-4a95-9f58-d5034dc53477",
+        "createdAt": "2026-04-23T06:45:09.395Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-bb73436d-3305-40b2-9914-039a7d5c51fd"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 2: 1x Cola.",
+        "tone": "info",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-55a631df-a414-4873-a11b-f47dd8e5bbeb",
+        "createdAt": "2026-04-23T06:33:26.263Z",
+        "read": false,
+        "title": "Bestellung geschlossen",
+        "body": "Tisch 3 wurden abgeschlossen.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-b7700884-7c6f-496f-8080-e1237c30089d",
+        "createdAt": "2026-04-23T06:33:20.616Z",
+        "read": true,
+        "kind": "admin-receipt-alarm",
+        "title": "Rechnung erneut gedruckt",
+        "body": "Tisch 3 hat gerade einen Rechnungs-Reprint gedruckt. Bitte Abrechnung prüfen.",
+        "tone": "alert",
+        "tableId": "table-3",
+        "targetRoles": [
+          "admin"
+        ]
+      },
+      {
+        "id": "notification-aada529b-51ce-4b64-bec6-bbae30a4952f",
+        "createdAt": "2026-04-23T06:33:12.050Z",
+        "read": false,
+        "title": "Teilzahlung verbucht",
+        "body": "36,00 € wurden als Restzahlung gespeichert.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-bd3ecea3-feaa-48fe-9bde-c94b7a12841c",
+        "createdAt": "2026-04-23T06:33:03.308Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "starter",
+        "itemIds": [
+          "item-8cd13b4f-c24a-4923-b2d9-d2adfc9a77c5"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 3: 1x Gruss aus der Küche für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-0f1c4f04-c2ae-4b92-a7b9-a15667a35964"
+      },
+      {
+        "id": "notification-0f1c4f04-c2ae-4b92-a7b9-a15667a35964",
+        "createdAt": "2026-04-23T06:31:44.262Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "starter",
+        "itemIds": [
+          "item-8cd13b4f-c24a-4923-b2d9-d2adfc9a77c5"
+        ],
+        "title": "Vorspeise fertig",
+        "body": "1x Gruss aus der Küche für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-e3ff7541-64a0-4371-b2ba-1b24947d9149",
+        "createdAt": "2026-04-23T06:31:38.979Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-f97004c6-bea7-4127-beea-0a274184f94e",
+          "item-770aa3ca-60ec-4771-b2a5-370e5973c34c",
+          "item-14a5410e-a598-4c03-8908-7d92ea4f7cda",
+          "item-c5357dda-700b-4d81-b3b7-b35de3e72b03"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 4: 1x Pizza Kochschinken, 1x Pizza Speziale, 1x Pizza Thunfisch, 1x Pizza Salami für Tisch 4 ist fertig.",
+        "tone": "success",
+        "tableId": "table-4",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-ee363646-5cc7-493a-be09-241d145a0008"
+      },
+      {
+        "id": "notification-5186b0be-c63e-4ff9-ac27-f858d3c2b22c",
+        "createdAt": "2026-04-23T06:31:30.675Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-074969fa-3505-4886-93ca-9c80fef4f538"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 3: 1x Nudeln mit Tomatensauce für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-14d0b367-4529-4293-8d7f-eac7cff91945"
+      },
+      {
+        "id": "notification-ee363646-5cc7-493a-be09-241d145a0008",
+        "createdAt": "2026-04-23T06:14:48.182Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-f97004c6-bea7-4127-beea-0a274184f94e",
+          "item-770aa3ca-60ec-4771-b2a5-370e5973c34c",
+          "item-14a5410e-a598-4c03-8908-7d92ea4f7cda",
+          "item-c5357dda-700b-4d81-b3b7-b35de3e72b03"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Pizza Kochschinken, 1x Pizza Speziale, 1x Pizza Thunfisch, 1x Pizza Salami für Tisch 4 ist fertig.",
+        "tone": "success",
+        "tableId": "table-4"
+      },
+      {
+        "id": "notification-02985904-32d1-4f45-a7a5-18c30c73c8ed",
+        "createdAt": "2026-04-23T06:14:42.556Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 4 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-4"
+      },
+      {
+        "id": "notification-f548a3f8-3700-48ba-b57e-e7aa910a3100",
+        "createdAt": "2026-04-23T06:14:26.835Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 4 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-4"
+      },
+      {
+        "id": "notification-1bf83ed5-9b36-49a4-9278-10ee4f556b16",
+        "createdAt": "2026-04-23T06:13:48.337Z",
+        "read": false,
+        "title": "Vorspeise wartet",
+        "body": "Tisch 3: Vorspeise wartet 5 Minuten, bevor die Küche startet.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-cf1ee940-d286-4d92-b7c9-b470ffb6424a",
+        "createdAt": "2026-04-23T06:13:32.796Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 3 wartet auf die vorspeise.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-14d0b367-4529-4293-8d7f-eac7cff91945",
+        "createdAt": "2026-04-23T06:08:11.714Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-074969fa-3505-4886-93ca-9c80fef4f538"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Nudeln mit Tomatensauce für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-fdce9c6b-99c2-4a87-8a2d-6f5680951691",
+        "createdAt": "2026-04-23T06:08:08.174Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 3 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-50b2441b-7983-41d7-bca4-3526f71725c2",
+        "createdAt": "2026-04-23T06:07:42.014Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 3 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-aae3150b-0146-451f-94f0-8499083f5238",
+        "createdAt": "2026-04-23T06:04:58.933Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 3 wartet auf die hauptspeise.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
       {
         "id": "notification-8a058c98-3220-45e6-92c7-314fef95863b",
         "createdAt": "2026-04-20T15:01:23.291Z",
@@ -1404,7 +3888,7 @@
       {
         "id": "notification-a5180c18-8706-4714-8ee0-d922cbbaa0cb",
         "createdAt": "2026-04-19T14:28:19.571Z",
-        "read": false,
+        "read": true,
         "kind": "service-drinks-accepted",
         "title": "Getränke übernommen",
         "body": "Service kümmert sich um Tisch 1: 1x Sprite, 1x Rotwein.",
@@ -1425,7 +3909,7 @@
       {
         "id": "notification-a182583d-af9c-4732-b3ce-08a0ccb9b0e2",
         "createdAt": "2026-04-19T14:27:31.907Z",
-        "read": false,
+        "read": true,
         "kind": "service-drinks-accepted",
         "title": "Getränke übernommen",
         "body": "Service kümmert sich um Tisch 1: 1x Cola Zero, 1x Bionade.",
@@ -1755,20 +4239,25 @@
     ],
     "dailyStats": {
       "date": "2026-03-30",
-      "servedTables": 0,
-      "servedGuests": 0,
-      "revenueCents": 0,
-      "closedOrderIds": []
+      "servedTables": 2,
+      "servedGuests": 2,
+      "revenueCents": 3850,
+      "closedOrderIds": [
+        "session-table-3-f331dca6-24d4-421c-8b00-018d50a02fc5",
+        "session-table-2-83eb079b-1675-4be5-bf5b-e4a3402e7c2d"
+      ]
     },
     "catalogVersion": 1,
     "serviceOrderMode": "table",
-    "deletedTableIds": [
-      "table-7"
-    ],
+    "deletedTableIds": [],
     "deletedUserIds": [
       "user-waiter-1"
     ],
     "designMode": "classic",
-    "linkedTableGroups": []
+    "linkedTableGroups": [],
+    "deletedProductIds": [
+      "starter-greeting"
+    ],
+    "extraIngredients": []
   }
 }

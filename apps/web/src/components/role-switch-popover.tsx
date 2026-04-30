@@ -11,7 +11,8 @@ import { useDemoApp } from "../lib/app-state";
 const roleLabels: Record<Role, string> = {
   admin: "Admin",
   waiter: "Service",
-  kitchen: "Küche"
+  kitchen: "Küche",
+  bar: "Bar"
 };
 
 export const RoleSwitchPopover = () => {

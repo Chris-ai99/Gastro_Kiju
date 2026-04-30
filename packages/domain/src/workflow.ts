@@ -95,8 +95,37 @@ export const calculatePaidItemQuantity = (session: OrderSession | undefined, ite
   );
 };
 
+export const calculateCanceledItemQuantity = (
+  session: OrderSession | undefined,
+  itemId: string
+) => {
+  if (!session) return 0;
+
+  const item = session.items.find((entry) => entry.id === itemId);
+  if (!item) return 0;
+
+  const canceledQuantity = session.cancellations.reduce(
+    (sum, cancellation) =>
+      sum +
+      cancellation.lineItems
+        .filter((lineItem) => lineItem.itemId === itemId)
+        .reduce((lineSum, lineItem) => lineSum + lineItem.quantity, 0),
+    0
+  );
+
+  return Math.min(
+    Math.max(0, item.quantity - calculatePaidItemQuantity(session, itemId)),
+    canceledQuantity
+  );
+};
+
 export const calculateOpenItemQuantity = (session: OrderSession | undefined, item: OrderItem) =>
-  Math.max(0, item.quantity - calculatePaidItemQuantity(session, item.id));
+  Math.max(
+    0,
+    item.quantity -
+      calculatePaidItemQuantity(session, item.id) -
+      calculateCanceledItemQuantity(session, item.id)
+  );
 
 export const calculateLineItemsTotal = (
   session: OrderSession | undefined,
@@ -116,8 +145,28 @@ export const calculateLineItemsTotal = (
 export const calculateSessionPaidTotal = (session: OrderSession | undefined) =>
   session?.payments.reduce((sum, payment) => sum + payment.amountCents, 0) ?? 0;
 
+export const calculateSessionCanceledTotal = (
+  session: OrderSession | undefined,
+  products: Product[]
+) =>
+  session?.items.reduce((sum, item) => {
+    const quantity = calculateCanceledItemQuantity(session, item.id);
+    if (quantity <= 0) return sum;
+
+    return sum + Math.round((calculateItemTotal(item, products) / item.quantity) * quantity);
+  }, 0) ?? 0;
+
+export const calculateSessionBillableTotal = (
+  session: OrderSession | undefined,
+  products: Product[]
+) =>
+  Math.max(
+    0,
+    calculateSessionTotal(session, products) - calculateSessionCanceledTotal(session, products)
+  );
+
 export const calculateSessionOpenTotal = (session: OrderSession | undefined, products: Product[]) =>
-  Math.max(0, calculateSessionTotal(session, products) - calculateSessionPaidTotal(session));
+  Math.max(0, calculateSessionBillableTotal(session, products) - calculateSessionPaidTotal(session));
 
 export const getOpenLineItems = (session: OrderSession | undefined) =>
   session?.items

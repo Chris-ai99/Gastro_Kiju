@@ -65,6 +65,7 @@ export const routeConfig = {
   login: "/",
   waiter: "/waiter",
   kitchen: "/kitchen",
+  bar: "/bar",
   admin: "/admin"
 } as const;
 

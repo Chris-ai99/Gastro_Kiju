@@ -85,6 +85,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/domain
     devDependencies:
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.12.0
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.8)(typescript@5.9.3)
@@ -100,6 +103,9 @@ importers:
       '@kiju/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@kiju/print-bridge':
+        specifier: workspace:*
+        version: link:../print-bridge
       '@kiju/ui':
         specifier: workspace:*
         version: link:../../packages/ui

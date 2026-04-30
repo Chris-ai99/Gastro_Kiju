@@ -111,6 +111,7 @@ enum Role {
   admin
   waiter
   kitchen
+  bar
 }
 
 enum CourseKey {

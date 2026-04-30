@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogIn } from "lucide-react";
+import { Beer, ChefHat, LogIn, Settings, Users } from "lucide-react";
 
 import { routeConfig } from "@kiju/config";
 import { SectionCard } from "@kiju/ui";
@@ -12,14 +12,16 @@ import { useDemoApp } from "../lib/app-state";
 const roleRoutes = {
   waiter: routeConfig.waiter,
   kitchen: routeConfig.kitchen,
+  bar: routeConfig.bar,
   admin: routeConfig.admin
 } as const;
+
+type WorkspaceRole = "waiter" | "kitchen" | "bar" | "admin";
 
 export const LoginScreen = () => {
   const router = useRouter();
   const { actions, currentUser, hydrated } = useDemoApp();
-  const [identifier, setIdentifier] = useState("");
-  const [secret, setSecret] = useState("");
+  const [serviceName, setServiceName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,11 +29,11 @@ export const LoginScreen = () => {
     router.replace(roleRoutes[currentUser.role]);
   }, [currentUser, hydrated, router]);
 
-  const handleLogin = (nextIdentifier: string, nextSecret: string) => {
-    const result = actions.login(nextIdentifier, nextSecret);
+  const handleStationStart = (role: WorkspaceRole, name?: string) => {
+    const result = actions.startWorkspaceSession(role, name);
 
     if (!result.ok || !result.user) {
-      setError(result.message ?? "Login fehlgeschlagen.");
+      setError(result.message ?? "Bereich konnte nicht geöffnet werden.");
       return;
     }
 
@@ -39,50 +41,70 @@ export const LoginScreen = () => {
     router.replace(roleRoutes[result.user.role]);
   };
 
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  const submitService = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    handleLogin(identifier, secret);
+    handleStationStart("waiter", serviceName);
   };
 
   return (
     <main className="kiju-login-shell">
       <section className="kiju-login-hero kiju-login-hero--compact">
         <SectionCard
-          title="Anmelden"
+          title="Bereich wählen"
           eyebrow="KiJu Gastro"
           action={
             <div className="kiju-login-badge">
-              <KeyRound size={16} />
-              PIN
+              <LogIn size={16} />
+              Start
             </div>
           }
         >
           <p className="kiju-login-intro">
-            PIN eingeben. Falls eine PIN mehrfach vergeben ist, zusätzlich den Namen eintragen.
+            Wähle Küche, Getränke oder Service. Für den Service reicht dein Name.
           </p>
-          <form className="kiju-form" onSubmit={submit}>
+
+          <div className="kiju-form">
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={() => handleStationStart("kitchen")}
+            >
+              <ChefHat size={18} />
+              Küche öffnen
+            </button>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={() => handleStationStart("bar")}
+            >
+              <Beer size={18} />
+              Getränke öffnen
+            </button>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={() => handleStationStart("admin")}
+            >
+              <Settings size={18} />
+              Admin öffnen
+            </button>
+          </div>
+
+          <form className="kiju-form" onSubmit={submitService}>
             <label>
-              <span>PIN oder Passwort</span>
+              <span>Service: Dein Name</span>
               <input
-                type="password"
-                value={secret}
-                onChange={(event) => setSecret(event.target.value)}
-                autoComplete="current-password"
+                value={serviceName}
+                onChange={(event) => setServiceName(event.target.value)}
+                autoComplete="name"
                 autoFocus
-              />
-            </label>
-            <label>
-              <span>Name oder Benutzername, falls nötig</span>
-              <input
-                value={identifier}
-                onChange={(event) => setIdentifier(event.target.value)}
-                autoComplete="username"
+                placeholder="Zum Beispiel Chris"
               />
             </label>
             {error ? <p className="kiju-error">{error}</p> : null}
             <button type="submit" className="kiju-button kiju-button--primary">
-              <LogIn size={18} />
-              Anmelden
+              <Users size={18} />
+              Service öffnen
             </button>
           </form>
         </SectionCard>

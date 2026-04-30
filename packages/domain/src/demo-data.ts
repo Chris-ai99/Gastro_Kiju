@@ -76,6 +76,15 @@ export const demoUsers: UserAccount[] = [
     password: "Kitchen1234",
     pin: "2026",
     active: true
+  },
+  {
+    id: "user-bar",
+    name: "Bar",
+    username: "Bar",
+    role: "bar",
+    password: "Bar1234",
+    pin: "3030",
+    active: true
   }
 ];
 
@@ -158,6 +167,18 @@ export const demoProducts: Product[] = [
     modifierGroups: []
   },
   {
+    id: "main-pizza-margherita",
+    name: "Pizza Margherita",
+    category: "main",
+    description: "Pizza mit Tomate, Käse und Basilikum.",
+    priceCents: 700,
+    taxRate: 7,
+    allergens: ["Gluten", "Milch"],
+    showInKitchen: true,
+    productionTarget: "kitchen",
+    modifierGroups: []
+  },
+  {
     id: "main-pizza-ham",
     name: "Pizza Kochschinken",
     category: "main",
@@ -206,6 +227,18 @@ export const demoProducts: Product[] = [
     modifierGroups: []
   },
   {
+    id: "main-pizza-veggi",
+    name: "Pizza Veggi",
+    category: "main",
+    description: "Pizza mit Tomate, Käse und Gemüse.",
+    priceCents: 800,
+    taxRate: 7,
+    allergens: ["Gluten", "Milch"],
+    showInKitchen: true,
+    productionTarget: "kitchen",
+    modifierGroups: []
+  },
+  {
     id: "drink-beer",
     name: "Bier",
     category: "drinks",
@@ -215,7 +248,7 @@ export const demoProducts: Product[] = [
     taxRate: 19,
     allergens: ["Gluten"],
     showInKitchen: false,
-    productionTarget: "service",
+    productionTarget: "bar",
     modifierGroups: []
   },
   {
@@ -228,7 +261,7 @@ export const demoProducts: Product[] = [
     taxRate: 19,
     allergens: ["Koffein"],
     showInKitchen: false,
-    productionTarget: "service",
+    productionTarget: "bar",
     modifierGroups: []
   },
   {
@@ -237,11 +270,11 @@ export const demoProducts: Product[] = [
     category: "drinks",
     drinkSubcategory: "Alkoholfrei",
     description: "Stilles Wasser.",
-    priceCents: 200,
+    priceCents: 100,
     taxRate: 19,
     allergens: [],
     showInKitchen: false,
-    productionTarget: "service",
+    productionTarget: "bar",
     modifierGroups: []
   },
   {
@@ -254,7 +287,7 @@ export const demoProducts: Product[] = [
     taxRate: 19,
     allergens: ["Sulfite"],
     showInKitchen: false,
-    productionTarget: "service",
+    productionTarget: "bar",
     modifierGroups: []
   },
   {
@@ -311,6 +344,25 @@ const createKitchenBatch = (
   sequence
 });
 
+const createBarBatch = (
+  id: string,
+  itemIds: string[],
+  ticket: CourseTicket,
+  sequence = 1
+): KitchenTicketBatch => ({
+  id,
+  course: "drinks",
+  itemIds,
+  status: ticket.status,
+  sentAt: ticket.sentAt ?? now,
+  releasedAt: ticket.releasedAt,
+  readyAt: ticket.readyAt,
+  completedAt: ticket.completedAt,
+  manualRelease: false,
+  countdownMinutes: ticket.countdownMinutes,
+  sequence
+});
+
 export const demoSessions: OrderSession[] = [
   {
     id: "session-table-1",
@@ -352,9 +404,10 @@ export const demoSessions: OrderSession[] = [
     skippedCourses: [],
     courseTickets: {
       ...baseCourseTickets(),
-      drinks: createTicket("drinks", "completed", {
+      drinks: createTicket("drinks", "ready", {
         sentAt: now,
-        completedAt: "2026-03-27T18:31:00.000Z"
+        readyAt: now,
+        countdownMinutes: 0
       }),
       starter: createTicket("starter", "completed", {
         sentAt: now,
@@ -385,7 +438,19 @@ export const demoSessions: OrderSession[] = [
         })
       )
     ],
+    barTicketBatches: [
+      createBarBatch(
+        "bar-ticket-table-1-drinks-1",
+        ["item-1"],
+        createTicket("drinks", "ready", {
+          sentAt: now,
+          readyAt: now,
+          countdownMinutes: 0
+        })
+      )
+    ],
     payments: [],
+    cancellations: [],
     partyGroups: [],
     receipt: {}
   },
@@ -403,6 +468,7 @@ export const demoSessions: OrderSession[] = [
         quantity: 1,
         modifiers: [],
         sentAt: now,
+        preparedAt: "2026-03-27T18:31:00.000Z",
         servedAt: "2026-03-27T18:34:00.000Z"
       }
     ],
@@ -411,12 +477,27 @@ export const demoSessions: OrderSession[] = [
       ...baseCourseTickets(),
       drinks: createTicket("drinks", "completed", {
         sentAt: now,
-        completedAt: "2026-03-27T18:34:00.000Z"
+        readyAt: "2026-03-27T18:30:00.000Z",
+        completedAt: "2026-03-27T18:31:00.000Z",
+        countdownMinutes: 0
       }),
       starter: createTicket("starter", "skipped")
     },
     kitchenTicketBatches: [],
+    barTicketBatches: [
+      createBarBatch(
+        "bar-ticket-table-3-drinks-1",
+        ["item-4"],
+        createTicket("drinks", "completed", {
+          sentAt: now,
+          readyAt: "2026-03-27T18:30:00.000Z",
+          completedAt: "2026-03-27T18:31:00.000Z",
+          countdownMinutes: 0
+        })
+      )
+    ],
     payments: [],
+    cancellations: [],
     partyGroups: [],
     receipt: {}
   },
@@ -434,6 +515,7 @@ export const demoSessions: OrderSession[] = [
         quantity: 1,
         modifiers: [],
         sentAt: "2026-03-27T16:20:00.000Z",
+        preparedAt: "2026-03-27T16:21:00.000Z",
         servedAt: "2026-03-27T16:25:00.000Z"
       },
       {
@@ -453,7 +535,9 @@ export const demoSessions: OrderSession[] = [
       ...baseCourseTickets(),
       drinks: createTicket("drinks", "completed", {
         sentAt: "2026-03-27T16:20:00.000Z",
-        completedAt: "2026-03-27T16:25:00.000Z"
+        readyAt: "2026-03-27T16:20:00.000Z",
+        completedAt: "2026-03-27T16:21:00.000Z",
+        countdownMinutes: 0
       }),
       starter: createTicket("starter", "skipped"),
       main: createTicket("main", "completed", {
@@ -475,6 +559,18 @@ export const demoSessions: OrderSession[] = [
         })
       )
     ],
+    barTicketBatches: [
+      createBarBatch(
+        "bar-ticket-table-5-drinks-1",
+        ["item-closed-1"],
+        createTicket("drinks", "completed", {
+          sentAt: "2026-03-27T16:20:00.000Z",
+          readyAt: "2026-03-27T16:20:00.000Z",
+          completedAt: "2026-03-27T16:21:00.000Z",
+          countdownMinutes: 0
+        })
+      )
+    ],
     payments: [
       {
         id: "payment-closed-1",
@@ -487,6 +583,7 @@ export const demoSessions: OrderSession[] = [
         ]
       }
     ],
+    cancellations: [],
     partyGroups: [],
     receipt: {
       printedAt: "2026-03-27T16:47:00.000Z",

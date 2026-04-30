@@ -1,9 +1,17 @@
-export type Role = "admin" | "waiter" | "kitchen";
+export type Role = "admin" | "waiter" | "kitchen" | "bar";
 export type LoginMethod = "password" | "pin";
 export type CourseKey = "drinks" | "starter" | "main" | "dessert";
 export type ProductCategory = CourseKey;
 export type ProductionTarget = "service" | "bar" | "kitchen";
 export type PaymentMethod = "cash" | "card" | "voucher";
+export type PrintJobType =
+  | "receipt"
+  | "reprint"
+  | "daily-close"
+  | "kitchen-ticket"
+  | "test-print";
+export type PrintJobStatus = "pending" | "processing" | "printed" | "failed";
+export type ThermalPrintAlign = "left" | "center";
 export type ServiceOrderMode = "table" | "seat";
 export type DesignMode = "modern" | "classic";
 export type OrderTarget = { type: "table" } | { type: "seat"; seatId: string };
@@ -21,6 +29,8 @@ export type KitchenStatus =
   | "countdown"
   | "ready"
   | "completed";
+export type KitchenUnitStatus = "pending" | "in-progress" | "completed";
+export const EXTRA_INGREDIENTS_MODIFIER_GROUP_ID = "extra-ingredients";
 export type NotificationTone = "info" | "success" | "alert";
 export type NotificationKind =
   | "service-drinks"
@@ -55,6 +65,13 @@ export interface ModifierGroup {
   options: ModifierOption[];
 }
 
+export interface ExtraIngredient {
+  id: string;
+  name: string;
+  priceDeltaCents: number;
+  active: boolean;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -67,6 +84,7 @@ export interface Product {
   showInKitchen: boolean;
   productionTarget: ProductionTarget;
   modifierGroups: ModifierGroup[];
+  supportsExtraIngredients?: boolean;
 }
 
 export interface TableSeat {
@@ -94,6 +112,12 @@ export interface OrderModifierSelection {
   optionIds: string[];
 }
 
+export interface KitchenUnitState {
+  status: KitchenUnitStatus;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 export interface OrderItem {
   id: string;
   target: OrderTarget;
@@ -102,6 +126,7 @@ export interface OrderItem {
   quantity: number;
   note?: string;
   modifiers: OrderModifierSelection[];
+  kitchenUnitStates?: KitchenUnitState[];
   sentAt?: string;
   preparedAt?: string;
   servedAt?: string;
@@ -132,6 +157,8 @@ export interface KitchenTicketBatch {
   sequence: number;
 }
 
+export type BarTicketBatch = KitchenTicketBatch;
+
 export interface PaymentLineItem {
   itemId: string;
   quantity: number;
@@ -145,6 +172,14 @@ export interface PaymentSplit {
   lineItems: PaymentLineItem[];
   tableIds?: string[];
   groupId?: string;
+}
+
+export interface OrderCancellation {
+  id: string;
+  label: string;
+  createdAt: string;
+  createdByUserId?: string;
+  lineItems: PaymentLineItem[];
 }
 
 export interface OrderPartyGroup {
@@ -170,7 +205,9 @@ export interface OrderSession {
   skippedCourses: CourseKey[];
   courseTickets: Record<CourseKey, CourseTicket>;
   kitchenTicketBatches: KitchenTicketBatch[];
+  barTicketBatches: BarTicketBatch[];
   payments: PaymentSplit[];
+  cancellations: OrderCancellation[];
   partyGroups: OrderPartyGroup[];
   receipt: ReceiptRecord;
 }
@@ -209,6 +246,56 @@ export interface LinkedTableGroup {
   createdAt: string;
 }
 
+export interface ThermalPrintLine {
+  text: string;
+  emphasis?: boolean;
+  align?: ThermalPrintAlign;
+}
+
+export interface ThermalPrintDocument {
+  title: string;
+  width: number;
+  lines: ThermalPrintLine[];
+}
+
+export interface NetworkPrinterConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  model: string;
+  lastTestAt?: string;
+  lastError?: string;
+}
+
+export interface PersistedPrintJob {
+  id: string;
+  type: PrintJobType;
+  status: PrintJobStatus;
+  title: string;
+  subtitle?: string;
+  tableId?: string;
+  tableLabel?: string;
+  sessionId?: string;
+  batchId?: string;
+  course?: CourseKey;
+  sequence?: number;
+  createdAt: string;
+  updatedAt: string;
+  lastAttemptAt?: string;
+  printedAt?: string;
+  failedAt?: string;
+  error?: string;
+  attemptCount: number;
+  document: ThermalPrintDocument;
+}
+
+export interface PrintQueueState {
+  version: number;
+  updatedAt: string;
+  printer: NetworkPrinterConfig;
+  jobs: PersistedPrintJob[];
+}
+
 export interface AppState {
   catalogVersion?: number;
   serviceOrderMode: ServiceOrderMode;
@@ -216,6 +303,8 @@ export interface AppState {
   linkedTableGroups: LinkedTableGroup[];
   deletedTableIds?: string[];
   deletedUserIds?: string[];
+  deletedProductIds?: string[];
+  extraIngredients?: ExtraIngredient[];
   users: UserAccount[];
   tables: TableLayout[];
   products: Product[];
