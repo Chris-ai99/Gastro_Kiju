@@ -16,6 +16,7 @@ import {
   getOpenLineItems,
   getProductById,
   getSessionForTable,
+  isOrderItemCanceled,
   normalizeOperationalState,
   type AppNotification,
   type AppState,
@@ -178,12 +179,15 @@ type DemoActions = {
   setDesignMode: (mode: DesignMode) => void;
   setSeatVisible: (tableId: string, seatId: string, visible: boolean) => void;
   toggleTableActive: (tableId: string) => void;
+  resetDailyState: () => { ok: boolean; closedSessions: number; message?: string };
+  undoDailyStateReset: () => { ok: boolean; message?: string };
   resetDemoState: () => void;
   removeTableAndServices: (tableId: string) => { ok: boolean; message?: string };
   markNotificationRead: (
     notificationId: string,
     scope?: "local" | "shared" | "shared-dismiss"
   ) => void;
+  markNotificationsRead: (notificationIds: string[], scope?: "local") => void;
 };
 
 type DemoContextValue = {
@@ -520,6 +524,8 @@ const hasKitchenItemProgress = (item: OrderItem) =>
   getNormalizedKitchenUnitStates(item)?.some((unitState) => unitState.status !== "pending") ?? false;
 
 const isKitchenItemCompleted = (item: OrderItem) => {
+  if (isOrderItemCanceled(item)) return true;
+
   const unitStates = getNormalizedKitchenUnitStates(item);
   if (!unitStates || unitStates.length === 0) {
     return false;
@@ -541,6 +547,10 @@ const setKitchenItemCompleted = (item: OrderItem, completedAt: string) => {
 };
 
 const cycleKitchenUnitState = (item: OrderItem, unitIndex: number, changedAt: string) => {
+  if (isOrderItemCanceled(item)) {
+    return null;
+  }
+
   const unitStates = getKitchenItemUnitStates(item);
   if (!unitStates || !unitStates[unitIndex]) {
     return null;
@@ -738,13 +748,31 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
 
 const withNotification = (
   state: AppState,
-  notification: Omit<AppNotification, "id" | "createdAt" | "read">
+  notification: Omit<AppNotification, "id" | "createdAt" | "read">,
+  actorUserId?: string | null
 ) => {
+  const sessionForNotification = notification.tableId
+    ? getSessionForTable(state.sessions, notification.tableId) ??
+      state.sessions.find((session) => session.tableId === notification.tableId)
+    : undefined;
+  const resolvedActorUserId =
+    notification.createdByUserId ??
+    actorUserId ??
+    notification.acceptedByUserId ??
+    sessionForNotification?.waiterId;
+  const actorUser = resolvedActorUserId
+    ? state.users.find((user) => user.id === resolvedActorUserId)
+    : undefined;
+  const createdByUserId = actorUser?.id ?? resolvedActorUserId;
+  const createdByName = notification.createdByName ?? notification.acceptedByName ?? actorUser?.name;
+
   state.notifications.unshift({
     id: createClientId("notification"),
     createdAt: new Date().toISOString(),
     read: false,
-    ...notification
+    ...notification,
+    ...(createdByUserId ? { createdByUserId } : {}),
+    ...(createdByName ? { createdByName } : {})
   });
 };
 
@@ -1069,6 +1097,8 @@ const formatItemCorrectionSummary = (
 };
 
 const canReviseSentItem = (session: OrderSession, item: OrderItem, actorRole?: Role) => {
+  if (isOrderItemCanceled(item)) return false;
+
   if (actorRole === "admin") {
     return true;
   }
@@ -1087,7 +1117,11 @@ const syncOpenDrinkNotifications = (
   table?: TableLayout
 ) => {
   const activeDrinkItems = session.items.filter(
-    (item) => item.category === "drinks" && item.sentAt && !item.servedAt
+    (item) =>
+      item.category === "drinks" &&
+      item.sentAt &&
+      !item.servedAt &&
+      !isOrderItemCanceled(item)
   );
   const activeDrinkItemIds = new Set(activeDrinkItems.map((item) => item.id));
   const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
@@ -1121,7 +1155,8 @@ const notifySentItemCorrection = (
     OrderItem,
     "category" | "productId" | "quantity" | "note" | "target" | "modifiers"
   >,
-  action: "updated" | "removed"
+  action: "updated" | "removed",
+  actorUserId?: string | null
 ) => {
   const table = state.tables.find((entry) => entry.id === tableId);
   const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
@@ -1145,7 +1180,7 @@ const notifySentItemCorrection = (
     tone: action === "removed" ? "alert" : "info",
     tableId,
     targetRoles: [...targetRoles]
-  });
+  }, actorUserId);
 
   if (course === "drinks") {
     const session = getSessionForTable(state.sessions, tableId);
@@ -1510,6 +1545,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const stateRef = useRef(state);
   const currentUserIdRef = useRef(currentUserId);
   const localWriteRevisionRef = useRef(0);
+  const dailyResetUndoRef = useRef<AppState | null>(null);
   const hasActiveExpiringNotification = state.notifications.some(
     (notification) =>
       !notification.read &&
@@ -1893,6 +1929,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         productId,
         category: product.category,
         quantity: 1,
+        createdAt: new Date().toISOString(),
         modifiers: []
       });
 
@@ -1950,7 +1987,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       if (previousItem) {
-        notifySentItemCorrection(next, tableId, item, previousItem, "updated");
+        notifySentItemCorrection(next, tableId, item, previousItem, "updated", currentUserId);
       }
 
       commit(next);
@@ -2002,7 +2039,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       );
 
       if (previousItem) {
-        notifySentItemCorrection(next, tableId, item, previousItem, "updated");
+        notifySentItemCorrection(next, tableId, item, previousItem, "updated", currentUserId);
       }
 
       commit(next);
@@ -2029,14 +2066,22 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         modifiers: structuredClone(item.modifiers)
       };
 
-      session.items = session.items.filter((entry) => entry.id !== itemId);
-      normalizeSessionAfterItemRemoval(session);
-
       if (item.sentAt) {
-        notifySentItemCorrection(next, tableId, null, previousItem, "removed");
+        const canceledAt = new Date().toISOString();
+        item.canceledAt = canceledAt;
+        if (currentUserId) {
+          item.canceledByUserId = currentUserId;
+        } else {
+          delete item.canceledByUserId;
+        }
+        item.preparedAt = canceledAt;
+        notifySentItemCorrection(next, tableId, null, previousItem, "removed", currentUserId);
+      } else {
+        session.items = session.items.filter((entry) => entry.id !== itemId);
+        normalizeSessionAfterItemRemoval(session);
       }
 
-      if (session.items.length === 0) {
+      if (!item.sentAt && session.items.length === 0) {
         next.sessions = next.sessions.filter((entry) => entry.id !== session.id);
       }
 
@@ -2137,7 +2182,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         .map((kitchenCourse) => ({
           course: kitchenCourse,
           items: session.items.filter(
-            (item) => item.category === kitchenCourse && !item.sentAt
+            (item) =>
+              item.category === kitchenCourse && !item.sentAt && !isOrderItemCanceled(item)
           )
         }))
         .filter(({ items }) => items.length > 0);
@@ -2147,7 +2193,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
       const kitchenPrintRequests: Parameters<typeof createPrintJob>[0][] = [];
       const pendingDrinkItems = session.items.filter(
-        (item) => item.category === "drinks" && !item.sentAt
+        (item) => item.category === "drinks" && !item.sentAt && !isOrderItemCanceled(item)
       );
 
       if (course === "drinks" && pendingDrinkItems.length === 0) {
@@ -2244,7 +2290,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
             : `${tableName} wartet auf ${batchLabel.toLowerCase()}.`,
           tone: "info",
           tableId
-        });
+        }, currentUserId);
       });
 
       session.status = "waiting";
@@ -2268,7 +2314,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         ticketStatus: waitingKitchenCourseLabels.length > 0 ? ("countdown" as const) : ("ready" as const)
       };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const cycleKitchenItemUnitStatus = useCallback(
@@ -2420,11 +2466,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "alert",
         tableId,
         targetRoles: ["admin"]
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const reprintReceipt = useCallback(
@@ -2468,11 +2514,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "alert",
         tableId,
         targetRoles: ["admin"]
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const closeOrder = useCallback(
@@ -2511,11 +2557,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         body: `${tableId.replace("table-", "Tisch ")} wurde abgeschlossen.`,
         tone: "success",
         tableId
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const recordPartialPayment = useCallback(
@@ -2574,12 +2620,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         body: `${euro(bookedAmount)} wurden als ${label.trim() || "Teilzahlung"} gespeichert.`,
         tone: "success",
         tableId: uniqueTableIds[0]
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const recordInvoiceCancellation = useCallback(
@@ -2631,7 +2677,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         body: `${euro(canceledAmount)} wurden als ${label.trim() || "Rechnungsstorno"} markiert.`,
         tone: "alert",
         tableId: uniqueTableIds[0]
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
@@ -2684,12 +2730,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         body: `${checkoutTableIds.length > 1 ? "Gekoppelte Tische" : tableId.replace("table-", "Tisch ")} wurden abgeschlossen.`,
         tone: "success",
         tableId
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const createPartyGroup = useCallback(
@@ -2847,12 +2893,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Produkt angelegt",
         body: `${name} wurde in den Stammdaten ergänzt.`,
         tone: "success"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const createExtraIngredient = useCallback(
@@ -2960,12 +3006,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Produkt gelöscht",
         body: `${product.name} wurde aus den Stammdaten entfernt.`,
         tone: "alert"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const deleteProductHard = useCallback(
@@ -3028,12 +3074,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Produkt gelöscht",
         body: `${product.name} wurde aus den Stammdaten entfernt.`,
         tone: "alert"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const deleteSession = useCallback(
@@ -3075,12 +3121,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         body: `${tableName} wurde vollständig aus dem Betrieb entfernt.`,
         tone: "alert",
         tableId: nextSession.tableId
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const createUser = useCallback(
@@ -3113,12 +3159,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Mitarbeiter angelegt",
         body: `${name} ist jetzt als ${input.role} hinterlegt.`,
         tone: "success"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const updateUser = useCallback(
@@ -3236,7 +3282,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Benutzer gelöscht",
         body: `${user.name} wurde aus der Verwaltung entfernt.`,
         tone: "alert"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
@@ -3268,12 +3314,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Tisch angelegt",
         body: `${tableName} wurde zur Raumansicht hinzugefügt.`,
         tone: "success"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
       commit(next);
       return { ok: true };
     },
-    [commit, state]
+    [commit, currentUserId, state]
   );
 
   const updateTable = useCallback(
@@ -3352,6 +3398,74 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, state]
   );
 
+  const resetDailyState = useCallback(() => {
+    const next = structuredClone(state);
+    const resetAt = new Date().toISOString();
+    const sessionsToClose = next.sessions.filter((session) => session.status !== "closed");
+
+    dailyResetUndoRef.current = structuredClone(state);
+
+    sessionsToClose.forEach((session) => {
+      session.status = "closed";
+      session.receipt.closedAt = resetAt;
+      session.courseTickets = Object.fromEntries(
+        Object.entries(session.courseTickets).map(([course, ticket]) => [
+          course,
+          {
+            ...ticket,
+            status:
+              ticket.status === "not-recorded" || ticket.status === "skipped"
+                ? ticket.status
+                : "completed",
+            completedAt:
+              ticket.status === "not-recorded" || ticket.status === "skipped"
+                ? ticket.completedAt
+                : ticket.completedAt ?? resetAt
+          }
+        ])
+      ) as OrderSession["courseTickets"];
+      session.kitchenTicketBatches.forEach((batch) => {
+        if (batch.status !== "completed") {
+          batch.status = "completed";
+          batch.completedAt = batch.completedAt ?? resetAt;
+        }
+      });
+      session.barTicketBatches.forEach((batch) => {
+        if (batch.status !== "completed") {
+          batch.status = "completed";
+          batch.completedAt = batch.completedAt ?? resetAt;
+        }
+      });
+    });
+
+    next.dailyStats = {
+      date: resetAt.slice(0, 10),
+      revenueCents: 0,
+      servedTables: 0,
+      servedGuests: 0,
+      closedOrderIds: []
+    };
+
+    commit(next);
+
+    return {
+      ok: true,
+      closedSessions: sessionsToClose.length
+    };
+  }, [commit, state]);
+
+  const undoDailyStateReset = useCallback(() => {
+    const snapshot = dailyResetUndoRef.current;
+    if (!snapshot) {
+      return { ok: false, message: "Es gibt keinen Tagesreset, der rückgängig gemacht werden kann." };
+    }
+
+    dailyResetUndoRef.current = null;
+    const nextUserId = snapshot.users.some((user) => user.id === currentUserId) ? currentUserId : null;
+    commit(structuredClone(snapshot), nextUserId);
+    return { ok: true };
+  }, [commit, currentUserId]);
+
   const resetDemoState = useCallback(() => {
     const next = createDefaultOperationalState();
     const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
@@ -3392,7 +3506,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         title: "Tisch entfernt",
         body: `${table.name} und alle zugehörigen Leistungen wurden gelöscht.`,
         tone: "alert"
-      });
+      }, currentUserId);
       emitOperatorFeedback();
 
       const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
@@ -3443,7 +3557,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
             acceptedByUserId: acceptedByUser?.id,
             acceptedByName,
             sourceNotificationId: notification.id
-          });
+          }, currentUserId);
           emitOperatorFeedback();
         }
 
@@ -3468,6 +3582,31 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       setLocalNotificationReads(nextReads);
     },
     [commit, currentUserId, localNotificationReads, state]
+  );
+
+  const markNotificationsRead = useCallback(
+    (notificationIds: string[], scope: "local" = "local") => {
+      if (scope !== "local") return;
+
+      const uniqueNotificationIds = [...new Set(notificationIds)].filter((notificationId) =>
+        state.notifications.some((notification) => notification.id === notificationId && !notification.read)
+      );
+      if (uniqueNotificationIds.length === 0) return;
+
+      const readerKey = getNotificationReaderKey();
+      const currentReads = localNotificationReads[readerKey] ?? [];
+      const currentReadSet = new Set(currentReads);
+      const nextIds = uniqueNotificationIds.filter((notificationId) => !currentReadSet.has(notificationId));
+      if (nextIds.length === 0) return;
+
+      const nextReads = {
+        ...localNotificationReads,
+        [readerKey]: [...currentReads, ...nextIds]
+      };
+      storeNotificationReads(nextReads);
+      setLocalNotificationReads(nextReads);
+    },
+    [localNotificationReads, state.notifications]
   );
 
   const currentUser = state.users.find((user) => user.id === currentUserId);
@@ -3535,9 +3674,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         setDesignMode,
         setSeatVisible,
         toggleTableActive,
+        resetDailyState,
+        undoDailyStateReset,
         resetDemoState,
         removeTableAndServices,
-        markNotificationRead
+        markNotificationRead,
+        markNotificationsRead
       }
     }),
     [
@@ -3563,6 +3705,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       logout,
       markCourseCompleted,
       markNotificationRead,
+      markNotificationsRead,
       printReceipt,
       releaseCourse,
       reopenKitchenBatch,
@@ -3570,6 +3713,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       reprintReceipt,
       recordPartialPayment,
       recordInvoiceCancellation,
+      resetDailyState,
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
@@ -3582,6 +3726,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       skipCourse,
       state,
       toggleTableActive,
+      undoDailyStateReset,
       unlinkTables,
       unreadNotifications,
       updateExtraIngredient,

@@ -127,7 +127,10 @@ export interface OrderItem {
   note?: string;
   modifiers: OrderModifierSelection[];
   kitchenUnitStates?: KitchenUnitState[];
+  createdAt?: string;
   sentAt?: string;
+  canceledAt?: string;
+  canceledByUserId?: string;
   preparedAt?: string;
   servedAt?: string;
 }
@@ -230,6 +233,8 @@ export interface AppNotification {
   tone: NotificationTone;
   tableId?: string;
   targetRoles?: Role[];
+  createdByUserId?: string;
+  createdByName?: string;
   acceptedByUserId?: string;
   acceptedByName?: string;
   sourceNotificationId?: string;

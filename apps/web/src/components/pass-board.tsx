@@ -17,6 +17,7 @@ import {
   courseLabels,
   getProductById,
   getSessionForTable,
+  isOrderItemCanceled,
   type CourseKey,
   type KitchenTicketBatch,
   type KitchenUnitStatus,
@@ -83,6 +84,7 @@ type PassTicketLine = {
   productName: string;
   modifiers: string[];
   note?: string;
+  canceledAt?: string;
   units?: PassTicketUnit[];
 };
 
@@ -293,8 +295,11 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
         const lines = items.map((item) => {
           const product = getProductById(state.products, item.productId);
           const productName = product?.name ?? "Unbekannt";
+          const canceledAt = item.canceledAt;
           const units = station === "kitchen" ? normalizeKitchenUnits(item, productName) : undefined;
-          const openQuantity = units
+          const openQuantity = isOrderItemCanceled(item)
+            ? 0
+            : units
             ? units.filter((unit) => unit.status !== "completed").length
             : item.quantity;
 
@@ -306,6 +311,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             productName,
             modifiers: buildModifierLabels(item, product),
             note: item.note,
+            canceledAt,
             units
           };
         });
@@ -389,6 +395,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
 
     for (const ticket of activeTickets) {
       for (const line of ticket.lines) {
+        if (line.canceledAt) continue;
         if (line.openQuantity <= 0) continue;
 
         const key = `${ticket.course}:${line.productName}`;
@@ -417,6 +424,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
   const renderLineCopy = (line: PassTicketLine) => (
     <div className="kiju-pass-ticket__line-copy">
       <strong>{line.productName}</strong>
+      {line.canceledAt ? <span className="kiju-pass-ticket__cancel-badge">Storniert</span> : null}
       <small>{line.targetLabel}</small>
       {line.modifiers.length > 0 ? (
         <em className="kiju-pass-ticket__modifier">{line.modifiers.join(" · ")}</em>
@@ -472,7 +480,10 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
           {ticket.lines.map((line) => {
             if (station !== "kitchen" || !line.units) {
               return (
-                <li key={line.id} className="kiju-pass-ticket__line">
+                <li
+                  key={line.id}
+                  className={`kiju-pass-ticket__line${line.canceledAt ? " is-canceled" : ""}`}
+                >
                   <span className="kiju-pass-ticket__quantity">{line.quantity}</span>
                   {renderLineCopy(line)}
                 </li>
@@ -486,7 +497,9 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
               return (
                 <li
                   key={line.id}
-                  className={`kiju-pass-ticket__line is-clickable is-${unit.status}`}
+                  className={`kiju-pass-ticket__line is-clickable is-${unit.status}${
+                    line.canceledAt ? " is-canceled" : ""
+                  }`}
                 >
                   <button
                     type="button"
@@ -499,7 +512,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                         unit.unitIndex
                       )
                     }
-                    disabled={!canToggleKitchenUnits}
+                    disabled={!canToggleKitchenUnits || Boolean(line.canceledAt)}
                     aria-label={`${ticket.tableName}, ${ticket.courseLabel}, ${line.productName}: aktuell ${
                       kitchenUnitStatusLabels[unit.status]
                     }, weiter zu ${nextKitchenUnitStatusLabels[unit.status]}`}
@@ -512,7 +525,12 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             }
 
             return (
-              <li key={line.id} className="kiju-pass-ticket__line is-grouped">
+              <li
+                key={line.id}
+                className={`kiju-pass-ticket__line is-grouped${
+                  line.canceledAt ? " is-canceled" : ""
+                }`}
+              >
                 <span className="kiju-pass-ticket__quantity">{line.quantity}</span>
                 <div className="kiju-pass-ticket__line-group">
                   {renderLineCopy(line)}
@@ -530,7 +548,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                             unit.unitIndex
                           )
                         }
-                        disabled={!canToggleKitchenUnits}
+                        disabled={!canToggleKitchenUnits || Boolean(line.canceledAt)}
                         aria-label={`${ticket.tableName}, ${ticket.courseLabel}, ${line.productName}, Portion ${
                           unit.unitIndex + 1
                         }: aktuell ${kitchenUnitStatusLabels[unit.status]}, weiter zu ${

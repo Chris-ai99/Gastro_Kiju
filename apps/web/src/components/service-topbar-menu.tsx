@@ -35,6 +35,7 @@ type ServiceHistoryEntry = {
 type ServiceTopbarMenuProps = {
   unreadNotifications: AppNotification[];
   onNotificationAction: (notification: AppNotification) => void;
+  onMarkAllNotificationsRead: () => void;
   historyEntries: ServiceHistoryEntry[];
   onHistoryPrint: (sessionId: string) => void;
 };
@@ -42,6 +43,7 @@ type ServiceTopbarMenuProps = {
 export const ServiceTopbarMenu = ({
   unreadNotifications,
   onNotificationAction,
+  onMarkAllNotificationsRead,
   historyEntries,
   onHistoryPrint
 }: ServiceTopbarMenuProps) => {
@@ -64,8 +66,18 @@ export const ServiceTopbarMenu = ({
       <div className="kiju-service-menu-popover__panel">
         <section className="kiju-service-menu-section">
           <header>
-            <strong>Hinweise</strong>
-            <span>{unreadNotifications.length} offen</span>
+            <div>
+              <strong>Hinweise</strong>
+              <span>{unreadNotifications.length} offen</span>
+            </div>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary kiju-service-menu-section__mark-all"
+              onClick={onMarkAllNotificationsRead}
+              disabled={unreadNotifications.length === 0}
+            >
+              Alles als gelesen markieren
+            </button>
           </header>
           {unreadNotifications.length === 0 ? (
             <div className="kiju-inline-panel">

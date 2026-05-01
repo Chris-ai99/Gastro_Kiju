@@ -36,6 +36,7 @@ import {
   getProductById,
   getSeatItems,
   getTableTargetItems,
+  isOrderItemCanceled,
   type CourseKey,
   type ExtraIngredient,
   type OrderItem,
@@ -101,6 +102,7 @@ const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
   Nachtisch: "dessert",
   Abrechnung: "checkout"
 };
+const serviceFeedbackTimeoutMs = 3000;
 const isCourseStep = (step: WaiterStep): step is CourseKey =>
   step === "drinks" || step === "starter" || step === "main" || step === "dessert";
 
@@ -479,6 +481,7 @@ export const WaiterWorkspace = () => {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
   const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
+  const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<{
     printMode: "receipt" | "reprint";
     receiptMode: ReceiptDocumentMode;
@@ -498,6 +501,11 @@ export const WaiterWorkspace = () => {
   const [waitMinutes, setWaitMinutes] = useState("10");
   const [extraIngredientsItemId, setExtraIngredientsItemId] = useState<string | null>(null);
   const [extraIngredientDraftIds, setExtraIngredientDraftIds] = useState<string[]>([]);
+  const [sentItemNoteDrafts, setSentItemNoteDrafts] = useState<Record<string, string>>({});
+  const sentItemNoteTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pendingSentItemNotesRef = useRef<
+    Record<string, { tableId: string; itemId: string; note: string }>
+  >({});
 
   const isWaiterView = currentUser?.role === "waiter";
   const selectedTable = state.tables.find((table) => table.id === selectedTableId) ?? null;
@@ -582,6 +590,7 @@ export const WaiterWorkspace = () => {
   }, [extraIngredientsItem, extraIngredientsItemId]);
 
   const canReviseSentItem = (item: OrderItem) => {
+    if (isOrderItemCanceled(item)) return false;
     if (!item.sentAt) return true;
     if (!selectedSession) return false;
     if (currentUser?.role === "admin") return true;
@@ -685,11 +694,16 @@ export const WaiterWorkspace = () => {
     if (!selectedSession) return [];
 
     if (!usesSeatMode) {
-      return selectedSession.items.filter((item) => item.category === activeCourse);
+      return selectedSession.items.filter(
+        (item) => item.category === activeCourse && !isOrderItemCanceled(item)
+      );
     }
 
-    return selectedSession.items.filter((item) =>
-      isItemForTarget(item, selectedOrderTarget) && item.category === activeCourse
+    return selectedSession.items.filter(
+      (item) =>
+        isItemForTarget(item, selectedOrderTarget) &&
+        item.category === activeCourse &&
+        !isOrderItemCanceled(item)
     );
   }, [activeCourse, selectedOrderTarget, selectedSession, usesSeatMode]);
   const newEditableItems = useMemo(
@@ -697,7 +711,7 @@ export const WaiterWorkspace = () => {
     [editableItems]
   );
   const sentEditableItems = useMemo(
-    () => editableItems.filter((item) => item.sentAt),
+    () => editableItems.filter((item) => item.sentAt && !isOrderItemCanceled(item)),
     [editableItems]
   );
   const revisableSentItemCount = sentEditableItems.filter((item) => canReviseSentItem(item)).length;
@@ -771,6 +785,16 @@ export const WaiterWorkspace = () => {
     (sum, lineItem) => sum + lineItem.quantity,
     0
   );
+  const checkoutOpenQuantityTotal = checkoutOpenEntries.reduce(
+    (sum, entry) => sum + entry.openQuantity,
+    0
+  );
+  const areAllCheckoutPositionsSelected =
+    checkoutOpenEntries.length > 0 &&
+    checkoutOpenEntries.every(
+      ({ item, openQuantity }) =>
+        Math.min(openQuantity, Math.max(0, selectedPaymentQuantities[item.id] ?? 0)) === openQuantity
+    );
   const checkoutOpenGroups = checkoutSessions
     .map(({ table, session }) => {
       const entries = checkoutOpenEntries.filter((entry) => entry.table.id === table.id);
@@ -863,6 +887,16 @@ export const WaiterWorkspace = () => {
   }, [activeCourse, selectedSeatId, selectedTableId, serviceOrderMode]);
 
   useEffect(() => {
+    if (!serviceFeedback) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setServiceFeedback(null);
+    }, serviceFeedbackTimeoutMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [serviceFeedback]);
+
+  useEffect(() => {
     setReceiptPreview(null);
     setSelectedPaymentQuantities({});
     setLinkTableSelection(selectedTableId ? [selectedTableId] : []);
@@ -881,6 +915,52 @@ export const WaiterWorkspace = () => {
       document.body.style.overflow = previousOverflow;
     };
   }, [isOrderWizardOpen, isTableActionDialogOpen]);
+
+  useEffect(
+    () => () => {
+      Object.values(sentItemNoteTimersRef.current).forEach((timerId) => clearTimeout(timerId));
+      sentItemNoteTimersRef.current = {};
+    },
+    []
+  );
+
+  const getSentItemNoteDraftKey = (tableId: string, itemId: string) => `${tableId}::${itemId}`;
+
+  const clearSentItemNoteTimer = (draftKey: string) => {
+    const timerId = sentItemNoteTimersRef.current[draftKey];
+    if (!timerId) return;
+
+    clearTimeout(timerId);
+    delete sentItemNoteTimersRef.current[draftKey];
+  };
+
+  const commitSentItemNoteDraft = (tableId: string, itemId: string, note: string) => {
+    const draftKey = getSentItemNoteDraftKey(tableId, itemId);
+    clearSentItemNoteTimer(draftKey);
+    delete pendingSentItemNotesRef.current[draftKey];
+    setSentItemNoteDrafts((current) => {
+      const next = { ...current };
+      delete next[draftKey];
+      return next;
+    });
+    actions.updateItem(tableId, itemId, { note });
+  };
+
+  const flushPendingSentItemNotes = () => {
+    Object.values(pendingSentItemNotesRef.current).forEach(({ tableId, itemId, note }) => {
+      commitSentItemNoteDraft(tableId, itemId, note);
+    });
+  };
+
+  const scheduleSentItemNoteDraft = (tableId: string, itemId: string, note: string) => {
+    const draftKey = getSentItemNoteDraftKey(tableId, itemId);
+    pendingSentItemNotesRef.current[draftKey] = { tableId, itemId, note };
+    setSentItemNoteDrafts((current) => ({ ...current, [draftKey]: note }));
+    clearSentItemNoteTimer(draftKey);
+    sentItemNoteTimersRef.current[draftKey] = setTimeout(() => {
+      commitSentItemNoteDraft(tableId, itemId, note);
+    }, 15000);
+  };
 
   const getCheckoutOpenTotalForTable = (tableId: string) =>
     getCheckoutTableIds(state, tableId).reduce((sum, checkoutTableId) => {
@@ -1202,6 +1282,18 @@ export const WaiterWorkspace = () => {
     setPaymentQuantity(itemId, checked ? maxQuantity : 0, maxQuantity);
   };
 
+  const selectAllPaymentItems = () => {
+    if (checkoutOpenEntries.length === 0) return;
+
+    setSelectedPaymentQuantities((current) => {
+      const next = { ...current };
+      checkoutOpenEntries.forEach(({ item, openQuantity }) => {
+        next[item.id] = openQuantity;
+      });
+      return next;
+    });
+  };
+
   const handleRecordPartialPayment = () => {
     if (!selectedTable) return;
 
@@ -1276,6 +1368,7 @@ export const WaiterWorkspace = () => {
   };
 
   const closeOrderWizard = () => {
+    flushPendingSentItemNotes();
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(false);
     setCurrentStep("table");
@@ -1456,6 +1549,10 @@ const sendCourseActionLabel =
     actions.markNotificationRead(notification.id, "local");
   };
 
+  const handleMarkAllNotificationsRead = () => {
+    actions.markNotificationsRead(unreadNotifications.map((notification) => notification.id), "local");
+  };
+
   const handleNotificationDismiss = (notificationId: string) => {
     actions.markNotificationRead(notificationId, "local");
   };
@@ -1526,6 +1623,10 @@ const sendCourseActionLabel =
         extraIngredientsCatalog
       );
       const itemTargetValue = item.target.type === "table" ? "table" : item.target.seatId;
+      const sentItemNoteDraftKey = getSentItemNoteDraftKey(selectedTable.id, item.id);
+      const noteValue = isSent
+        ? sentItemNoteDrafts[sentItemNoteDraftKey] ?? item.note ?? ""
+        : item.note ?? "";
       const hiddenSeat =
         item.target.type === "seat"
           ? (() => {
@@ -1647,11 +1748,22 @@ const sendCourseActionLabel =
             <span>Notiz</span>
             <input
               name={`item-note-${item.id}`}
-              value={item.note ?? ""}
+              value={noteValue}
               disabled={isLocked}
-              onChange={(event) =>
-                actions.updateItem(selectedTable.id, item.id, { note: event.target.value })
-              }
+              onChange={(event) => {
+                if (isSent) {
+                  scheduleSentItemNoteDraft(selectedTable.id, item.id, event.target.value);
+                  return;
+                }
+
+                actions.updateItem(selectedTable.id, item.id, { note: event.target.value });
+              }}
+              onBlur={() => {
+                const pendingDraft = pendingSentItemNotesRef.current[sentItemNoteDraftKey];
+                if (pendingDraft) {
+                  commitSentItemNoteDraft(pendingDraft.tableId, pendingDraft.itemId, pendingDraft.note);
+                }
+              }}
               placeholder="Zum Beispiel ohne Zwiebeln"
             />
           </label>
@@ -1707,64 +1819,86 @@ const sendCourseActionLabel =
       );
     }
 
-    return checkoutOpenGroups.map(({ table, entries, openTotal }) => (
-      <section key={table.id} className="kiju-checkout-table-group">
-        <div className="kiju-checkout-table-group__header">
+    return (
+      <>
+        <div className="kiju-checkout-selection-toolbar">
           <div>
-            <strong>{table.name}</strong>
-            <small>{entries.length} offene Einträge</small>
+            <strong>Positionen auswählen</strong>
+            <span>
+              {selectedPaymentQuantityTotal} von {checkoutOpenQuantityTotal} offenen Positionen ausgewählt
+            </span>
           </div>
-          <strong>{euro(openTotal)}</strong>
+          <button
+            type="button"
+            className="kiju-button kiju-button--secondary"
+            onClick={selectAllPaymentItems}
+            disabled={areAllCheckoutPositionsSelected}
+          >
+            <CheckCircle2 size={18} />
+            {areAllCheckoutPositionsSelected ? "Alles ausgewählt" : "Alle auswählen"}
+          </button>
         </div>
 
-        <div className="kiju-review-list kiju-wizard-payment-list">
-          {entries.map(({ item, openQuantity, unitTotal }) => {
-            const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
-            const modifierLabels = resolveItemModifierLabels(item, state.products);
+        {checkoutOpenGroups.map(({ table, entries, openTotal }) => (
+          <section key={table.id} className="kiju-checkout-table-group">
+            <div className="kiju-checkout-table-group__header">
+              <div>
+                <strong>{table.name}</strong>
+                <small>{entries.length} offene Einträge</small>
+              </div>
+              <strong>{euro(openTotal)}</strong>
+            </div>
 
-            return (
-              <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
-                <label>
-                  <input
-                    name={`checkout-item-${item.id}`}
-                    type="checkbox"
-                    checked={selectedQuantity > 0}
-                    onChange={(event) =>
-                      togglePaymentItem(item.id, event.target.checked, openQuantity)
-                    }
-                  />
-                  <span>
-                    <strong>{resolveProductName(state.products, item.productId)}</strong>
-                    <small>
-                      {table.name} · {courseLabels[item.category]} · offen {openQuantity}
-                    </small>
-                    {modifierLabels.length > 0 || item.note ? (
-                      <small>
-                        {[...modifierLabels, ...(item.note ? [`Hinweis: ${item.note}`] : [])].join(
-                          " · "
-                        )}
-                      </small>
-                    ) : null}
-                  </span>
-                </label>
-                <input
-                  name={`payment-quantity-${item.id}`}
-                  type="number"
-                  min={0}
-                  max={openQuantity}
-                  value={selectedQuantity}
-                  aria-label="Anzahl für Zahlung"
-                  onChange={(event) =>
-                    setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
-                  }
-                />
-                <strong>{euro(unitTotal * selectedQuantity)}</strong>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-    ));
+            <div className="kiju-review-list kiju-wizard-payment-list">
+              {entries.map(({ item, openQuantity, unitTotal }) => {
+                const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
+                const modifierLabels = resolveItemModifierLabels(item, state.products);
+
+                return (
+                  <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
+                    <label>
+                      <input
+                        name={`checkout-item-${item.id}`}
+                        type="checkbox"
+                        checked={selectedQuantity > 0}
+                        onChange={(event) =>
+                          togglePaymentItem(item.id, event.target.checked, openQuantity)
+                        }
+                      />
+                      <span>
+                        <strong>{resolveProductName(state.products, item.productId)}</strong>
+                        <small>
+                          {table.name} · {courseLabels[item.category]} · offen {openQuantity}
+                        </small>
+                        {modifierLabels.length > 0 || item.note ? (
+                          <small>
+                            {[...modifierLabels, ...(item.note ? [`Hinweis: ${item.note}`] : [])].join(
+                              " · "
+                            )}
+                          </small>
+                        ) : null}
+                      </span>
+                    </label>
+                    <input
+                      name={`payment-quantity-${item.id}`}
+                      type="number"
+                      min={0}
+                      max={openQuantity}
+                      value={selectedQuantity}
+                      aria-label="Anzahl für Zahlung"
+                      onChange={(event) =>
+                        setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
+                      }
+                    />
+                    <strong>{euro(unitTotal * selectedQuantity)}</strong>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </>
+    );
   };
 
   const renderReceiptPreviewPanel = () => {
@@ -1851,11 +1985,24 @@ const sendCourseActionLabel =
             <ServiceTopbarMenu
               unreadNotifications={unreadNotifications}
               onNotificationAction={handleNotificationAction}
+              onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
               historyEntries={closedSessionHistory}
               onHistoryPrint={handleHistoryReceiptPrint}
             />
           </div>
         </header>
+
+        {serviceFeedback ? (
+          <div
+            className={`kiju-service-feedback-toast kiju-inline-panel kiju-inline-panel--feedback is-${serviceFeedback.tone}`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <strong>{serviceFeedback.title}</strong>
+            <span>{serviceFeedback.detail}</span>
+          </div>
+        ) : null}
 
         {isWaiterView && primaryServiceDeliveryNotification && !isOrderWizardOpen ? (
           <aside className="kiju-service-drink-popup-stack" role="alert" aria-live="polite">
@@ -2077,14 +2224,14 @@ const sendCourseActionLabel =
         ) : null}
 
         {isWaiterView && currentStep === "table" ? (
-          <section className="kiju-overview-fusion-panel" aria-label="Tisch-Fusion">
+          <section className="kiju-table-overview-panel" aria-label="Tischübersicht">
             <SectionCard
-              title="Tisch-Fusion"
-              eyebrow="Gemeinsame Abrechnung"
+              title="Tischübersicht"
+              eyebrow="Alle Service-Tische"
               action={
                 <StatusPill
-                  label={`${linkTableSelection.length} ausgewählt`}
-                  tone={linkTableSelection.length >= 2 ? "navy" : "slate"}
+                  label={`${waiterMenuEntries.length} Tische`}
+                  tone="navy"
                 />
               }
             >
@@ -2094,9 +2241,9 @@ const sendCourseActionLabel =
                     key={entry.table.id}
                     type="button"
                     className={`kiju-table-menu__button ${
-                      linkTableSelection.includes(entry.table.id) ? "is-selected" : ""
+                      entry.table.id === selectedTableId ? "is-selected" : ""
                     }`}
-                    onClick={() => toggleLinkTableSelection(entry.table.id)}
+                    onClick={() => selectTable(entry.table.id)}
                   >
                     <strong>{entry.table.name}</strong>
                     <small>
@@ -2108,47 +2255,90 @@ const sendCourseActionLabel =
               <div className="kiju-step-actions">
                 <button
                   type="button"
-                  className="kiju-button kiju-button--primary"
-                  onClick={handleLinkTables}
-                  disabled={linkTableSelection.length < 2}
+                  className="kiju-button kiju-button--secondary"
+                  onClick={() => setIsLinkTablesOpen((current) => !current)}
+                  aria-expanded={isLinkTablesOpen}
+                  aria-controls="kiju-link-tables-panel"
                 >
                   <Split size={18} />
                   Tische koppeln
                 </button>
-                <button
-                  type="button"
-                  className="kiju-button kiju-button--secondary"
-                  onClick={() => setLinkTableSelection(selectedTableId ? [selectedTableId] : [])}
-                  disabled={linkTableSelection.length === 0}
-                >
-                  Auswahl zurücksetzen
-                </button>
               </div>
-              {activeLinkedTableGroups.length > 0 ? (
-                <div className="kiju-linked-table-list">
-                  {activeLinkedTableGroups.map((group) => (
-                    <article key={group.id} className="kiju-inline-panel">
-                      <strong>{group.label}</strong>
-                      <span>
-                        {group.tableIds
-                          .map((tableId) => state.tables.find((table) => table.id === tableId)?.name ?? tableId)
-                          .join(" · ")}
+              {isLinkTablesOpen ? (
+                <div
+                  id="kiju-link-tables-panel"
+                  className="kiju-link-tables-panel"
+                  aria-label="Tische koppeln"
+                >
+                  <div className="kiju-link-tables-panel__header">
+                    <div>
+                      <strong>Tische koppeln</strong>
+                      <span className="kiju-link-tables-panel__hint">
+                        Wähle mindestens zwei Tische für eine gemeinsame Abrechnung.
                       </span>
+                    </div>
+                    <StatusPill
+                      label={`${linkTableSelection.length} ausgewählt`}
+                      tone={linkTableSelection.length >= 2 ? "navy" : "slate"}
+                    />
+                  </div>
+                  <div className="kiju-table-menu kiju-table-menu--compact">
+                    {waiterMenuEntries.map((entry) => (
                       <button
+                        key={entry.table.id}
                         type="button"
-                        className="kiju-button kiju-button--secondary"
-                        onClick={() => handleUnlinkTableGroup(group.id)}
+                        className={`kiju-table-menu__button ${
+                          linkTableSelection.includes(entry.table.id) ? "is-selected" : ""
+                        }`}
+                        onClick={() => toggleLinkTableSelection(entry.table.id)}
                       >
-                        Kopplung lösen
+                        <strong>{entry.table.name}</strong>
+                        <small>
+                          {statusLabel[entry.status] ?? "Status"} · {euro(entry.total)}
+                        </small>
                       </button>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-              {serviceFeedback ? (
-                <div className={`kiju-inline-panel kiju-inline-panel--feedback is-${serviceFeedback.tone}`}>
-                  <strong>{serviceFeedback.title}</strong>
-                  <span>{serviceFeedback.detail}</span>
+                    ))}
+                  </div>
+                  <div className="kiju-step-actions">
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--primary"
+                      onClick={handleLinkTables}
+                      disabled={linkTableSelection.length < 2}
+                    >
+                      <Split size={18} />
+                      Tische koppeln
+                    </button>
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--secondary"
+                      onClick={() => setLinkTableSelection(selectedTableId ? [selectedTableId] : [])}
+                      disabled={linkTableSelection.length === 0}
+                    >
+                      Auswahl zurücksetzen
+                    </button>
+                  </div>
+                  {activeLinkedTableGroups.length > 0 ? (
+                    <div className="kiju-linked-table-list">
+                      {activeLinkedTableGroups.map((group) => (
+                        <article key={group.id} className="kiju-inline-panel">
+                          <strong>{group.label}</strong>
+                          <span>
+                            {group.tableIds
+                              .map((tableId) => state.tables.find((table) => table.id === tableId)?.name ?? tableId)
+                              .join(" · ")}
+                          </span>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handleUnlinkTableGroup(group.id)}
+                          >
+                            Kopplung lösen
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </SectionCard>
@@ -2717,14 +2907,6 @@ const sendCourseActionLabel =
                   </div>
                 )}
 
-                {serviceFeedback ? (
-                  <div
-                    className={`kiju-inline-panel kiju-inline-panel--feedback is-${serviceFeedback.tone}`}
-                  >
-                    <strong>{serviceFeedback.title}</strong>
-                    <span>{serviceFeedback.detail}</span>
-                  </div>
-                ) : null}
               </div>
 
               <div className="kiju-wizard-footer">
@@ -3133,15 +3315,6 @@ const sendCourseActionLabel =
                               Wartezeit bestätigen
                             </button>
                           </div>
-                        </div>
-                      ) : null}
-
-                      {serviceFeedback ? (
-                        <div
-                          className={`kiju-inline-panel kiju-inline-panel--feedback is-${serviceFeedback.tone}`}
-                        >
-                          <strong>{serviceFeedback.title}</strong>
-                          <span>{serviceFeedback.detail}</span>
                         </div>
                       ) : null}
 

@@ -1,6 +1,6 @@
 {
-  "version": 1127,
-  "updatedAt": "2026-04-24T19:57:57.457Z",
+  "version": 1433,
+  "updatedAt": "2026-05-01T00:25:34.624Z",
   "state": {
     "users": [
       {
@@ -10,7 +10,7 @@
         "role": "admin",
         "password": "Admin1234",
         "active": true,
-        "lastSeenAt": "2026-04-24T19:57:47.542Z",
+        "lastSeenAt": "2026-04-30T23:23:28.238Z",
         "pin": "123456"
       },
       {
@@ -21,7 +21,7 @@
         "password": "Kitchen1234",
         "pin": "12345",
         "active": true,
-        "lastSeenAt": "2026-04-24T19:57:39.222Z"
+        "lastSeenAt": "2026-04-30T22:12:44.396Z"
       },
       {
         "id": "user-bar",
@@ -31,7 +31,7 @@
         "password": "Bar1234",
         "pin": "3030",
         "active": true,
-        "lastSeenAt": "2026-04-24T19:57:57.447Z"
+        "lastSeenAt": "2026-04-30T22:12:56.967Z"
       },
       {
         "id": "user-1777047345814-234ae314",
@@ -40,7 +40,7 @@
         "role": "waiter",
         "password": "",
         "active": true,
-        "lastSeenAt": "2026-04-24T16:24:18.973Z"
+        "lastSeenAt": "2026-04-30T22:18:58.203Z"
       },
       {
         "id": "user-1777047264635-d80d4d91",
@@ -77,7 +77,7 @@
         "password": "1234",
         "pin": "1234",
         "active": true,
-        "lastSeenAt": "2026-04-24T19:56:53.224Z"
+        "lastSeenAt": "2026-04-30T21:32:17.115Z"
       }
     ],
     "tables": [
@@ -788,9 +788,9 @@
     ],
     "sessions": [
       {
-        "id": "session-table-3-11b16617-c868-4686-b012-444d53eaa67f",
+        "id": "session-table-3-0dcd2e2d-fc1c-49dd-8977-085ad77dab71",
         "tableId": "table-3",
-        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
         "skippedCourses": [],
         "courseTickets": {
           "drinks": {
@@ -801,9 +801,972 @@
           },
           "starter": {
             "course": "starter",
+            "status": "completed",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "releasedAt": "2026-05-01T00:06:01.874Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "completedAt": "2026-05-01T00:25:34.606Z"
+          },
+          "main": {
+            "course": "main",
+            "status": "completed",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "releasedAt": "2026-05-01T00:06:01.874Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "completedAt": "2026-05-01T00:25:34.606Z"
+          },
+          "dessert": {
+            "course": "dessert",
             "status": "not-recorded",
             "countdownMinutes": 15,
             "manualRelease": false
+          }
+        },
+        "receipt": {
+          "closedAt": "2026-05-01T00:25:34.606Z"
+        },
+        "status": "closed",
+        "items": [
+          {
+            "id": "item-dfd2e80d-00a7-4049-a677-78dbcacea2c2",
+            "productId": "starter-pizza-bread-aioli",
+            "category": "starter",
+            "quantity": 1,
+            "createdAt": "2026-05-01T00:05:57.509Z",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-343ffeea-619b-459e-ac0b-54d47c60b232",
+            "productId": "main-pasta-tomato",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-01T00:05:59.297Z",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-f273709e-f01c-41e6-83ad-57240213683d",
+            "productId": "main-pasta-pesto",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-01T00:05:59.665Z",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          }
+        ],
+        "payments": [],
+        "cancellations": [],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-3-starter-31d91570-171c-44e2-b502-17ec05f3b395",
+            "course": "starter",
+            "itemIds": [
+              "item-dfd2e80d-00a7-4049-a677-78dbcacea2c2"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "releasedAt": "2026-05-01T00:06:01.874Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-05-01T00:25:34.606Z"
+          },
+          {
+            "id": "kitchen-ticket-table-3-main-05357d4d-7b05-45dc-b753-77b62f050e57",
+            "course": "main",
+            "itemIds": [
+              "item-343ffeea-619b-459e-ac0b-54d47c60b232",
+              "item-f273709e-f01c-41e6-83ad-57240213683d"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-01T00:06:01.874Z",
+            "releasedAt": "2026-05-01T00:06:01.874Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-05-01T00:25:34.606Z"
+          }
+        ],
+        "barTicketBatches": [],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-1-c78d8e25-1c0d-4522-a80f-655bae448202",
+        "tableId": "table-1",
+        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "ready",
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "releasedAt": "2026-04-30T22:48:34.529Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "main": {
+            "course": "main",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "releasedAt": "2026-04-30T22:48:34.529Z",
+            "completedAt": "2026-04-30T23:19:11.546Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {
+          "printedAt": "2026-04-30T23:08:23.365Z",
+          "closedAt": "2026-04-30T23:24:56.842Z"
+        },
+        "status": "closed",
+        "items": [
+          {
+            "id": "item-e11446f0-e497-4e3c-b51e-d774c6c28250",
+            "productId": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
+            "category": "starter",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-528d3d06-b51e-4cbd-b711-34f65d835dbd",
+            "productId": "main-pasta-pesto",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "preparedAt": "2026-04-30T23:19:11.546Z",
+            "servedAt": "2026-04-30T23:19:14.883Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T23:19:11.546Z"
+              }
+            ]
+          },
+          {
+            "id": "item-95f1a8b1-3cdd-467c-8e88-baf934edbd1b",
+            "productId": "main-pasta-tomato",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "preparedAt": "2026-04-30T23:19:11.546Z",
+            "servedAt": "2026-04-30T23:19:14.883Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T23:19:11.546Z"
+              }
+            ]
+          },
+          {
+            "id": "item-631e80a0-e61e-42ce-96ed-0a00686e8a2d",
+            "productId": "main-pizza-ham",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "preparedAt": "2026-04-30T23:19:11.546Z",
+            "servedAt": "2026-04-30T23:19:14.883Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T23:19:11.546Z"
+              }
+            ]
+          },
+          {
+            "id": "item-cf510f05-0993-4a06-82bf-587235454fc4",
+            "productId": "main-pizza-margherita",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "preparedAt": "2026-04-30T23:19:11.546Z",
+            "servedAt": "2026-04-30T23:19:14.883Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T23:19:11.546Z"
+              }
+            ]
+          },
+          {
+            "id": "item-f8d3d2e1-d751-4554-8017-e94665213663",
+            "productId": "product-c3322151-e352-49f1-9615-2c7607950b02",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "canceledAt": "2026-04-30T22:48:39.579Z",
+            "canceledByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+            "preparedAt": "2026-04-30T23:19:11.546Z",
+            "servedAt": "2026-04-30T23:19:14.883Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T23:19:11.546Z"
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "id": "payment-76dfba6c-b878-4d57-9f08-ca7a3e9c1d11",
+            "label": "Restzahlung",
+            "amountCents": 2200,
+            "method": "cash",
+            "lineItems": [
+              {
+                "itemId": "item-95f1a8b1-3cdd-467c-8e88-baf934edbd1b",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-631e80a0-e61e-42ce-96ed-0a00686e8a2d",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-cf510f05-0993-4a06-82bf-587235454fc4",
+                "quantity": 1
+              }
+            ],
+            "tableIds": [
+              "table-1"
+            ]
+          }
+        ],
+        "cancellations": [
+          {
+            "id": "cancellation-552dca3c-0859-40d5-8b42-91db5410a0fa",
+            "label": "Rechnungsstorno",
+            "createdAt": "2026-04-30T23:08:23.365Z",
+            "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+            "lineItems": [
+              {
+                "itemId": "item-e11446f0-e497-4e3c-b51e-d774c6c28250",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-528d3d06-b51e-4cbd-b711-34f65d835dbd",
+                "quantity": 1
+              }
+            ]
+          }
+        ],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-1-starter-183e91a8-b223-41f0-8b3d-e6b8c37463a2",
+            "course": "starter",
+            "itemIds": [
+              "item-e11446f0-e497-4e3c-b51e-d774c6c28250"
+            ],
+            "status": "ready",
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "releasedAt": "2026-04-30T22:48:34.529Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1
+          },
+          {
+            "id": "kitchen-ticket-table-1-main-8d090059-53b2-49a7-8060-e3d66e017cc8",
+            "course": "main",
+            "itemIds": [
+              "item-528d3d06-b51e-4cbd-b711-34f65d835dbd",
+              "item-95f1a8b1-3cdd-467c-8e88-baf934edbd1b",
+              "item-631e80a0-e61e-42ce-96ed-0a00686e8a2d",
+              "item-cf510f05-0993-4a06-82bf-587235454fc4",
+              "item-f8d3d2e1-d751-4554-8017-e94665213663"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:48:34.529Z",
+            "releasedAt": "2026-04-30T22:48:34.529Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-04-30T23:19:11.546Z"
+          }
+        ],
+        "barTicketBatches": [],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-1-02003ad0-838a-4cf2-9213-4de47aba29e3",
+        "tableId": "table-1",
+        "waiterId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "releasedAt": "2026-04-30T22:15:04.643Z",
+            "readyAt": "2026-04-30T22:15:04.643Z",
+            "completedAt": "2026-04-30T22:18:25.781Z",
+            "manualRelease": false,
+            "countdownMinutes": 0
+          },
+          "starter": {
+            "course": "starter",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "releasedAt": "2026-04-30T22:15:04.643Z",
+            "completedAt": "2026-04-30T22:18:10.584Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "main": {
+            "course": "main",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:17:18.734Z",
+            "releasedAt": "2026-04-30T22:17:18.734Z",
+            "completedAt": "2026-04-30T22:18:18.946Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "releasedAt": "2026-04-30T22:18:05.688Z",
+            "completedAt": "2026-04-30T22:18:20.465Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          }
+        },
+        "receipt": {
+          "printedAt": "2026-04-30T22:35:41.457Z",
+          "closedAt": "2026-04-30T22:46:56.665Z"
+        },
+        "status": "closed",
+        "items": [
+          {
+            "id": "item-53ae7687-6579-44b3-8e24-55a2098e1fe2",
+            "productId": "product-d6dad1ef-7ddd-4935-a8fa-43c965ef07d9",
+            "category": "drinks",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:25.781Z",
+            "servedAt": "2026-04-30T22:18:28.927Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-9f5a9b36-1535-4e96-abb2-c6f949d029c5",
+            "productId": "product-edb37013-532a-4023-a1d4-da120cd98a05",
+            "category": "drinks",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:25.781Z",
+            "servedAt": "2026-04-30T22:18:28.927Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-eca056ee-edc6-4f3f-844f-cf93077a8d23",
+            "productId": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
+            "category": "starter",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:10.584Z",
+            "servedAt": "2026-04-30T22:18:16.325Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:10.584Z"
+              }
+            ]
+          },
+          {
+            "id": "item-8c684e68-01a8-453d-8945-3bc903ee3a14",
+            "productId": "main-pasta-pesto",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:18.258Z",
+            "servedAt": "2026-04-30T22:18:23.859Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:18.258Z"
+              }
+            ]
+          },
+          {
+            "id": "item-fb245f54-31fa-43e5-b58d-172dd3ef4eec",
+            "productId": "main-pasta-pesto",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:18.258Z",
+            "servedAt": "2026-04-30T22:18:23.859Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:18.258Z"
+              }
+            ]
+          },
+          {
+            "id": "item-375f1069-8fd7-4dda-8c0c-1a9c67b3f788",
+            "productId": "main-pizza-margherita",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:18.258Z",
+            "servedAt": "2026-04-30T22:18:23.859Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:18.258Z"
+              }
+            ]
+          },
+          {
+            "id": "item-dd95e74d-cf0c-4f4c-8829-1fc551d4331f",
+            "productId": "main-pizza-ham",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "preparedAt": "2026-04-30T22:18:18.258Z",
+            "servedAt": "2026-04-30T22:18:23.859Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:18.258Z"
+              }
+            ]
+          },
+          {
+            "id": "item-e741a3a5-7daa-4f59-adb8-ad817cc3fb6f",
+            "productId": "main-pizza-veggi",
+            "category": "main",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:17:18.734Z",
+            "preparedAt": "2026-04-30T22:18:18.946Z",
+            "servedAt": "2026-04-30T22:18:23.214Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:18.946Z"
+              }
+            ]
+          },
+          {
+            "id": "item-170b4e77-2f26-4b80-acb0-1145fc9e4e90",
+            "productId": "product-27cc8061-864c-4d9c-8b6c-958eec181708",
+            "category": "dessert",
+            "quantity": 4,
+            "sentAt": "2026-04-30T22:17:37.965Z",
+            "preparedAt": "2026-04-30T22:18:19.988Z",
+            "servedAt": "2026-04-30T22:18:22.632Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:19.988Z"
+              },
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:19.988Z"
+              },
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:19.988Z"
+              },
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:19.988Z"
+              }
+            ]
+          },
+          {
+            "id": "item-0266a212-821c-41fc-ba3d-275648eba83c",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-70b0fc17-0e81-4681-a138-4faa036fb8ca",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-f8bf7444-b38b-4071-b94a-bafc3fbc0211",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-316bc4a2-f7f6-4945-b169-6a53bb94e49e",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-b8ba04d0-85e8-4c08-b2b4-d47243207b0c",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-9be9892a-f565-4425-ac8a-112d7c0b5c7b",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-ccb8c0d7-2f67-4c2d-9d55-99296c60a6fb",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-d7e40345-7d7e-40ae-8e35-2d740d0b534c",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          },
+          {
+            "id": "item-39de9fba-b08b-496f-91eb-2640bb9f48d0",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "preparedAt": "2026-04-30T22:18:20.465Z",
+            "servedAt": "2026-04-30T22:18:22.365Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:18:20.465Z"
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "id": "payment-880bf473-ec06-42ee-a2de-36dca5a99e0f",
+            "label": "Teilzahlung",
+            "amountCents": 7600,
+            "method": "cash",
+            "lineItems": [
+              {
+                "itemId": "item-53ae7687-6579-44b3-8e24-55a2098e1fe2",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-9f5a9b36-1535-4e96-abb2-c6f949d029c5",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-eca056ee-edc6-4f3f-844f-cf93077a8d23",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-8c684e68-01a8-453d-8945-3bc903ee3a14",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-fb245f54-31fa-43e5-b58d-172dd3ef4eec",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-375f1069-8fd7-4dda-8c0c-1a9c67b3f788",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-dd95e74d-cf0c-4f4c-8829-1fc551d4331f",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-e741a3a5-7daa-4f59-adb8-ad817cc3fb6f",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-170b4e77-2f26-4b80-acb0-1145fc9e4e90",
+                "quantity": 4
+              },
+              {
+                "itemId": "item-0266a212-821c-41fc-ba3d-275648eba83c",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-70b0fc17-0e81-4681-a138-4faa036fb8ca",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-f8bf7444-b38b-4071-b94a-bafc3fbc0211",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-316bc4a2-f7f6-4945-b169-6a53bb94e49e",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-b8ba04d0-85e8-4c08-b2b4-d47243207b0c",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-9be9892a-f565-4425-ac8a-112d7c0b5c7b",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-ccb8c0d7-2f67-4c2d-9d55-99296c60a6fb",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-d7e40345-7d7e-40ae-8e35-2d740d0b534c",
+                "quantity": 1
+              }
+            ],
+            "tableIds": [
+              "table-1"
+            ]
+          }
+        ],
+        "cancellations": [
+          {
+            "id": "cancellation-013f7ebb-5df8-4250-ae1e-7e494776209e",
+            "label": "Rechnungsstorno",
+            "createdAt": "2026-04-30T22:46:55.336Z",
+            "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+            "lineItems": [
+              {
+                "itemId": "item-39de9fba-b08b-496f-91eb-2640bb9f48d0",
+                "quantity": 1
+              }
+            ]
+          }
+        ],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-1-starter-bbec0ce1-584d-4712-99b4-3d722c1f3966",
+            "course": "starter",
+            "itemIds": [
+              "item-eca056ee-edc6-4f3f-844f-cf93077a8d23"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "releasedAt": "2026-04-30T22:15:04.643Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-04-30T22:18:10.584Z"
+          },
+          {
+            "id": "kitchen-ticket-table-1-main-0eeea186-d06d-4fa7-b055-c8a369153769",
+            "course": "main",
+            "itemIds": [
+              "item-8c684e68-01a8-453d-8945-3bc903ee3a14",
+              "item-fb245f54-31fa-43e5-b58d-172dd3ef4eec",
+              "item-375f1069-8fd7-4dda-8c0c-1a9c67b3f788",
+              "item-dd95e74d-cf0c-4f4c-8829-1fc551d4331f"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "releasedAt": "2026-04-30T22:15:04.643Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-04-30T22:18:18.258Z"
+          },
+          {
+            "id": "kitchen-ticket-table-1-main-843713c9-d1df-446c-ad42-31628f866457",
+            "course": "main",
+            "itemIds": [
+              "item-e741a3a5-7daa-4f59-adb8-ad817cc3fb6f"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:17:18.734Z",
+            "releasedAt": "2026-04-30T22:17:18.734Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 2,
+            "completedAt": "2026-04-30T22:18:18.946Z"
+          },
+          {
+            "id": "kitchen-ticket-table-1-dessert-6d59a601-2b9f-4828-9e24-03dfd92b0b55",
+            "course": "dessert",
+            "itemIds": [
+              "item-170b4e77-2f26-4b80-acb0-1145fc9e4e90"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:17:37.965Z",
+            "releasedAt": "2026-04-30T22:17:37.965Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-04-30T22:18:19.988Z"
+          },
+          {
+            "id": "kitchen-ticket-table-1-dessert-6587bd6a-ec38-463f-b5c5-490bf979e8d6",
+            "course": "dessert",
+            "itemIds": [
+              "item-0266a212-821c-41fc-ba3d-275648eba83c",
+              "item-70b0fc17-0e81-4681-a138-4faa036fb8ca",
+              "item-f8bf7444-b38b-4071-b94a-bafc3fbc0211",
+              "item-316bc4a2-f7f6-4945-b169-6a53bb94e49e",
+              "item-b8ba04d0-85e8-4c08-b2b4-d47243207b0c",
+              "item-9be9892a-f565-4425-ac8a-112d7c0b5c7b",
+              "item-ccb8c0d7-2f67-4c2d-9d55-99296c60a6fb",
+              "item-d7e40345-7d7e-40ae-8e35-2d740d0b534c",
+              "item-39de9fba-b08b-496f-91eb-2640bb9f48d0"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:18:05.688Z",
+            "releasedAt": "2026-04-30T22:18:05.688Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 2,
+            "completedAt": "2026-04-30T22:18:20.465Z"
+          }
+        ],
+        "barTicketBatches": [
+          {
+            "id": "bar-ticket-table-1-drinks-5b7bc50b-b4b1-4d12-9155-6aaa48190950",
+            "course": "drinks",
+            "itemIds": [
+              "item-53ae7687-6579-44b3-8e24-55a2098e1fe2",
+              "item-9f5a9b36-1535-4e96-abb2-c6f949d029c5"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:15:04.643Z",
+            "releasedAt": "2026-04-30T22:15:04.643Z",
+            "readyAt": "2026-04-30T22:15:04.643Z",
+            "manualRelease": false,
+            "countdownMinutes": 0,
+            "sequence": 1,
+            "completedAt": "2026-04-30T22:18:25.781Z"
+          }
+        ],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-3-11b16617-c868-4686-b012-444d53eaa67f",
+        "tableId": "table-3",
+        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:47:43.338Z",
+            "releasedAt": "2026-04-30T22:47:43.338Z",
+            "readyAt": "2026-04-30T22:47:43.338Z",
+            "completedAt": "2026-04-30T22:47:47.011Z",
+            "manualRelease": false,
+            "countdownMinutes": 0
+          },
+          "starter": {
+            "course": "starter",
+            "status": "completed",
+            "sentAt": "2026-04-30T22:47:43.338Z",
+            "releasedAt": "2026-04-30T22:47:43.338Z",
+            "completedAt": "2026-04-30T22:47:45.292Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
           },
           "main": {
             "course": "main",
@@ -823,9 +1786,10 @@
         },
         "receipt": {
           "printedAt": "2026-04-24T13:12:34.736Z",
-          "reprintedAt": "2026-04-24T13:12:49.543Z"
+          "reprintedAt": "2026-04-24T13:12:49.543Z",
+          "closedAt": "2026-04-30T22:48:12.680Z"
         },
-        "status": "ready-to-bill",
+        "status": "closed",
         "items": [
           {
             "id": "item-5d32a822-0021-4efe-bf08-ab18b6f4bd97",
@@ -843,6 +1807,38 @@
               {
                 "status": "completed",
                 "completedAt": "2026-04-24T16:14:41.693Z"
+              }
+            ]
+          },
+          {
+            "id": "item-5a2ef6ea-92df-4095-b226-c348e79b4409",
+            "productId": "drink-cola",
+            "category": "drinks",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:47:43.338Z",
+            "preparedAt": "2026-04-30T22:47:47.011Z",
+            "servedAt": "2026-04-30T22:47:54.437Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-e577e7b5-1897-4a6f-b183-ef385dbfec6a",
+            "productId": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
+            "category": "starter",
+            "quantity": 1,
+            "sentAt": "2026-04-30T22:47:43.338Z",
+            "preparedAt": "2026-04-30T22:47:45.292Z",
+            "servedAt": "2026-04-30T22:47:56.978Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-04-30T22:47:45.292Z"
               }
             ]
           }
@@ -864,7 +1860,24 @@
             ]
           }
         ],
-        "cancellations": [],
+        "cancellations": [
+          {
+            "id": "cancellation-cba583ed-7215-4d9f-a704-9390cc182ac1",
+            "label": "Rechnungsstorno",
+            "createdAt": "2026-04-30T22:48:11.850Z",
+            "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+            "lineItems": [
+              {
+                "itemId": "item-5a2ef6ea-92df-4095-b226-c348e79b4409",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-e577e7b5-1897-4a6f-b183-ef385dbfec6a",
+                "quantity": 1
+              }
+            ]
+          }
+        ],
         "kitchenTicketBatches": [
           {
             "id": "kitchen-ticket-table-3-main-d68ada7f-1904-4df1-814b-eee8fdc6590e",
@@ -879,60 +1892,39 @@
             "countdownMinutes": 15,
             "sequence": 1,
             "completedAt": "2026-04-24T16:14:41.693Z"
-          }
-        ],
-        "barTicketBatches": [],
-        "partyGroups": []
-      },
-      {
-        "id": "session-table-2-3ce074b8-bd72-415b-a4f9-754d7f492dd0",
-        "tableId": "table-2",
-        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
-        "skippedCourses": [],
-        "courseTickets": {
-          "drinks": {
-            "course": "drinks",
-            "status": "not-recorded",
-            "countdownMinutes": 15,
-            "manualRelease": false
           },
-          "starter": {
-            "course": "starter",
-            "status": "not-recorded",
-            "countdownMinutes": 15,
-            "manualRelease": false
-          },
-          "main": {
-            "course": "main",
-            "status": "not-recorded",
-            "countdownMinutes": 15,
-            "manualRelease": false
-          },
-          "dessert": {
-            "course": "dessert",
-            "status": "not-recorded",
-            "countdownMinutes": 15,
-            "manualRelease": false
-          }
-        },
-        "receipt": {},
-        "status": "serving",
-        "items": [
           {
-            "id": "item-6061194b-531f-4373-af41-6345a5207e17",
-            "productId": "main-pizza-ham",
-            "category": "main",
-            "quantity": 1,
-            "target": {
-              "type": "table"
-            },
-            "modifiers": []
+            "id": "kitchen-ticket-table-3-starter-190cdecd-2a3d-41a0-ac9e-d2b8d578d31c",
+            "course": "starter",
+            "itemIds": [
+              "item-e577e7b5-1897-4a6f-b183-ef385dbfec6a"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:47:43.338Z",
+            "releasedAt": "2026-04-30T22:47:43.338Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-04-30T22:47:45.292Z"
           }
         ],
-        "payments": [],
-        "cancellations": [],
-        "kitchenTicketBatches": [],
-        "barTicketBatches": [],
+        "barTicketBatches": [
+          {
+            "id": "bar-ticket-table-3-drinks-1b04c2a5-68e1-476e-8bad-6654d7319703",
+            "course": "drinks",
+            "itemIds": [
+              "item-5a2ef6ea-92df-4095-b226-c348e79b4409"
+            ],
+            "status": "completed",
+            "sentAt": "2026-04-30T22:47:43.338Z",
+            "releasedAt": "2026-04-30T22:47:43.338Z",
+            "readyAt": "2026-04-30T22:47:43.338Z",
+            "manualRelease": false,
+            "countdownMinutes": 0,
+            "sequence": 1,
+            "completedAt": "2026-04-30T22:47:47.011Z"
+          }
+        ],
         "partyGroups": []
       },
       {
@@ -1132,6 +2124,2944 @@
       }
     ],
     "notifications": [
+      {
+        "id": "notification-0ad6d47b-cc7f-4f3b-85c2-1d19910001a8",
+        "createdAt": "2026-05-01T00:06:01.875Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 3 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-3",
+        "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "createdByName": "Timmy"
+      },
+      {
+        "id": "notification-750f33fb-f9b8-4127-8c11-b0dceb2a189c",
+        "createdAt": "2026-05-01T00:06:01.874Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 3 wartet auf vorspeise.",
+        "tone": "info",
+        "tableId": "table-3",
+        "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "createdByName": "Timmy"
+      },
+      {
+        "id": "notification-adad2126-8fd5-41f1-a67e-3a8f23d746c0",
+        "createdAt": "2026-04-30T23:24:56.842Z",
+        "read": false,
+        "title": "Bestellung geschlossen",
+        "body": "Tisch 1 wurden abgeschlossen.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "createdByName": "Timmy"
+      },
+      {
+        "id": "notification-7cb8e221-8d45-457d-ab47-50133e9b72b9",
+        "createdAt": "2026-04-30T23:24:56.037Z",
+        "read": false,
+        "title": "Teilzahlung verbucht",
+        "body": "22,00 € wurden als Restzahlung gespeichert.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "createdByName": "Timmy"
+      },
+      {
+        "id": "notification-c61d4da7-8a3e-4589-b152-c2ee4726272f",
+        "createdAt": "2026-04-30T23:19:13.324Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-528d3d06-b51e-4cbd-b711-34f65d835dbd",
+          "item-95f1a8b1-3cdd-467c-8e88-baf934edbd1b",
+          "item-631e80a0-e61e-42ce-96ed-0a00686e8a2d",
+          "item-cf510f05-0993-4a06-82bf-587235454fc4",
+          "item-f8d3d2e1-d751-4554-8017-e94665213663"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 1x Nudeln mit gr?ner Pesto, 1x Nudeln mit Tomatensauce, 1x Pizza Kochschinken, 1x Pizza Margherita und 1 weitere Positionen für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-2458bcec-1415-4f67-9b40-c67379f88b7a",
+        "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "createdByName": "Timmy"
+      },
+      {
+        "id": "notification-2458bcec-1415-4f67-9b40-c67379f88b7a",
+        "createdAt": "2026-04-30T23:19:11.546Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-528d3d06-b51e-4cbd-b711-34f65d835dbd",
+          "item-95f1a8b1-3cdd-467c-8e88-baf934edbd1b",
+          "item-631e80a0-e61e-42ce-96ed-0a00686e8a2d",
+          "item-cf510f05-0993-4a06-82bf-587235454fc4",
+          "item-f8d3d2e1-d751-4554-8017-e94665213663"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Nudeln mit gr?ner Pesto, 1x Nudeln mit Tomatensauce, 1x Pizza Kochschinken, 1x Pizza Margherita und 1 weitere Positionen für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "createdByName": "Timmy"
+      },
+      {
+        "id": "notification-98fc92dd-9838-47ad-943c-578f5e8fb938",
+        "createdAt": "2026-04-30T23:08:23.366Z",
+        "read": false,
+        "title": "Rechnungsstorno gespeichert",
+        "body": "7,00 € wurden als Rechnungsstorno markiert.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-5632a346-a6e9-4c01-8cf5-92f6e46c07b1",
+        "createdAt": "2026-04-30T22:48:39.579Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 1: 1x Rauberteller · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3be37d44-fcf4-4515-b87a-cca37aa8f46a",
+        "createdAt": "2026-04-30T22:48:34.529Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 1 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-c0ebb6ea-76fe-4417-87f5-73d56bb0e3f4",
+        "createdAt": "2026-04-30T22:48:34.529Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-ba9506c3-594e-483d-858f-919e4d6e7675",
+        "createdAt": "2026-04-30T22:48:12.680Z",
+        "read": false,
+        "title": "Bestellung geschlossen",
+        "body": "Tisch 3 wurden abgeschlossen.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-9ddc8e70-cbf1-4d41-b67e-a8946e984d2a",
+        "createdAt": "2026-04-30T22:48:11.851Z",
+        "read": false,
+        "title": "Rechnungsstorno gespeichert",
+        "body": "2,50 € wurden als Rechnungsstorno markiert.",
+        "tone": "alert",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-8124ced6-3dbf-48d9-8fdc-4814fd70f6e5",
+        "createdAt": "2026-04-30T22:47:55.983Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "starter",
+        "itemIds": [
+          "item-e577e7b5-1897-4a6f-b183-ef385dbfec6a"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 3: 1x Gruß aus der Küche für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-57d62575-0808-46ed-b07d-996b332e457a"
+      },
+      {
+        "id": "notification-5f88d169-d92e-478f-b7a4-a540cda4a1f1",
+        "createdAt": "2026-04-30T22:47:53.595Z",
+        "read": true,
+        "kind": "service-drinks-accepted",
+        "course": "drinks",
+        "itemIds": [
+          "item-5a2ef6ea-92df-4095-b226-c348e79b4409"
+        ],
+        "title": "Getränke ausliefern",
+        "body": "Bringe die Getränke 1x Cola zu Tisch 3.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-ec7bf287-9ccb-4701-97b7-1c5857ea06a1"
+      },
+      {
+        "id": "notification-ec7bf287-9ccb-4701-97b7-1c5857ea06a1",
+        "createdAt": "2026-04-30T22:47:47.011Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-5a2ef6ea-92df-4095-b226-c348e79b4409"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 3: 1x Cola.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-57d62575-0808-46ed-b07d-996b332e457a",
+        "createdAt": "2026-04-30T22:47:45.293Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "starter",
+        "itemIds": [
+          "item-e577e7b5-1897-4a6f-b183-ef385dbfec6a"
+        ],
+        "title": "Vorspeise fertig",
+        "body": "1x Gruß aus der Küche für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-0dc9627c-ce3b-44fe-b043-488f70f879ee",
+        "createdAt": "2026-04-30T22:47:43.338Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 3 wartet auf vorspeise.",
+        "tone": "info",
+        "tableId": "table-3"
+      },
+      {
+        "id": "notification-20f7cb2e-d357-410d-a903-dfc576de693c",
+        "createdAt": "2026-04-30T22:46:56.665Z",
+        "read": false,
+        "title": "Bestellung geschlossen",
+        "body": "Tisch 1 wurden abgeschlossen.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-4c92124f-e5c2-451a-ad02-4ca6d35dcee2",
+        "createdAt": "2026-04-30T22:46:55.337Z",
+        "read": false,
+        "title": "Rechnungsstorno gespeichert",
+        "body": "2,50 € wurden als Rechnungsstorno markiert.",
+        "tone": "alert",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-802c6d80-56c3-4bbf-be91-61aeb8833715",
+        "createdAt": "2026-04-30T22:35:41.457Z",
+        "read": true,
+        "kind": "admin-receipt-alarm",
+        "title": "Rechnung gedruckt",
+        "body": "Tisch 1 hat gerade eine Rechnung gedruckt. Bitte Abrechnung prüfen.",
+        "tone": "alert",
+        "tableId": "table-1",
+        "targetRoles": [
+          "admin"
+        ]
+      },
+      {
+        "id": "notification-917d7c00-c226-43bb-800a-46b801ddc170",
+        "createdAt": "2026-04-30T22:35:25.185Z",
+        "read": false,
+        "title": "Teilzahlung verbucht",
+        "body": "76,00 € wurden als Teilzahlung gespeichert.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-7ed343ee-ec8b-45e8-b1c5-e5fe5e3cdd9d",
+        "createdAt": "2026-04-30T22:25:21.121Z",
+        "read": false,
+        "title": "Rechnungsstorno gespeichert",
+        "body": "8,00 € wurden als Rechnungsstorno markiert.",
+        "tone": "alert",
+        "tableId": "table-2"
+      },
+      {
+        "id": "notification-02d49843-3392-4b3f-bb53-1498d58a93f2",
+        "createdAt": "2026-04-30T22:18:27.909Z",
+        "read": true,
+        "kind": "service-drinks-accepted",
+        "course": "drinks",
+        "itemIds": [
+          "item-53ae7687-6579-44b3-8e24-55a2098e1fe2",
+          "item-9f5a9b36-1535-4e96-abb2-c6f949d029c5"
+        ],
+        "title": "Getränke ausliefern",
+        "body": "Bringe die Getränke 1x Bionade, 1x Sprite zu Tisch 1.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-7b774b08-0be6-4fc6-a999-c742200c2d6a"
+      },
+      {
+        "id": "notification-7b774b08-0be6-4fc6-a999-c742200c2d6a",
+        "createdAt": "2026-04-30T22:18:25.782Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-53ae7687-6579-44b3-8e24-55a2098e1fe2",
+          "item-9f5a9b36-1535-4e96-abb2-c6f949d029c5"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 1: 1x Bionade, 1x Sprite.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-9b6fdf4f-3093-4773-b6d4-62a58046f65a",
+        "createdAt": "2026-04-30T22:18:23.526Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-8c684e68-01a8-453d-8945-3bc903ee3a14",
+          "item-fb245f54-31fa-43e5-b58d-172dd3ef4eec",
+          "item-375f1069-8fd7-4dda-8c0c-1a9c67b3f788",
+          "item-dd95e74d-cf0c-4f4c-8829-1fc551d4331f"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 2x Nudeln mit gr?ner Pesto, 1x Pizza Margherita, 1x Pizza Kochschinken für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-66c22c15-777a-4719-84e6-f111b90be7fb"
+      },
+      {
+        "id": "notification-a695d689-3b72-41f4-a71e-a4e9f73a32cb",
+        "createdAt": "2026-04-30T22:18:23.005Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-e741a3a5-7daa-4f59-adb8-ad817cc3fb6f"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 1x Pizza Veggi für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-b117d2ed-2a9a-45a9-8326-0348bd3d62be"
+      },
+      {
+        "id": "notification-df40180a-d33c-4992-aea7-b978206254b7",
+        "createdAt": "2026-04-30T22:18:22.551Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "dessert",
+        "itemIds": [
+          "item-170b4e77-2f26-4b80-acb0-1145fc9e4e90"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 4x Dessert des Tages für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-f23c1ae2-77b5-498d-a8c0-fb3f7f7981f6"
+      },
+      {
+        "id": "notification-6886f457-0302-439a-afe8-82bb7878a23e",
+        "createdAt": "2026-04-30T22:18:22.176Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "dessert",
+        "itemIds": [
+          "item-0266a212-821c-41fc-ba3d-275648eba83c",
+          "item-70b0fc17-0e81-4681-a138-4faa036fb8ca",
+          "item-f8bf7444-b38b-4071-b94a-bafc3fbc0211",
+          "item-316bc4a2-f7f6-4945-b169-6a53bb94e49e",
+          "item-b8ba04d0-85e8-4c08-b2b4-d47243207b0c",
+          "item-9be9892a-f565-4425-ac8a-112d7c0b5c7b",
+          "item-ccb8c0d7-2f67-4c2d-9d55-99296c60a6fb",
+          "item-d7e40345-7d7e-40ae-8e35-2d740d0b534c",
+          "item-39de9fba-b08b-496f-91eb-2640bb9f48d0"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 9x Pizza Brot mit Nutella für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-1e88191d-fcd5-46bb-859a-0c852215750c"
+      },
+      {
+        "id": "notification-1e88191d-fcd5-46bb-859a-0c852215750c",
+        "createdAt": "2026-04-30T22:18:20.465Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "dessert",
+        "itemIds": [
+          "item-0266a212-821c-41fc-ba3d-275648eba83c",
+          "item-70b0fc17-0e81-4681-a138-4faa036fb8ca",
+          "item-f8bf7444-b38b-4071-b94a-bafc3fbc0211",
+          "item-316bc4a2-f7f6-4945-b169-6a53bb94e49e",
+          "item-b8ba04d0-85e8-4c08-b2b4-d47243207b0c",
+          "item-9be9892a-f565-4425-ac8a-112d7c0b5c7b",
+          "item-ccb8c0d7-2f67-4c2d-9d55-99296c60a6fb",
+          "item-d7e40345-7d7e-40ae-8e35-2d740d0b534c",
+          "item-39de9fba-b08b-496f-91eb-2640bb9f48d0"
+        ],
+        "title": "Nachtisch fertig",
+        "body": "9x Pizza Brot mit Nutella für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-f23c1ae2-77b5-498d-a8c0-fb3f7f7981f6",
+        "createdAt": "2026-04-30T22:18:19.989Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "dessert",
+        "itemIds": [
+          "item-170b4e77-2f26-4b80-acb0-1145fc9e4e90"
+        ],
+        "title": "Nachtisch fertig",
+        "body": "4x Dessert des Tages für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-b117d2ed-2a9a-45a9-8326-0348bd3d62be",
+        "createdAt": "2026-04-30T22:18:18.946Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-e741a3a5-7daa-4f59-adb8-ad817cc3fb6f"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Pizza Veggi für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-66c22c15-777a-4719-84e6-f111b90be7fb",
+        "createdAt": "2026-04-30T22:18:18.258Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-8c684e68-01a8-453d-8945-3bc903ee3a14",
+          "item-fb245f54-31fa-43e5-b58d-172dd3ef4eec",
+          "item-375f1069-8fd7-4dda-8c0c-1a9c67b3f788",
+          "item-dd95e74d-cf0c-4f4c-8829-1fc551d4331f"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "2x Nudeln mit gr?ner Pesto, 1x Pizza Margherita, 1x Pizza Kochschinken für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-426a73ca-9bd9-4951-99fa-2803b467986f",
+        "createdAt": "2026-04-30T22:18:15.591Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "starter",
+        "itemIds": [
+          "item-eca056ee-edc6-4f3f-844f-cf93077a8d23"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 1x Gruß aus der Küche für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
+        "acceptedByName": "Timmy",
+        "sourceNotificationId": "notification-11eedd9b-5f48-4204-ba60-7937f71f8d22"
+      },
+      {
+        "id": "notification-11eedd9b-5f48-4204-ba60-7937f71f8d22",
+        "createdAt": "2026-04-30T22:18:10.585Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "starter",
+        "itemIds": [
+          "item-eca056ee-edc6-4f3f-844f-cf93077a8d23"
+        ],
+        "title": "Vorspeise fertig",
+        "body": "1x Gruß aus der Küche für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-574ceb9d-2340-428b-8c9f-c19ceab0a523",
+        "createdAt": "2026-04-30T22:18:05.688Z",
+        "read": false,
+        "title": "Nachtisch · Nachbestellung 2 gesendet",
+        "body": "Tisch 1 wartet auf nachtisch · nachbestellung 2.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-0d852013-30ec-406e-878d-e1841c3b4b97",
+        "createdAt": "2026-04-30T22:17:37.965Z",
+        "read": false,
+        "title": "Nachtisch gesendet",
+        "body": "Tisch 1 wartet auf nachtisch.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-7e9d6705-b68f-40cd-a2de-f1efa08221bb",
+        "createdAt": "2026-04-30T22:17:18.735Z",
+        "read": false,
+        "title": "Hauptspeise · Nachbestellung 2 gesendet",
+        "body": "Tisch 1 wartet auf hauptspeise · nachbestellung 2.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-6ef3e0e6-5212-4d39-989b-71f7d04d2880",
+        "createdAt": "2026-04-30T22:15:49.494Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (s) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2dc32fbc-d7b1-4ac3-8ec8-2ca05b41f9bc",
+        "createdAt": "2026-04-30T22:15:49.463Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (s) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-470a3a0a-5f6d-4aa5-ad4d-dbd9f387ec3d",
+        "createdAt": "2026-04-30T22:15:49.432Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2d08a47d-3532-47db-b21f-021dbb74c53c",
+        "createdAt": "2026-04-30T22:15:49.400Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4c73ae60-4c81-4bb8-b707-8ae129296713",
+        "createdAt": "2026-04-30T22:15:49.370Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-61f2c1cd-7e79-46a2-84ba-41a7b1a06913",
+        "createdAt": "2026-04-30T22:15:49.323Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-6272f6f3-8bee-4eca-b402-74399dcd4d0a",
+        "createdAt": "2026-04-30T22:15:49.291Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-cfd36dd1-150a-4308-9d58-81d786e74218",
+        "createdAt": "2026-04-30T22:15:49.271Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0119e624-cb51-4f52-9aa0-e0a248c8ea74",
+        "createdAt": "2026-04-30T22:15:49.241Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-ac92c149-2d56-4524-8fed-51cfaf15d50e",
+        "createdAt": "2026-04-30T22:15:49.211Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-df8d9240-b163-440a-b9b4-7d93ee6e9e2f",
+        "createdAt": "2026-04-30T22:15:49.165Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d0341e33-fd69-4277-8788-a30f8181a43f",
+        "createdAt": "2026-04-30T22:15:49.136Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c86933af-bac5-4a9b-83fc-07ed13a9fe59",
+        "createdAt": "2026-04-30T22:15:49.104Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-04dcc290-16d3-40f9-b56c-9da0c65a1bb9",
+        "createdAt": "2026-04-30T22:15:49.066Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-ada01bf7-24d9-4d7c-95f6-3353d817191c",
+        "createdAt": "2026-04-30T22:15:49.029Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-260a43f5-1aa1-42ca-895c-e28576f9f869",
+        "createdAt": "2026-04-30T22:15:48.995Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-172b94a8-820e-485a-bd2c-82939a507e30",
+        "createdAt": "2026-04-30T22:15:48.968Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-69aa3c4c-5096-42fc-af47-046badc7de49",
+        "createdAt": "2026-04-30T22:15:48.934Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-53d33d72-dd59-4fde-a764-add7cb49ccb7",
+        "createdAt": "2026-04-30T22:15:48.840Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b5223047-e6ac-42b3-b8c2-a4c25b760691",
+        "createdAt": "2026-04-30T22:15:48.816Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-07ef3eb8-ae42-4ba3-be41-352868458a0e",
+        "createdAt": "2026-04-30T22:15:48.762Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3b0ffb57-b7a4-4057-a6d3-017b4307f99c",
+        "createdAt": "2026-04-30T22:15:48.729Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a9d9898e-e238-4f4d-83a0-072e68db259c",
+        "createdAt": "2026-04-30T22:15:48.699Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-35b96a95-96d4-4334-8947-4f3d7c6a73bc",
+        "createdAt": "2026-04-30T22:15:48.667Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b769e318-c135-438e-a0b9-ac3114e6f0c4",
+        "createdAt": "2026-04-30T22:15:48.637Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3c7d7d3e-0dd4-43b3-b19e-29cc880e2312",
+        "createdAt": "2026-04-30T22:15:48.608Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8af4655a-e867-4cbe-b287-18e89f4a9e8f",
+        "createdAt": "2026-04-30T22:15:48.575Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2dbc7341-f921-4aed-9e11-5853ed4745fc",
+        "createdAt": "2026-04-30T22:15:48.541Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c038adf4-d2f5-4b86-8299-7f8d95536791",
+        "createdAt": "2026-04-30T22:15:48.499Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-fe7ee722-bffe-4955-bd86-7678cb8b3f72",
+        "createdAt": "2026-04-30T22:15:48.404Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5fc62aab-10af-4aa7-a7d5-4d785bb96205",
+        "createdAt": "2026-04-30T22:15:48.374Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-02f7e2fc-5ee7-403e-a3b7-31dc44be4422",
+        "createdAt": "2026-04-30T22:15:48.346Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-15e84947-d45a-4bf4-accd-735ce7a2aa21",
+        "createdAt": "2026-04-30T22:15:48.314Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-35a221c0-2d21-4f8c-9877-de3182702555",
+        "createdAt": "2026-04-30T22:15:48.292Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d95345b8-4830-4251-adb0-bb6f789b33be",
+        "createdAt": "2026-04-30T22:15:48.258Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c9cf99db-3195-4aab-8b85-f2255124594c",
+        "createdAt": "2026-04-30T22:15:48.211Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-944bc004-f524-4ef4-8a9f-6abc1cc1d027",
+        "createdAt": "2026-04-30T22:15:48.172Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d7debce4-6da5-46ff-b662-9a5c964bb9d7",
+        "createdAt": "2026-04-30T22:15:48.142Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5024f45e-16a7-477d-8e32-d1ad59d9420f",
+        "createdAt": "2026-04-30T22:15:48.107Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-ccfd075a-64c6-4542-8d4e-d3bd250c19e8",
+        "createdAt": "2026-04-30T22:15:48.078Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-eef9d260-d15a-49ca-a177-8a016df4fff4",
+        "createdAt": "2026-04-30T22:15:48.045Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8b35ec35-5381-43dc-9467-badfede7fd5e",
+        "createdAt": "2026-04-30T22:15:48.012Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5b0c1a22-9e95-45ac-836e-2d8e16db77e2",
+        "createdAt": "2026-04-30T22:15:47.982Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-21fa0774-905d-4e07-8af2-8814a710b5f0",
+        "createdAt": "2026-04-30T22:15:47.940Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4ae32cae-8b0e-4891-a192-6ff8b644ec00",
+        "createdAt": "2026-04-30T22:15:47.905Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b3381ec9-66cb-4da2-8360-b7a1493a4152",
+        "createdAt": "2026-04-30T22:15:47.873Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-572d80f8-2c12-4782-8f50-2473a4965f7a",
+        "createdAt": "2026-04-30T22:15:47.841Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-af033a80-148b-4ae4-bfaf-e884690c9d2a",
+        "createdAt": "2026-04-30T22:15:47.811Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d021cb08-ff42-4cdb-ac7c-0c2dbb5ee896",
+        "createdAt": "2026-04-30T22:15:47.780Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a5b77c27-66fc-4209-a8bb-1f84d9981150",
+        "createdAt": "2026-04-30T22:15:47.748Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0ed451ee-acd8-46e6-83ee-50be409dbcb5",
+        "createdAt": "2026-04-30T22:15:47.716Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0bdc9f93-db8c-4335-a3fa-42dd0e983abb",
+        "createdAt": "2026-04-30T22:15:47.685Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-044b1463-61a2-43d3-9c85-e4770ddf313e",
+        "createdAt": "2026-04-30T22:15:47.642Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c2eaa9da-dd80-4cb4-8b2e-c65c0c89b663",
+        "createdAt": "2026-04-30T22:15:47.606Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-fabc4a97-eb1b-4ca1-85a4-a5df0f17b29c",
+        "createdAt": "2026-04-30T22:15:47.576Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c2035eaa-135c-4e7a-9620-32227bcf8c7c",
+        "createdAt": "2026-04-30T22:15:47.549Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5f3d3c14-9e4e-44c1-bf2d-f2fdb3acae5f",
+        "createdAt": "2026-04-30T22:15:47.404Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-45a38fd4-44bb-473c-a809-196911643c22",
+        "createdAt": "2026-04-30T22:15:47.389Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-39c3995d-1d33-48b4-a2e0-8d6446d560f3",
+        "createdAt": "2026-04-30T22:15:47.372Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-430d332e-f60b-41f7-812e-b1f7ece8d832",
+        "createdAt": "2026-04-30T22:15:47.349Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-43521531-1fe1-4195-ad80-305bd5e63c78",
+        "createdAt": "2026-04-30T22:15:47.300Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3d4cc4cd-33ba-4761-b07b-ab9bd2493880",
+        "createdAt": "2026-04-30T22:15:47.264Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-9561c0e5-a4fd-4e93-bf34-21f84a65dd69",
+        "createdAt": "2026-04-30T22:15:47.226Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c41a458e-be73-4590-bd96-3c3941e6ec02",
+        "createdAt": "2026-04-30T22:15:47.188Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4d43ca6c-a9e2-44f1-bf25-85afcda8e221",
+        "createdAt": "2026-04-30T22:15:47.151Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4d6d9848-762d-49cb-b73b-43bc422f1bed",
+        "createdAt": "2026-04-30T22:15:47.113Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-01543e21-e0e7-4f2c-8933-8231ed811de2",
+        "createdAt": "2026-04-30T22:15:47.066Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d6a1b333-c935-48ac-a5d4-1eabab2a776f",
+        "createdAt": "2026-04-30T22:15:47.027Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8cc67708-0f0d-4498-8e9a-a5efae167301",
+        "createdAt": "2026-04-30T22:15:46.988Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-bacd1feb-3e2c-464b-90f3-1bc000eaeda9",
+        "createdAt": "2026-04-30T22:15:46.707Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-535087dd-c3db-464c-8809-d1448bd8644d",
+        "createdAt": "2026-04-30T22:15:46.678Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-fa6bde93-52b3-47f6-a130-9dcc95e56bf1",
+        "createdAt": "2026-04-30T22:15:46.648Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2e984e2f-97fa-4677-93da-ba9affffe789",
+        "createdAt": "2026-04-30T22:15:46.617Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e73fb84f-9479-4820-8f94-fe09952a1a7d",
+        "createdAt": "2026-04-30T22:15:46.583Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-59a2a470-8c8b-4f12-be4a-58c09d266a95",
+        "createdAt": "2026-04-30T22:15:46.555Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e75400c6-ea90-4e72-875c-61fca91f271e",
+        "createdAt": "2026-04-30T22:15:46.525Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-ba4eb844-aac0-47d9-b150-6909dc7a7bfe",
+        "createdAt": "2026-04-30T22:15:46.382Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b7250679-7289-417f-8ce6-ff4bfbad1ad7",
+        "createdAt": "2026-04-30T22:15:46.359Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8a24d364-348f-462d-9e29-036307a6d225",
+        "createdAt": "2026-04-30T22:15:46.340Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-bd7d9742-a076-405e-9036-c02083a74b92",
+        "createdAt": "2026-04-30T22:15:46.323Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e766f24c-9b8f-4122-8f0a-7d6bbeb3cbf7",
+        "createdAt": "2026-04-30T22:15:46.306Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-49887432-66de-49a1-981d-f2dcf370b70d",
+        "createdAt": "2026-04-30T22:15:46.280Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-80c1aa54-0f01-48d0-8d70-8d1c51514a7f",
+        "createdAt": "2026-04-30T22:15:46.240Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4ccac89f-97ee-4c17-9dfb-bf30cdcc93fe",
+        "createdAt": "2026-04-30T22:15:46.202Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0ed54e0d-ffc1-4d1e-ab28-46f7c85b5b32",
+        "createdAt": "2026-04-30T22:15:46.164Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-94e533b6-e6e4-4304-b666-c8e7fe54d08e",
+        "createdAt": "2026-04-30T22:15:46.130Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b99d43b0-8703-4627-a4a8-2c5ad8edcc78",
+        "createdAt": "2026-04-30T22:15:46.092Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3328e757-8a7d-4b24-84b0-462d6fd7fed6",
+        "createdAt": "2026-04-30T22:15:46.047Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-33955bdc-e8f4-4578-9179-9810d3279cd9",
+        "createdAt": "2026-04-30T22:15:46.006Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-f8c0cbac-67b4-4e2a-81d1-85266289f78c",
+        "createdAt": "2026-04-30T22:15:45.969Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-647838e6-7e73-49fc-9664-cec1ec8546c0",
+        "createdAt": "2026-04-30T22:15:45.915Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4e534d1b-d76b-47d8-b3ff-57651393ab8f",
+        "createdAt": "2026-04-30T22:15:45.884Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-beaf872f-2f89-45b1-8e24-f10d73e0746b",
+        "createdAt": "2026-04-30T22:15:45.826Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-089f52e5-7b91-4f14-9856-4f510eccbe05",
+        "createdAt": "2026-04-30T22:15:45.796Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5993126c-f9a1-48dc-be45-6b244ec7e7d2",
+        "createdAt": "2026-04-30T22:15:45.762Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-62d523e5-7044-4582-a0eb-b8c7c129e472",
+        "createdAt": "2026-04-30T22:15:45.715Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-665a7b90-9d35-440e-a85d-7fcc6cfe3686",
+        "createdAt": "2026-04-30T22:15:45.684Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-78509077-0c6a-404a-8c2d-10a01a17bfa5",
+        "createdAt": "2026-04-30T22:15:45.654Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-22e64f0e-15d8-4f71-ae98-1be45fa7acda",
+        "createdAt": "2026-04-30T22:15:45.623Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-1348e2a0-73f2-4fec-901b-aafb4410764e",
+        "createdAt": "2026-04-30T22:15:45.591Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b095fbdc-b79d-4625-9319-e658940ebd14",
+        "createdAt": "2026-04-30T22:15:45.561Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-ad688196-931e-41f2-aef4-0f02baaf5707",
+        "createdAt": "2026-04-30T22:15:45.530Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-280c4da9-4c4c-4686-aa2b-6c4960fb515d",
+        "createdAt": "2026-04-30T22:15:45.499Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3da960d7-2d12-4777-9031-b6cbd349a84a",
+        "createdAt": "2026-04-30T22:15:45.465Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-29659d43-0850-490e-b9f2-1f8caa331104",
+        "createdAt": "2026-04-30T22:15:45.419Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-6df071d6-2457-4d14-9462-a700092efebf",
+        "createdAt": "2026-04-30T22:15:45.390Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-95dfcad2-b3a6-4df6-9bb3-2314a433b229",
+        "createdAt": "2026-04-30T22:15:45.375Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-7248b047-6885-4b04-80af-33f83623b746",
+        "createdAt": "2026-04-30T22:15:45.356Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-01c6b971-01d5-4874-8cd7-1ee32bf29059",
+        "createdAt": "2026-04-30T22:15:45.335Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-cadaff6e-5567-43cb-b6b5-62526dd5d184",
+        "createdAt": "2026-04-30T22:15:45.317Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-26eedbc6-ca17-46c5-b442-81c5734e1d45",
+        "createdAt": "2026-04-30T22:15:45.298Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-9579126a-8432-43e5-a709-891f8bf7840a",
+        "createdAt": "2026-04-30T22:15:45.272Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a8edb5a0-8ca5-45d2-a54b-9f148935f18f",
+        "createdAt": "2026-04-30T22:15:45.233Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-40baf0ac-ea53-44e9-8e8a-5c6d36b53a5f",
+        "createdAt": "2026-04-30T22:15:45.195Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e60a2785-c6b1-4a86-889c-b0e309901e9d",
+        "createdAt": "2026-04-30T22:15:45.160Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-487ab4b2-d5d1-4f9a-a0e4-2f36942d3a43",
+        "createdAt": "2026-04-30T22:15:45.121Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-44391f84-58ab-4157-b1f9-156cd283b28c",
+        "createdAt": "2026-04-30T22:15:45.075Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-38672b82-6dd1-4390-81a2-c623f7f7048c",
+        "createdAt": "2026-04-30T22:15:45.036Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a8a59abc-8d84-4a76-836e-db748a1ede2f",
+        "createdAt": "2026-04-30T22:15:45.000Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c60a0022-0787-4d66-81d9-17e6c3d41604",
+        "createdAt": "2026-04-30T22:15:44.957Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-acd27aab-ddf4-40fd-a081-073f0dc126e2",
+        "createdAt": "2026-04-30T22:15:44.832Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-ed0aedce-b29b-4293-91d0-731044755c08",
+        "createdAt": "2026-04-30T22:15:44.798Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-6899d5a0-296d-45c7-99ff-73c430810841",
+        "createdAt": "2026-04-30T22:15:44.766Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-d33470dc-b2d3-4330-a81f-225ee56b54c3",
+        "createdAt": "2026-04-30T22:15:44.736Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-040d6a20-45c2-462d-b43c-aa98768e88fa",
+        "createdAt": "2026-04-30T22:15:44.711Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-cff28ba5-2733-417d-bc43-7956dc0e5d35",
+        "createdAt": "2026-04-30T22:15:44.675Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-bbf6f829-9c9f-4d13-9992-48d4d7cda33f",
+        "createdAt": "2026-04-30T22:15:44.629Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-53434e77-e07e-4d40-994b-1e575615cb72",
+        "createdAt": "2026-04-30T22:15:44.594Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b3714e64-2a66-41b1-8b70-55b0dcf2664c",
+        "createdAt": "2026-04-30T22:15:44.570Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-02798102-f7cc-43fe-a138-e9b2a93d14fa",
+        "createdAt": "2026-04-30T22:15:44.551Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-7331dd65-8636-44fd-9342-05ceb82682c2",
+        "createdAt": "2026-04-30T22:15:44.532Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4ea90eb4-6d53-4e32-9810-9b80aa2b9415",
+        "createdAt": "2026-04-30T22:15:44.511Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e5158053-00c0-456f-948e-809646c7a39f",
+        "createdAt": "2026-04-30T22:15:44.487Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b0f2416d-c7a8-432c-aee2-0d539b45e174",
+        "createdAt": "2026-04-30T22:15:44.443Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-79985420-047e-4344-bf12-4b5692ab7825",
+        "createdAt": "2026-04-30T22:15:44.398Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-50bf0e5b-bc47-4bab-acb6-c58b2c7e6152",
+        "createdAt": "2026-04-30T22:15:44.352Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sddd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-27f817ad-742b-4061-81e8-a3ea70723a98",
+        "createdAt": "2026-04-30T22:15:44.308Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sdd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sddd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3bb04ab8-c185-4978-99af-9637524be2d8",
+        "createdAt": "2026-04-30T22:15:44.267Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (sd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sdd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5cc37742-0563-48be-b19d-399f0bbda7bd",
+        "createdAt": "2026-04-30T22:15:44.012Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (s) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (sd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-898abe68-5511-4087-86a7-6936ce1ba6a1",
+        "createdAt": "2026-04-30T22:15:43.916Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (s) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-4d13c8a2-7e31-4aff-b6a3-e32236658174",
+        "createdAt": "2026-04-30T22:15:42.026Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (o) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8b1dc306-9c65-45fc-95f4-dfaab7aee406",
+        "createdAt": "2026-04-30T22:15:41.989Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (oh) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (o) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e0332923-3f35-4fb7-8858-8ab75a8b1c70",
+        "createdAt": "2026-04-30T22:15:41.951Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohn) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (oh) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-09f1018e-7bb6-4352-b7b8-0ede77e39b74",
+        "createdAt": "2026-04-30T22:15:41.916Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohne) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohn) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b5126aea-c1d5-48ba-a7b1-eb6e6627d866",
+        "createdAt": "2026-04-30T22:15:41.876Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohne) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-7e7bda3b-7046-47a4-9b16-c658908a9643",
+        "createdAt": "2026-04-30T22:15:41.829Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-95b341d6-3ca5-4a9f-a401-7edc517294ec",
+        "createdAt": "2026-04-30T22:15:41.793Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepar) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-48b8e294-867d-4408-a9ec-6838cc4bc7f5",
+        "createdAt": "2026-04-30T22:15:41.747Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparm) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepar) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-b35225b2-c232-40a7-a8a8-cfe53f632eb4",
+        "createdAt": "2026-04-30T22:15:41.495Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparme) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparm) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2e036eff-4182-4d7a-a61a-32fe3f2f86e8",
+        "createdAt": "2026-04-30T22:15:41.114Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparmes) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparme) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c5e500b9-aa0f-45f1-a46d-e1f74546fae9",
+        "createdAt": "2026-04-30T22:15:40.944Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparmesa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparmes) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-853e3150-49d7-448a-afcf-8dbbd59870d3",
+        "createdAt": "2026-04-30T22:15:40.778Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparmesan) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparmesa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-cba83807-c91e-4472-a015-94eb9607f5e0",
+        "createdAt": "2026-04-30T22:15:32.328Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparmesa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparmesan) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8ed85f3a-4888-43b4-a943-f2e4e5878723",
+        "createdAt": "2026-04-30T22:15:32.196Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparmes) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparmesa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-2357d26c-7604-431c-aacb-4072af13187b",
+        "createdAt": "2026-04-30T22:15:31.952Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparme) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparmes) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5ba8f4f8-aa9c-491e-b5b9-f53d7e135795",
+        "createdAt": "2026-04-30T22:15:31.679Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohneparm) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparme) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-3953ff87-daa8-42d2-8863-a4c7864da0c7",
+        "createdAt": "2026-04-30T22:15:31.512Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepar) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohneparm) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-84be7064-a5f0-4b21-873a-b4aaaf71cb44",
+        "createdAt": "2026-04-30T22:15:31.267Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepar) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-9b927bae-7d30-4ac9-bebb-1738c6bc2a84",
+        "createdAt": "2026-04-30T22:15:31.013Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-764a2b06-6bd7-4e92-a3b8-3a0cf291b93e",
+        "createdAt": "2026-04-30T22:15:30.889Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohne) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-de5d954a-902b-4a0a-aef6-2d795ff92927",
+        "createdAt": "2026-04-30T22:15:30.543Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnef) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohne) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-95035e1f-03f2-46df-ac36-79d303758684",
+        "createdAt": "2026-04-30T22:15:30.372Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnefd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnef) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-cc4422af-8927-49cf-871d-b7784df9692d",
+        "createdAt": "2026-04-30T22:15:30.227Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnefda) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnefd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-392e8470-878e-4e8d-b4c3-79473e439a0d",
+        "createdAt": "2026-04-30T22:15:30.032Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnefdad) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnefda) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a7e8a7fe-d607-42a0-9ca9-08edf8222842",
+        "createdAt": "2026-04-30T22:15:29.772Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnefda) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnefdad) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c2c4563c-f749-40af-9426-a4c32af19570",
+        "createdAt": "2026-04-30T22:15:29.681Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnefd) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnefda) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e102fe8d-3b80-4c0d-a145-c163b125ba72",
+        "createdAt": "2026-04-30T22:15:29.579Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnef) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnefd) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a35acffa-98f3-4db8-8328-9f951ddc0e78",
+        "createdAt": "2026-04-30T22:15:29.541Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohne) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnef) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-91f2bcd5-7c17-46ca-b544-4cc4f13e94e6",
+        "createdAt": "2026-04-30T22:15:29.234Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohne) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-5599c8bd-fbd8-4061-862f-c37cceff2130",
+        "createdAt": "2026-04-30T22:15:29.042Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-79daa3bc-2375-478d-963b-fce1baba7058",
+        "createdAt": "2026-04-30T22:15:28.044Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0c08aeb6-7709-4e41-a0fe-1fb61787dc68",
+        "createdAt": "2026-04-30T22:15:27.880Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohne) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-71f32c82-b655-4c45-9445-1eb9500781b0",
+        "createdAt": "2026-04-30T22:15:26.827Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohne) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-fcf19504-f27f-402a-bdec-fe2877f62613",
+        "createdAt": "2026-04-30T22:15:26.658Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-af85063a-d276-4f4a-8eb0-4eba0a74a4f3",
+        "createdAt": "2026-04-30T22:15:26.317Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-7a9e90f4-0075-4428-b10f-edab4dd8f1c1",
+        "createdAt": "2026-04-30T22:15:26.071Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohne) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-e6ca82be-d863-40c4-9c2e-961a79f06abb",
+        "createdAt": "2026-04-30T22:15:25.613Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohne) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-1b8fbe67-c79d-4b6f-a1e1-da24348f979d",
+        "createdAt": "2026-04-30T22:15:25.449Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-76413e93-f8cf-44ca-ad00-b00337eeeb84",
+        "createdAt": "2026-04-30T22:15:25.281Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepar) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-134a3f85-bcce-4b8e-ae9d-9fa3cf7af1ea",
+        "createdAt": "2026-04-30T22:15:24.883Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepar) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a05f11d4-58b6-4ae2-8c5a-e26b495a982a",
+        "createdAt": "2026-04-30T22:15:24.426Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnepa) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-8c7c731f-483a-4913-b2b4-637f54975d03",
+        "createdAt": "2026-04-30T22:15:24.316Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohne) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohnep) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c9edcd0b-4174-4967-9698-880cc18c17fc",
+        "createdAt": "2026-04-30T22:15:23.587Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (ohn) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohne) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-0a51fa36-62a5-4237-b959-0864ff09c292",
+        "createdAt": "2026-04-30T22:15:23.466Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (oh) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (ohn) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-c11a60b9-0451-496b-a9c5-fb290eeb871a",
+        "createdAt": "2026-04-30T22:15:23.248Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto (o) · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (oh) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-a115b5ab-962b-4f33-b9d3-33fe117a634a",
+        "createdAt": "2026-04-30T22:15:22.935Z",
+        "read": false,
+        "title": "Hauptspeise korrigiert",
+        "body": "Tisch 1: 1x Nudeln mit gr?ner Pesto · Tisch wurde geändert zu 1x Nudeln mit gr?ner Pesto (o) · Tisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ]
+      },
+      {
+        "id": "notification-763079dc-7612-4670-b0f7-9529fa2e9e79",
+        "createdAt": "2026-04-30T22:15:04.644Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 1 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
+      {
+        "id": "notification-8c1880b1-00b4-47f0-8b27-ec91ee094106",
+        "createdAt": "2026-04-30T22:15:04.643Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf vorspeise.",
+        "tone": "info",
+        "tableId": "table-1"
+      },
       {
         "id": "notification-1777047353811-98395686",
         "createdAt": "2026-04-24T16:15:53.811Z",
@@ -4238,14 +8168,11 @@
       }
     ],
     "dailyStats": {
-      "date": "2026-03-30",
-      "servedTables": 2,
-      "servedGuests": 2,
-      "revenueCents": 3850,
-      "closedOrderIds": [
-        "session-table-3-f331dca6-24d4-421c-8b00-018d50a02fc5",
-        "session-table-2-83eb079b-1675-4be5-bf5b-e4a3402e7c2d"
-      ]
+      "date": "2026-05-01",
+      "revenueCents": 0,
+      "servedTables": 0,
+      "servedGuests": 0,
+      "closedOrderIds": []
     },
     "catalogVersion": 1,
     "serviceOrderMode": "table",

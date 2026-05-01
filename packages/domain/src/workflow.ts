@@ -35,18 +35,25 @@ export const getProductById = (products: Product[], id: string) =>
 export const getSessionForTable = (sessions: OrderSession[], tableId: string) =>
   sessions.find((session) => session.tableId === tableId && session.status !== "closed");
 
+export const isOrderItemCanceled = (item: Pick<OrderItem, "canceledAt">) =>
+  Boolean(item.canceledAt);
+
 export const getItemsForCourse = (session: OrderSession | undefined, course: CourseKey) =>
-  session?.items.filter((item) => item.category === course) ?? [];
+  session?.items.filter((item) => item.category === course && !isOrderItemCanceled(item)) ?? [];
 
 export const getOrderTargetKey = (item: OrderItem) =>
   item.target.type === "table" ? "table" : item.target.seatId;
 
 export const getSeatItems = (session: OrderSession | undefined, seatId: string) =>
-  session?.items.filter((item) => item.target.type === "seat" && item.target.seatId === seatId) ??
-  [];
+  session?.items.filter(
+    (item) =>
+      item.target.type === "seat" &&
+      item.target.seatId === seatId &&
+      !isOrderItemCanceled(item)
+  ) ?? [];
 
 export const getTableTargetItems = (session: OrderSession | undefined) =>
-  session?.items.filter((item) => item.target.type === "table") ?? [];
+  session?.items.filter((item) => item.target.type === "table" && !isOrderItemCanceled(item)) ?? [];
 
 export const resolveSessionStatus = (
   table: TableLayout,
@@ -58,6 +65,8 @@ export const resolveSessionStatus = (
 };
 
 export const calculateItemTotal = (item: OrderItem, products: Product[]) => {
+  if (isOrderItemCanceled(item)) return 0;
+
   const product = getProductById(products, item.productId);
   if (!product) return 0;
 
@@ -120,12 +129,14 @@ export const calculateCanceledItemQuantity = (
 };
 
 export const calculateOpenItemQuantity = (session: OrderSession | undefined, item: OrderItem) =>
-  Math.max(
-    0,
-    item.quantity -
-      calculatePaidItemQuantity(session, item.id) -
-      calculateCanceledItemQuantity(session, item.id)
-  );
+  isOrderItemCanceled(item)
+    ? 0
+    : Math.max(
+        0,
+        item.quantity -
+          calculatePaidItemQuantity(session, item.id) -
+          calculateCanceledItemQuantity(session, item.id)
+      );
 
 export const calculateLineItemsTotal = (
   session: OrderSession | undefined,
