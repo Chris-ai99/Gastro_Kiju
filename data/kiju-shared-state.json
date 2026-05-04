@@ -1,6 +1,6 @@
 {
-  "version": 1433,
-  "updatedAt": "2026-05-01T00:25:34.624Z",
+  "version": 1470,
+  "updatedAt": "2026-05-03T16:51:59.083Z",
   "state": {
     "users": [
       {
@@ -21,7 +21,7 @@
         "password": "Kitchen1234",
         "pin": "12345",
         "active": true,
-        "lastSeenAt": "2026-04-30T22:12:44.396Z"
+        "lastSeenAt": "2026-05-03T16:43:51.277Z"
       },
       {
         "id": "user-bar",
@@ -31,7 +31,7 @@
         "password": "Bar1234",
         "pin": "3030",
         "active": true,
-        "lastSeenAt": "2026-04-30T22:12:56.967Z"
+        "lastSeenAt": "2026-05-03T16:43:34.090Z"
       },
       {
         "id": "user-1777047345814-234ae314",
@@ -67,7 +67,7 @@
         "role": "waiter",
         "password": "",
         "active": true,
-        "lastSeenAt": "2026-04-24T12:36:54.293Z"
+        "lastSeenAt": "2026-05-03T16:41:18.391Z"
       },
       {
         "id": "user-936fdab9-0e35-4d1e-a0c8-2a688dcef27b",
@@ -787,6 +787,340 @@
       }
     ],
     "sessions": [
+      {
+        "id": "session-table-3-68a3d93c-c1d0-4588-9709-f4aff6e61c5f",
+        "tableId": "table-3",
+        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "completed",
+            "sentAt": "2026-05-03T16:51:16.386Z",
+            "releasedAt": "2026-05-03T16:51:16.386Z",
+            "readyAt": "2026-05-03T16:51:16.386Z",
+            "completedAt": "2026-05-03T16:51:43.143Z",
+            "manualRelease": false,
+            "countdownMinutes": 0
+          },
+          "starter": {
+            "course": "starter",
+            "status": "completed",
+            "sentAt": "2026-05-03T16:51:16.386Z",
+            "releasedAt": "2026-05-03T16:51:16.386Z",
+            "completedAt": "2026-05-03T16:51:39.337Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "main": {
+            "course": "main",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {},
+        "status": "waiting",
+        "items": [
+          {
+            "id": "item-09dd2607-0a5f-400c-8c0e-ac8232f9ab48",
+            "productId": "drink-cola",
+            "category": "drinks",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:51:05.761Z",
+            "sentAt": "2026-05-03T16:51:16.386Z",
+            "preparedAt": "2026-05-03T16:51:43.143Z",
+            "servedAt": "2026-05-03T16:51:56.763Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-a2f8548a-4070-4e1f-94b1-4c1d35470b45",
+            "productId": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
+            "category": "starter",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:51:14.813Z",
+            "sentAt": "2026-05-03T16:51:16.386Z",
+            "preparedAt": "2026-05-03T16:51:39.337Z",
+            "servedAt": "2026-05-03T16:51:59.068Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-05-03T16:51:39.337Z"
+              }
+            ]
+          }
+        ],
+        "payments": [],
+        "cancellations": [],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-3-starter-3788ebf7-1729-4596-87c7-626086b83aef",
+            "course": "starter",
+            "itemIds": [
+              "item-a2f8548a-4070-4e1f-94b1-4c1d35470b45"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-03T16:51:16.386Z",
+            "releasedAt": "2026-05-03T16:51:16.386Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-05-03T16:51:39.337Z"
+          }
+        ],
+        "barTicketBatches": [
+          {
+            "id": "bar-ticket-table-3-drinks-454e4bfe-80e2-4253-992d-7266b966c175",
+            "course": "drinks",
+            "itemIds": [
+              "item-09dd2607-0a5f-400c-8c0e-ac8232f9ab48"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-03T16:51:16.386Z",
+            "releasedAt": "2026-05-03T16:51:16.386Z",
+            "readyAt": "2026-05-03T16:51:16.386Z",
+            "manualRelease": false,
+            "countdownMinutes": 0,
+            "sequence": 1,
+            "completedAt": "2026-05-03T16:51:43.143Z"
+          }
+        ],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-1-177d0909-35e1-4d3f-9d1a-6cede81ebaab",
+        "tableId": "table-1",
+        "waiterId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "completed",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "releasedAt": "2026-05-03T16:42:42.571Z",
+            "readyAt": "2026-05-03T16:42:42.571Z",
+            "completedAt": "2026-05-03T16:44:25.016Z",
+            "manualRelease": false,
+            "countdownMinutes": 0
+          },
+          "starter": {
+            "course": "starter",
+            "status": "completed",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "releasedAt": "2026-05-03T16:42:42.571Z",
+            "completedAt": "2026-05-03T16:46:28.616Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "main": {
+            "course": "main",
+            "status": "completed",
+            "sentAt": "2026-05-03T16:47:15.881Z",
+            "releasedAt": "2026-05-03T16:47:15.881Z",
+            "completedAt": "2026-05-03T16:47:35.765Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {
+          "printedAt": "2026-05-03T16:48:56.916Z",
+          "closedAt": "2026-05-03T16:49:35.928Z"
+        },
+        "status": "closed",
+        "items": [
+          {
+            "id": "item-0d0d5b62-a065-4458-82d0-9d2cf495deab",
+            "productId": "product-d6dad1ef-7ddd-4935-a8fa-43c965ef07d9",
+            "category": "drinks",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:41:52.858Z",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "preparedAt": "2026-05-03T16:44:25.016Z",
+            "servedAt": "2026-05-03T16:46:14.598Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-ec0ba355-b49a-4b16-9f8d-79c110d16440",
+            "productId": "drink-cola",
+            "category": "drinks",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:41:59.446Z",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "preparedAt": "2026-05-03T16:44:25.016Z",
+            "servedAt": "2026-05-03T16:46:14.598Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-0e7bf623-eaa1-40e9-bcc1-2d72981f7f05",
+            "productId": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
+            "category": "starter",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:42:38.974Z",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "preparedAt": "2026-05-03T16:46:28.616Z",
+            "servedAt": "2026-05-03T16:46:41.412Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-05-03T16:46:28.616Z"
+              }
+            ]
+          },
+          {
+            "id": "item-bc12318c-2cc4-4bf0-8ca4-b9d6f59df8f4",
+            "productId": "main-pizza-tuna",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:47:06.467Z",
+            "sentAt": "2026-05-03T16:47:15.881Z",
+            "preparedAt": "2026-05-03T16:47:35.765Z",
+            "servedAt": "2026-05-03T16:48:10.779Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-05-03T16:47:35.765Z"
+              }
+            ]
+          },
+          {
+            "id": "item-2f2e85b3-2ede-47a9-b540-c49edef6fcbd",
+            "productId": "main-pasta-tomato",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-03T16:47:10.887Z",
+            "sentAt": "2026-05-03T16:47:15.881Z",
+            "preparedAt": "2026-05-03T16:47:35.765Z",
+            "servedAt": "2026-05-03T16:48:10.779Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-05-03T16:47:35.765Z"
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "id": "payment-c34f4b65-95b5-4ecd-8564-e3ec062759e3",
+            "label": "Restzahlung",
+            "amountCents": 2000,
+            "method": "cash",
+            "lineItems": [
+              {
+                "itemId": "item-0d0d5b62-a065-4458-82d0-9d2cf495deab",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-ec0ba355-b49a-4b16-9f8d-79c110d16440",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-0e7bf623-eaa1-40e9-bcc1-2d72981f7f05",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-bc12318c-2cc4-4bf0-8ca4-b9d6f59df8f4",
+                "quantity": 1
+              },
+              {
+                "itemId": "item-2f2e85b3-2ede-47a9-b540-c49edef6fcbd",
+                "quantity": 1
+              }
+            ],
+            "tableIds": [
+              "table-1"
+            ]
+          }
+        ],
+        "cancellations": [],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-1-starter-ae4f2c18-3152-4bbd-acb1-6f31d740a4a9",
+            "course": "starter",
+            "itemIds": [
+              "item-0e7bf623-eaa1-40e9-bcc1-2d72981f7f05"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "releasedAt": "2026-05-03T16:42:42.571Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-05-03T16:46:28.616Z"
+          },
+          {
+            "id": "kitchen-ticket-table-1-main-04d4a049-5404-4d6f-95ef-f6b88174274a",
+            "course": "main",
+            "itemIds": [
+              "item-bc12318c-2cc4-4bf0-8ca4-b9d6f59df8f4",
+              "item-2f2e85b3-2ede-47a9-b540-c49edef6fcbd"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-03T16:47:15.881Z",
+            "releasedAt": "2026-05-03T16:47:15.881Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-05-03T16:47:35.765Z"
+          }
+        ],
+        "barTicketBatches": [
+          {
+            "id": "bar-ticket-table-1-drinks-56ea120f-dabe-4615-adea-c1e59401aa4d",
+            "course": "drinks",
+            "itemIds": [
+              "item-0d0d5b62-a065-4458-82d0-9d2cf495deab",
+              "item-ec0ba355-b49a-4b16-9f8d-79c110d16440"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-03T16:42:42.571Z",
+            "releasedAt": "2026-05-03T16:42:42.571Z",
+            "readyAt": "2026-05-03T16:42:42.571Z",
+            "manualRelease": false,
+            "countdownMinutes": 0,
+            "sequence": 1,
+            "completedAt": "2026-05-03T16:44:25.016Z"
+          }
+        ],
+        "partyGroups": []
+      },
       {
         "id": "session-table-3-0dcd2e2d-fc1c-49dd-8977-085ad77dab71",
         "tableId": "table-3",
@@ -2124,6 +2458,255 @@
       }
     ],
     "notifications": [
+      {
+        "id": "notification-50543856-0b44-4b42-8a82-32226dac445b",
+        "createdAt": "2026-05-03T16:51:58.411Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "starter",
+        "itemIds": [
+          "item-a2f8548a-4070-4e1f-94b1-4c1d35470b45"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 3: 1x Gruß aus der Küche für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-7a3458d3-09bb-4eb0-b39d-5db662902174",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-443d9368-8e5c-4c75-b20f-44efb6fe3484",
+        "createdAt": "2026-05-03T16:51:55.928Z",
+        "read": true,
+        "kind": "service-drinks-accepted",
+        "course": "drinks",
+        "itemIds": [
+          "item-09dd2607-0a5f-400c-8c0e-ac8232f9ab48"
+        ],
+        "title": "Getränke ausliefern",
+        "body": "Bringe die Getränke 1x Cola zu Tisch 3.",
+        "tone": "success",
+        "tableId": "table-3",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-7b701611-6ba3-4712-befe-3305fd1d3eb1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-7b701611-6ba3-4712-befe-3305fd1d3eb1",
+        "createdAt": "2026-05-03T16:51:43.143Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-09dd2607-0a5f-400c-8c0e-ac8232f9ab48"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 3: 1x Cola.",
+        "tone": "info",
+        "tableId": "table-3",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-7a3458d3-09bb-4eb0-b39d-5db662902174",
+        "createdAt": "2026-05-03T16:51:39.337Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "starter",
+        "itemIds": [
+          "item-a2f8548a-4070-4e1f-94b1-4c1d35470b45"
+        ],
+        "title": "Vorspeise fertig",
+        "body": "1x Gruß aus der Küche für Tisch 3 ist fertig.",
+        "tone": "success",
+        "tableId": "table-3",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-b1b03273-15d1-4f68-9501-22c99e964a98",
+        "createdAt": "2026-05-03T16:51:16.387Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 3 wartet auf vorspeise.",
+        "tone": "info",
+        "tableId": "table-3",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-a487623e-0a14-4eee-a9aa-4c5dbc0f7de1",
+        "createdAt": "2026-05-03T16:49:35.928Z",
+        "read": false,
+        "title": "Bestellung geschlossen",
+        "body": "Tisch 1 wurden abgeschlossen.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-6fd9a8ce-1fc9-4fdd-a303-5ad140c1aba2",
+        "createdAt": "2026-05-03T16:49:28.977Z",
+        "read": false,
+        "title": "Teilzahlung verbucht",
+        "body": "20,00 € wurden als Restzahlung gespeichert.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-b1593596-3e52-4eb3-a659-0b950726c81e",
+        "createdAt": "2026-05-03T16:48:56.916Z",
+        "read": false,
+        "kind": "admin-receipt-alarm",
+        "title": "Rechnung gedruckt",
+        "body": "Tisch 1 hat gerade eine Rechnung gedruckt. Bitte Abrechnung prüfen.",
+        "tone": "alert",
+        "tableId": "table-1",
+        "targetRoles": [
+          "admin"
+        ],
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-17ef9222-456c-4ca0-9b39-491301f03125",
+        "createdAt": "2026-05-03T16:48:09.596Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "main",
+        "itemIds": [
+          "item-bc12318c-2cc4-4bf0-8ca4-b9d6f59df8f4",
+          "item-2f2e85b3-2ede-47a9-b540-c49edef6fcbd"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 1x Pizza Thunfisch, 1x Nudeln mit Tomatensauce für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-ae0c6202-226a-4dea-96a4-e57c7154e6c9",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-ae0c6202-226a-4dea-96a4-e57c7154e6c9",
+        "createdAt": "2026-05-03T16:47:35.765Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "main",
+        "itemIds": [
+          "item-bc12318c-2cc4-4bf0-8ca4-b9d6f59df8f4",
+          "item-2f2e85b3-2ede-47a9-b540-c49edef6fcbd"
+        ],
+        "title": "Hauptspeise fertig",
+        "body": "1x Pizza Thunfisch, 1x Nudeln mit Tomatensauce für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-56deb8f1-75d3-42e4-95d2-b9974a9bbe5c",
+        "createdAt": "2026-05-03T16:47:15.882Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 1 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-a45c2b87-65a7-4e3e-8c79-23f38e8460d8",
+        "createdAt": "2026-05-03T16:46:39.097Z",
+        "read": true,
+        "kind": "service-course-ready-accepted",
+        "course": "starter",
+        "itemIds": [
+          "item-0e7bf623-eaa1-40e9-bcc1-2d72981f7f05"
+        ],
+        "title": "Speisen ausliefern",
+        "body": "Hole den fertigen Küchenbon ab und bringe ihn zu Tisch 1: 1x Gruß aus der Küche für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-46986553-b55a-4728-b058-f8ec3a8b09a8",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-46986553-b55a-4728-b058-f8ec3a8b09a8",
+        "createdAt": "2026-05-03T16:46:28.617Z",
+        "read": true,
+        "kind": "service-course-ready",
+        "course": "starter",
+        "itemIds": [
+          "item-0e7bf623-eaa1-40e9-bcc1-2d72981f7f05"
+        ],
+        "title": "Vorspeise fertig",
+        "body": "1x Gruß aus der Küche für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-72640ae5-2dbf-4c5a-a882-24974b8d909b",
+        "createdAt": "2026-05-03T16:46:02.362Z",
+        "read": true,
+        "kind": "service-drinks-accepted",
+        "course": "drinks",
+        "itemIds": [
+          "item-0d0d5b62-a065-4458-82d0-9d2cf495deab",
+          "item-ec0ba355-b49a-4b16-9f8d-79c110d16440"
+        ],
+        "title": "Getränke ausliefern",
+        "body": "Bringe die Getränke 1x Bionade, 1x Cola zu Tisch 1.",
+        "tone": "success",
+        "tableId": "table-1",
+        "acceptedByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "acceptedByName": "Chris",
+        "sourceNotificationId": "notification-3913c0ec-b952-49f6-a020-7e620ed3e5bf",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-3913c0ec-b952-49f6-a020-7e620ed3e5bf",
+        "createdAt": "2026-05-03T16:44:25.017Z",
+        "read": true,
+        "kind": "service-drinks",
+        "course": "drinks",
+        "itemIds": [
+          "item-0d0d5b62-a065-4458-82d0-9d2cf495deab",
+          "item-ec0ba355-b49a-4b16-9f8d-79c110d16440"
+        ],
+        "title": "Getränke an den Tisch",
+        "body": "Tisch 1: 1x Bionade, 1x Cola.",
+        "tone": "info",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
+      {
+        "id": "notification-dfec03d2-1133-4ae3-956b-a78b0a79054f",
+        "createdAt": "2026-05-03T16:42:42.571Z",
+        "read": false,
+        "title": "Vorspeise gesendet",
+        "body": "Tisch 1 wartet auf vorspeise.",
+        "tone": "info",
+        "tableId": "table-1",
+        "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
+        "createdByName": "Chris"
+      },
       {
         "id": "notification-0ad6d47b-cc7f-4f3b-85c2-1d19910001a8",
         "createdAt": "2026-05-01T00:06:01.875Z",
@@ -8169,10 +8752,12 @@
     ],
     "dailyStats": {
       "date": "2026-05-01",
-      "revenueCents": 0,
-      "servedTables": 0,
-      "servedGuests": 0,
-      "closedOrderIds": []
+      "revenueCents": 2000,
+      "servedTables": 1,
+      "servedGuests": 1,
+      "closedOrderIds": [
+        "session-table-1-177d0909-35e1-4d3f-9d1a-6cede81ebaab"
+      ]
     },
     "catalogVersion": 1,
     "serviceOrderMode": "table",
