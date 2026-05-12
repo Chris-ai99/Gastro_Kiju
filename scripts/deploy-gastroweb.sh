@@ -28,6 +28,12 @@ echo "Starting ${SERVICE_NAME} deploy in ${PROJECT_DIR}"
 
 cd "${PROJECT_DIR}"
 
+if [[ "$(git diff --name-only -- apps/web/next-env.d.ts)" == "apps/web/next-env.d.ts" ]]; then
+  echo
+  echo "==> Resetting Next.js generated next-env.d.ts"
+  git restore -- apps/web/next-env.d.ts
+fi
+
 if ! git diff --quiet --exit-code || ! git diff --cached --quiet --exit-code; then
   echo "Tracked local changes exist on the server. Refusing to deploy without manual review."
   git status --short
@@ -79,6 +85,12 @@ else
 fi
 
 run pnpm build
+
+if [[ "$(git diff --name-only -- apps/web/next-env.d.ts)" == "apps/web/next-env.d.ts" ]]; then
+  echo
+  echo "==> Resetting Next.js generated next-env.d.ts after build"
+  git restore -- apps/web/next-env.d.ts
+fi
 
 echo
 echo "==> Copying Next.js static assets into standalone runtime"
