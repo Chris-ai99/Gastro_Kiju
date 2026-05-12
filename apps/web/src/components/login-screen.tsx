@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Beer, ChefHat, LogIn, Settings, Users } from "lucide-react";
+import { Beer, ChefHat, KeyRound, LogIn, Users } from "lucide-react";
 
 import { routeConfig } from "@kiju/config";
 import { SectionCard } from "@kiju/ui";
@@ -22,6 +22,7 @@ export const LoginScreen = () => {
   const router = useRouter();
   const { actions, currentUser, hydrated } = useDemoApp();
   const [serviceName, setServiceName] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,6 +47,19 @@ export const LoginScreen = () => {
     handleStationStart("waiter", serviceName);
   };
 
+  const submitAdmin = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const result = actions.login("Admin", adminPassword);
+
+    if (!result.ok || !result.user || result.user.role !== "admin") {
+      setError(result.message ?? "Admin-Zugang konnte nicht geöffnet werden.");
+      return;
+    }
+
+    setError(null);
+    router.replace(roleRoutes.admin);
+  };
+
   return (
     <main className="kiju-login-shell">
       <section className="kiju-login-hero kiju-login-hero--compact">
@@ -60,7 +74,7 @@ export const LoginScreen = () => {
           }
         >
           <p className="kiju-login-intro">
-            Wähle Küche, Getränke oder Service. Für den Service reicht dein Name.
+            Wähle Küche, Getränke oder Service. Für den Service reicht dein Name, Admin ist per Passwort geschützt.
           </p>
 
           <div className="kiju-form">
@@ -80,15 +94,24 @@ export const LoginScreen = () => {
               <Beer size={18} />
               Getränke öffnen
             </button>
-            <button
-              type="button"
-              className="kiju-button kiju-button--secondary"
-              onClick={() => handleStationStart("admin")}
-            >
-              <Settings size={18} />
+          </div>
+
+          <form className="kiju-form" onSubmit={submitAdmin}>
+            <label>
+              <span>Admin-Passwort</span>
+              <input
+                value={adminPassword}
+                onChange={(event) => setAdminPassword(event.target.value)}
+                autoComplete="current-password"
+                placeholder="Passwort eingeben"
+                type="password"
+              />
+            </label>
+            <button type="submit" className="kiju-button kiju-button--secondary">
+              <KeyRound size={18} />
               Admin öffnen
             </button>
-          </div>
+          </form>
 
           <form className="kiju-form" onSubmit={submitService}>
             <label>

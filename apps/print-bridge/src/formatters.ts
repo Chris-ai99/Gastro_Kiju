@@ -52,6 +52,7 @@ export type ReceiptDocumentInput = {
   mode: ReceiptDocumentMode;
   bonNummer: string;
   datum: string;
+  tableLabel?: string;
   bedienung?: string;
   sections: ReceiptDocumentSection[];
   gesamt: number;
@@ -337,6 +338,12 @@ const buildReceiptInfoLines = (input: ReceiptDocumentInput): ThermalPrintLine[] 
     { text: `${fitLeft("DATUM", infoLabelWidth)} ${sanitizeReceiptValue(input.datum)}` }
   ];
 
+  if (normalizeText(input.tableLabel ?? "")) {
+    lines.push({
+      text: `${fitLeft("TISCH", infoLabelWidth)} ${sanitizeReceiptValue(input.tableLabel ?? "")}`
+    });
+  }
+
   if (normalizeText(input.bedienung ?? "")) {
     lines.push({
       text: `${fitLeft("BEDIENUNG", infoLabelWidth)} ${sanitizeReceiptValue(input.bedienung ?? "")}`
@@ -561,11 +568,13 @@ export const buildReceiptDocumentFromSessions = ({
           (sum, session) => sum + calculateSessionTotal(session, products),
           0
         );
+  const singleSession = activeSessions.length === 1 ? activeSessions[0] : undefined;
 
   return {
     mode: scope,
     bonNummer: formatReceiptNumber(buildReceiptNumberSource(scope, activeSessions, selectedLineItems)),
     datum: formatDateTime(openedAt),
+    tableLabel: singleSession ? resolveTableLabel(tableLabelsById, singleSession) : undefined,
     bedienung: normalizeText(bedienung ?? "") || undefined,
     sections,
     gesamt
@@ -698,6 +707,7 @@ export const buildKitchenTicketPrintDocument = ({
       { text: SEPARATOR },
       { text: `TISCH : ${table.name}` },
       { text: `ZEIT  : ${formatDateTime(printedAt)}` },
+      { text: `BED.  : ${sanitizeReceiptValue(batch.bedienung ?? "Service")}` },
       {
         text: `BON   : ${batch.sequence === 1 ? "Erstsendung" : `Nachbestellung ${batch.sequence}`}`
       },

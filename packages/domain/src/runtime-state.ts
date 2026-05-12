@@ -630,6 +630,9 @@ const normalizeSessions = (sessions: AppState["sessions"]) =>
 
     return {
       ...sessionFields,
+      serviceUserIds: Array.isArray(legacySession.serviceUserIds)
+        ? [...new Set(legacySession.serviceUserIds)]
+        : [legacySession.waiterId],
       status: normalizeSessionStatus(status),
       items: normalizedItems,
       payments: (payments ?? []).map((payment) => ({

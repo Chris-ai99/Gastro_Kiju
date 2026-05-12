@@ -11,7 +11,8 @@ export class AuthService {
         candidate.username.toLowerCase() === payload.identifier.toLowerCase() ||
         candidate.name.toLowerCase() === payload.identifier.toLowerCase();
       const secretMatches =
-        candidate.password === payload.secret || candidate.pin === payload.secret;
+        candidate.password === payload.secret ||
+        (candidate.role !== "admin" && candidate.pin === payload.secret);
 
       return candidate.active && identifierMatches && secretMatches;
     });

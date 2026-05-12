@@ -53,6 +53,8 @@ import {
   type PropsWithChildren
 } from "react";
 
+import { createPrintJob } from "./print-client";
+
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-session-v1";
 const LEGACY_AUTH_KEY = "kiju-auth-v2";
@@ -195,6 +197,9 @@ type DemoActions = {
   toggleTableActive: (tableId: string) => void;
   resetDailyState: () => { ok: boolean; closedSessions: number; message?: string };
   undoDailyStateReset: () => { ok: boolean; message?: string };
+  addServiceUserToTable: (tableId: string, userId: string) => { ok: boolean; message?: string };
+  handoverServiceTasks: (targetUserId: string) => { ok: boolean; message?: string };
+  releaseServiceTasks: () => { ok: boolean; message?: string };
   resetDemoState: () => void;
   removeTableAndServices: (tableId: string) => { ok: boolean; message?: string };
   markNotificationRead: (
@@ -696,7 +701,8 @@ const createKitchenTicketBatch = (
   course: CourseKey,
   items: OrderSession["items"],
   sentAt: string,
-  status: KitchenStatus
+  status: KitchenStatus,
+  bedienung?: string
 ): KitchenTicketBatch => {
   const sequence = getKitchenBatchesForCourse(session, course).length + 1;
   const ticket = session.courseTickets[course];
@@ -705,6 +711,7 @@ const createKitchenTicketBatch = (
     id: createClientId(`kitchen-ticket-${tableId}-${course}`),
     course,
     itemIds: items.map((item) => item.id),
+    bedienung,
     status,
     sentAt,
     releasedAt: sentAt,
@@ -720,11 +727,13 @@ const createBarTicketBatch = (
   session: OrderSession,
   tableId: string,
   items: OrderSession["items"],
-  sentAt: string
+  sentAt: string,
+  bedienung?: string
 ): KitchenTicketBatch => ({
   id: createClientId(`bar-ticket-${tableId}-drinks`),
   course: "drinks",
   itemIds: items.map((item) => item.id),
+  bedienung,
   status: "ready",
   sentAt,
   releasedAt: sentAt,
@@ -757,6 +766,7 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
   id: createClientId(`session-${tableId}`),
   tableId,
   waiterId,
+  serviceUserIds: [waiterId],
   status: "serving",
   items: [],
   skippedCourses: [],
@@ -768,6 +778,35 @@ const createSession = (tableId: string, waiterId: string): OrderSession => ({
   partyGroups: [],
   receipt: {}
 });
+
+const resolveSessionBedienung = (
+  users: UserAccount[],
+  session: OrderSession,
+  currentUserId?: string | null
+) =>
+  users.find((user) => user.id === currentUserId)?.name?.trim() ||
+  users.find((user) => user.id === session.waiterId)?.name?.trim() ||
+  "Service";
+
+const getSessionServiceUserIds = (session: OrderSession) =>
+  Array.isArray(session.serviceUserIds)
+    ? [...new Set(session.serviceUserIds.filter(Boolean))]
+    : [session.waiterId];
+
+const setSessionServiceUserIds = (session: OrderSession, userIds: string[]) => {
+  const nextUserIds = [...new Set(userIds.filter(Boolean))];
+  session.serviceUserIds = nextUserIds;
+};
+
+const serviceNotificationKinds: AppNotification["kind"][] = [
+  "service-drinks",
+  "service-drinks-accepted",
+  "service-course-ready",
+  "service-course-ready-accepted"
+];
+
+const isServiceNotification = (notification: AppNotification) =>
+  serviceNotificationKinds.includes(notification.kind);
 
 const withNotification = (
   state: AppState,
@@ -1256,6 +1295,7 @@ const completeCourseOrBatch = (
   const table = next.tables.find((entry) => entry.id === tableId);
   const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
   const courseItems = batch ? getBatchItems(session, batch) : session.items.filter((item) => item.category === course);
+  const targetUserIds = getSessionServiceUserIds(session);
 
   if (course === "drinks") {
     courseItems.forEach((item) => {
@@ -1302,7 +1342,7 @@ const completeCourseOrBatch = (
       tone: "info",
       tableId,
       targetRoles: ["waiter"],
-      targetUserIds: targetWaiterIds
+      targetUserIds: targetUserIds.length > 0 ? targetUserIds : targetWaiterIds
     });
     return;
   }
@@ -1316,7 +1356,7 @@ const completeCourseOrBatch = (
     tone: "success",
     tableId,
     targetRoles: ["waiter"],
-    targetUserIds: targetWaiterIds
+    targetUserIds: targetUserIds.length > 0 ? targetUserIds : targetWaiterIds
   });
 };
 
@@ -1810,13 +1850,17 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const activeUsers = state.users.filter((candidate) => candidate.active);
       const pinOnlyMatches =
         normalizedIdentifier.length === 0
-          ? activeUsers.filter((candidate) => candidate.pin === normalizedSecret)
+          ? activeUsers.filter(
+              (candidate) => candidate.role !== "admin" && candidate.pin === normalizedSecret
+            )
           : [];
       const user = pinOnlyMatches.length === 1 ? pinOnlyMatches[0] : activeUsers.find((candidate) => {
         const identifierMatches =
           candidate.username.toLowerCase() === normalizedIdentifier ||
           candidate.name.toLowerCase() === normalizedIdentifier;
-        const secretMatches = candidate.password === normalizedSecret || candidate.pin === normalizedSecret;
+        const secretMatches =
+          candidate.password === normalizedSecret ||
+          (candidate.role !== "admin" && candidate.pin === normalizedSecret);
 
         return identifierMatches && secretMatches;
       });
@@ -1844,6 +1888,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const startWorkspaceSession = useCallback(
     (role: WorkspaceRole, name?: string) => {
       const next = structuredClone(state);
+
+      if (role === "admin") {
+        return {
+          ok: false,
+          message: "Admin-Zugang ist nur mit Passwort möglich."
+        };
+      }
 
       if (role === "waiter") {
         const normalizedName = name?.trim() ?? "";
@@ -1952,6 +2003,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         session = createSession(tableId, waiterId);
         next.sessions.unshift(session);
       }
+      setSessionServiceUserIds(session, [...getSessionServiceUserIds(session), waiterId]);
 
       const product = next.products.find((entry) => entry.id === productId);
       if (!product) return;
@@ -2008,8 +2060,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       if (patch.note !== undefined) {
-        const note = patch.note.trim();
-        item.note = note ? note : undefined;
+        item.note = patch.note.length > 0 ? patch.note : undefined;
       }
 
       const changed =
@@ -2226,6 +2277,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const sentAt = new Date().toISOString();
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
+      const bedienung = resolveSessionBedienung(next.users, session, currentUserId);
+      const kitchenPrintRequests: Parameters<typeof createPrintJob>[0][] = [];
       const pendingDrinkItems = session.items.filter(
         (item) => item.category === "drinks" && !item.sentAt && !isOrderItemCanceled(item)
       );
@@ -2247,7 +2300,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const sendPendingDrinksToBar = () => {
         if (pendingDrinkItems.length === 0) return false;
 
-        const drinkBatch = createBarTicketBatch(session, tableId, pendingDrinkItems, sentAt);
+        const drinkBatch = createBarTicketBatch(
+          session,
+          tableId,
+          pendingDrinkItems,
+          sentAt,
+          bedienung
+        );
         session.barTicketBatches.push(drinkBatch);
 
         pendingDrinkItems.forEach((item) => {
@@ -2285,7 +2344,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           kitchenCourse,
           items,
           sentAt,
-          batchStatus
+          batchStatus,
+          bedienung
         );
         session.kitchenTicketBatches.push(batch);
 
@@ -2305,6 +2365,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         if (shouldWait) {
           waitingKitchenCourseLabels.push(batchLabel);
         }
+        if (table) {
+          kitchenPrintRequests.push({
+            type: "kitchen-ticket",
+            session: structuredClone(session),
+            table: structuredClone(table),
+            products: structuredClone(next.products),
+            batch: structuredClone(batch)
+          });
+        }
         withNotification(next, {
           title: shouldWait
             ? `${batchLabel} wartet`
@@ -2320,6 +2389,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.status = "waiting";
       emitOperatorFeedback();
       commit(next);
+      if (kitchenPrintRequests.length > 0) {
+        void Promise.all(kitchenPrintRequests.map((request) => createPrintJob(request)));
+      }
       return {
         ok: true,
         message:
@@ -3555,6 +3627,169 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     return { ok: true };
   }, [commit, currentUserId]);
 
+  const addServiceUserToTable = useCallback(
+    (tableId: string, userId: string) => {
+      const next = structuredClone(state);
+      const session = getSessionForTable(next.sessions, tableId);
+      const user = next.users.find((entry) => entry.id === userId && entry.role === "waiter" && entry.active);
+
+      if (!session) {
+        return { ok: false, message: "Für diesen Tisch gibt es keine offene Bestellung." };
+      }
+
+      if (!user) {
+        return { ok: false, message: "Bedienung wurde nicht gefunden." };
+      }
+
+      const serviceUserIds = [...getSessionServiceUserIds(session), user.id];
+      setSessionServiceUserIds(session, serviceUserIds);
+
+      next.notifications.forEach((notification) => {
+        if (notification.tableId !== tableId || !isServiceNotification(notification)) return;
+        if (!notification.targetUserIds?.length) return;
+        notification.targetUserIds = [...new Set([...notification.targetUserIds, user.id])];
+      });
+
+      withNotification(next, {
+        title: "Bedienung hinzugefügt",
+        body: `${user.name} erhält jetzt Service-Nachrichten für ${tableId.replace("table-", "Tisch ")}.`,
+        tone: "success",
+        tableId,
+        targetUserIds: serviceUserIds
+      });
+      commit(next);
+      return { ok: true, message: `${user.name} wurde zur Schichtübergabe hinzugefügt.` };
+    },
+    [commit, state]
+  );
+
+  const handoverServiceTasks = useCallback(
+    (targetUserId: string) => {
+      const currentUser = state.users.find((user) => user.id === currentUserId);
+      const targetUser = state.users.find(
+        (user) => user.id === targetUserId && user.role === "waiter" && user.active
+      );
+
+      if (!currentUser || currentUser.role !== "waiter") {
+        return { ok: false, message: "Bitte als Service anmelden, um Aufgaben zu übergeben." };
+      }
+
+      if (!targetUser) {
+        return { ok: false, message: "Ziel-Bedienung wurde nicht gefunden." };
+      }
+
+      if (targetUser.id === currentUser.id) {
+        return { ok: false, message: "Bitte eine andere Bedienung auswählen." };
+      }
+
+      const next = structuredClone(state);
+      const affectedTableIds = new Set<string>();
+
+      next.sessions
+        .filter(
+          (session) =>
+            session.status !== "closed" && getSessionServiceUserIds(session).includes(currentUser.id)
+        )
+        .forEach((session) => {
+          const nextServiceUserIds = getSessionServiceUserIds(session).map((userId) =>
+            userId === currentUser.id ? targetUser.id : userId
+          );
+          setSessionServiceUserIds(session, nextServiceUserIds);
+          affectedTableIds.add(session.tableId);
+        });
+
+      if (affectedTableIds.size === 0) {
+        return { ok: false, message: "Es gibt keine offenen Service-Aufgaben für deine Bedienung." };
+      }
+
+      next.notifications.forEach((notification) => {
+        if (!notification.tableId || !affectedTableIds.has(notification.tableId) || !isServiceNotification(notification)) {
+          return;
+        }
+
+        if (notification.acceptedByUserId === currentUser.id) {
+          notification.acceptedByUserId = targetUser.id;
+          notification.acceptedByName = targetUser.name;
+          notification.targetUserIds = [targetUser.id];
+          return;
+        }
+
+        const targetUserIds = notification.targetUserIds?.length
+          ? notification.targetUserIds
+          : [currentUser.id];
+        notification.targetUserIds = [
+          ...new Set(targetUserIds.map((userId) => (userId === currentUser.id ? targetUser.id : userId)))
+        ];
+      });
+
+      withNotification(next, {
+        title: "Schicht übergeben",
+        body: `${currentUser.name} hat offene Aufgaben an ${targetUser.name} übergeben.`,
+        tone: "info",
+        targetUserIds: [targetUser.id]
+      });
+      commit(next);
+      return { ok: true, message: `Offene Service-Aufgaben wurden an ${targetUser.name} übergeben.` };
+    },
+    [commit, currentUserId, state]
+  );
+
+  const releaseServiceTasks = useCallback(() => {
+    const currentUser = state.users.find((user) => user.id === currentUserId);
+
+    if (!currentUser || currentUser.role !== "waiter") {
+      return { ok: false, message: "Bitte als Service anmelden, um Aufgaben freizugeben." };
+    }
+
+    const next = structuredClone(state);
+    const releasedTableIds = new Set<string>();
+
+    next.sessions
+      .filter(
+        (session) =>
+          session.status !== "closed" && getSessionServiceUserIds(session).includes(currentUser.id)
+      )
+      .forEach((session) => {
+        const remainingUserIds = getSessionServiceUserIds(session).filter(
+          (userId) => userId !== currentUser.id
+        );
+        setSessionServiceUserIds(session, remainingUserIds);
+        releasedTableIds.add(session.tableId);
+      });
+
+    if (releasedTableIds.size === 0) {
+      return { ok: false, message: "Es gibt keine offenen Service-Aufgaben für deine Bedienung." };
+    }
+
+    next.notifications.forEach((notification) => {
+      if (!notification.tableId || !releasedTableIds.has(notification.tableId) || !isServiceNotification(notification)) {
+        return;
+      }
+
+      if (notification.acceptedByUserId === currentUser.id) {
+        notification.kind =
+          notification.kind === "service-drinks-accepted" ? "service-drinks" : "service-course-ready";
+        notification.acceptedByUserId = undefined;
+        notification.acceptedByName = undefined;
+        notification.sourceNotificationId = undefined;
+      }
+
+      if (!notification.targetUserIds?.length) return;
+
+      const remainingUserIds = notification.targetUserIds.filter((userId) => userId !== currentUser.id);
+      notification.targetUserIds = remainingUserIds.length > 0 ? remainingUserIds : undefined;
+    });
+
+    withNotification(next, {
+      title: "Aufgaben freigegeben",
+      body: `${currentUser.name} hat offene Service-Aufgaben für das Team freigegeben.`,
+      tone: "info",
+      targetRoles: ["waiter"]
+    });
+    commit(next);
+    return { ok: true, message: "Offene Service-Aufgaben wurden für das Team freigegeben." };
+  }, [commit, currentUserId, state]);
+
   const resetDemoState = useCallback(() => {
     const next = createDefaultOperationalState();
     const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
@@ -3643,6 +3878,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
               : `Hole den fertigen Küchenbon ab und bringe ihn zu ${tableName}: ${itemText}.`,
             tone: "success",
             tableId: notification.tableId,
+            targetUserIds: acceptedByUser?.id ? [acceptedByUser.id] : undefined,
             acceptedByUserId: acceptedByUser?.id,
             acceptedByName,
             sourceNotificationId: notification.id
@@ -3709,7 +3945,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       (!notification.targetRoles?.length ||
         (currentUser ? notification.targetRoles.includes(currentUser.role) : false)) &&
       (!notification.targetUserIds?.length ||
-        (currentUserId ? notification.targetUserIds.includes(currentUserId) : false)) &&
+        (currentUser ? notification.targetUserIds.includes(currentUser.id) : false)) &&
       ((notification.kind !== "service-drinks-accepted" &&
         notification.kind !== "service-course-ready-accepted") ||
         !notification.acceptedByUserId ||
@@ -3768,6 +4004,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         toggleTableActive,
         resetDailyState,
         undoDailyStateReset,
+        addServiceUserToTable,
+        handoverServiceTasks,
+        releaseServiceTasks,
         resetDemoState,
         removeTableAndServices,
         markNotificationRead,
@@ -3776,6 +4015,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     }),
     [
       addItem,
+      addServiceUserToTable,
       assignItemsToPartyGroup,
       closeOrder,
       closePaidOrder,
@@ -3793,6 +4033,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       deleteSession,
       deleteUser,
       hydrated,
+      handoverServiceTasks,
       login,
       startWorkspaceSession,
       logout,
@@ -3807,6 +4048,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       recordPartialPayment,
       recordInvoiceCancellation,
       resetDailyState,
+      releaseServiceTasks,
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,

@@ -618,6 +618,8 @@ export const WaiterWorkspace = () => {
   const [waitPlannerOpen, setWaitPlannerOpen] = useState(false);
   const [waitCourse, setWaitCourse] = useState<CourseKey>("main");
   const [waitMinutes, setWaitMinutes] = useState("10");
+  const [handoverTargetUserId, setHandoverTargetUserId] = useState("");
+  const [supportUserId, setSupportUserId] = useState("");
   const [extraIngredientsItemId, setExtraIngredientsItemId] = useState<string | null>(null);
   const [extraIngredientDraftIds, setExtraIngredientDraftIds] = useState<string[]>([]);
   const [sentItemNoteDrafts, setSentItemNoteDrafts] = useState<Record<string, string>>({});
@@ -665,6 +667,27 @@ export const WaiterWorkspace = () => {
     () => Object.fromEntries(checkoutSessions.map(({ table }) => [table.id, table.name])),
     [checkoutSessions]
   );
+  const activeWaiterUsers = state.users.filter((user) => user.role === "waiter" && user.active);
+  const handoverTargetUsers = activeWaiterUsers.filter((user) => user.id !== currentUser?.id);
+  const selectedServiceUserIds = new Set(
+    selectedSession
+      ? Array.isArray(selectedSession.serviceUserIds)
+        ? selectedSession.serviceUserIds
+        : [selectedSession.waiterId]
+      : []
+  );
+  const supportTargetUsers = handoverTargetUsers.filter((user) => !selectedServiceUserIds.has(user.id));
+  const selectedServiceNames = selectedSession
+    ? [...selectedServiceUserIds]
+        .map((userId) => state.users.find((user) => user.id === userId)?.name)
+        .filter((name): name is string => Boolean(name))
+    : [];
+  const resolveReceiptBedienung = (sessions: OrderSession[]) =>
+    currentUser?.name?.trim() ||
+    sessions
+      .map((session) => state.users.find((user) => user.id === session.waiterId)?.name?.trim())
+      .find((name): name is string => Boolean(name)) ||
+    "Service";
   const extraIngredientsItem =
     extraIngredientsItemId && selectedSession
       ? selectedSession.items.find((item) => item.id === extraIngredientsItemId) ?? null
@@ -708,6 +731,18 @@ export const WaiterWorkspace = () => {
       setExtraIngredientDraftIds([]);
     }
   }, [extraIngredientsItem, extraIngredientsItemId]);
+
+  useEffect(() => {
+    if (handoverTargetUserId && !handoverTargetUsers.some((user) => user.id === handoverTargetUserId)) {
+      setHandoverTargetUserId("");
+    }
+  }, [handoverTargetUserId, handoverTargetUsers]);
+
+  useEffect(() => {
+    if (supportUserId && !supportTargetUsers.some((user) => user.id === supportUserId)) {
+      setSupportUserId("");
+    }
+  }, [supportTargetUsers, supportUserId]);
 
   const canReviseSentItem = (item: OrderItem) => {
     if (isOrderItemCanceled(item)) return false;
@@ -1369,7 +1404,8 @@ export const WaiterWorkspace = () => {
       scope: receiptMode,
       selectedLineItems: receiptMode === "partial" ? selectedLineItems : undefined,
       tableLabelsById: checkoutTableLabelsById,
-      openedAt
+      openedAt,
+      bedienung: resolveReceiptBedienung(sessions)
     });
     if (receipt.sections.length === 0) return null;
 
@@ -1487,7 +1523,8 @@ export const WaiterWorkspace = () => {
       products: state.products,
       scope: "table",
       tableLabelsById: { [session.tableId]: tableName },
-      openedAt
+      openedAt,
+      bedienung: resolveReceiptBedienung([session])
     });
     actions.reprintReceipt(session.tableId, [session.id]);
 
@@ -1810,6 +1847,50 @@ export const WaiterWorkspace = () => {
 
   const handleNotificationDismiss = (notificationId: string) => {
     actions.markNotificationRead(notificationId, "local");
+  };
+
+  const handleHandoverService = () => {
+    const result = actions.handoverServiceTasks(handoverTargetUserId);
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Schicht übergeben" : "Übergabe nicht möglich",
+      detail: result.message ?? "Bitte eine Ziel-Bedienung auswählen."
+    });
+
+    if (result.ok) {
+      setHandoverTargetUserId("");
+    }
+  };
+
+  const handleReleaseService = () => {
+    const result = actions.releaseServiceTasks();
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Aufgaben freigegeben" : "Freigabe nicht möglich",
+      detail: result.message ?? "Offene Aufgaben konnten nicht freigegeben werden."
+    });
+  };
+
+  const handleAddServiceUser = () => {
+    if (!selectedTable || !supportUserId) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Keine Bedienung ausgewählt",
+        detail: "Bitte zuerst einen Tisch und eine Bedienung auswählen."
+      });
+      return;
+    }
+
+    const result = actions.addServiceUserToTable(selectedTable.id, supportUserId);
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Bedienung hinzugefügt" : "Hinzufügen nicht möglich",
+      detail: result.message ?? "Die Bedienung konnte nicht hinzugefügt werden."
+    });
+
+    if (result.ok) {
+      setSupportUserId("");
+    }
   };
 
   const handleItemRemoval = (item: OrderItem) => {
@@ -2836,6 +2917,89 @@ export const WaiterWorkspace = () => {
                 ))}
               </div>
             )}
+          </section>
+        ) : null}
+
+        {isWaiterView && currentStep === "table" ? (
+          <section className="kiju-service-drink-delivery">
+            <div className="kiju-service-drink-delivery__header">
+              <div>
+                <span>Service</span>
+                <strong>Schichtübergabe</strong>
+              </div>
+              <StatusPill
+                label={
+                  selectedSession
+                    ? selectedServiceNames.length > 0
+                      ? selectedServiceNames.join(", ")
+                      : "freigegeben"
+                    : "kein Tisch"
+                }
+                tone={selectedSession ? "navy" : "slate"}
+              />
+            </div>
+
+            <div className="kiju-wizard-action-grid">
+              <label className="kiju-inline-field">
+                <span>An Bedienung übergeben</span>
+                <select
+                  value={handoverTargetUserId}
+                  onChange={(event) => setHandoverTargetUserId(event.target.value)}
+                >
+                  <option value="">Bedienung auswählen</option>
+                  {handoverTargetUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={handleHandoverService}
+                disabled={!handoverTargetUserId}
+              >
+                <Split size={18} />
+                Übergeben
+              </button>
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={handleReleaseService}
+              >
+                <Users size={18} />
+                Für Service freigeben
+              </button>
+            </div>
+
+            {selectedSession ? (
+              <div className="kiju-wizard-action-grid">
+                <label className="kiju-inline-field">
+                  <span>Kollegin/Kollegen hinzufügen</span>
+                  <select
+                    value={supportUserId}
+                    onChange={(event) => setSupportUserId(event.target.value)}
+                  >
+                    <option value="">Bedienung auswählen</option>
+                    {supportTargetUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={handleAddServiceUser}
+                  disabled={!supportUserId}
+                >
+                  <Plus size={18} />
+                  Hinzufügen
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
