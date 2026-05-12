@@ -98,9 +98,25 @@ run systemctl status "${SERVICE_NAME}" --no-pager
 
 echo
 echo "==> Checking port ${APP_PORT}"
-ss -tulpen | grep "${APP_PORT}"
+for attempt in {1..20}; do
+  if ss -tulpen | grep "${APP_PORT}"; then
+    break
+  fi
 
-run systemctl status nginx --no-pager
+  if [[ "${attempt}" == "20" ]]; then
+    echo "Port ${APP_PORT} did not open in time."
+    exit 1
+  fi
+
+  sleep 1
+done
+
+if systemctl list-unit-files nginx.service >/dev/null 2>&1; then
+  run systemctl status nginx --no-pager
+else
+  echo
+  echo "==> nginx service not installed; skipping nginx status check"
+fi
 
 echo
 echo "Deploy finished successfully."
