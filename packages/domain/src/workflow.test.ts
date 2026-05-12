@@ -43,6 +43,16 @@ describe("domain workflow", () => {
     expect(summary[0]?.table.name).toBe("Tisch 1");
   });
 
+  it("hides archived tables from the dashboard summary", () => {
+    const state = structuredClone(demoAppState);
+    state.tables[0]!.archivedAt = "2026-05-12T12:00:00.000Z";
+
+    const summary = buildDashboardSummary(state);
+
+    expect(summary).toHaveLength(6);
+    expect(summary.some((entry) => entry.table.id === state.tables[0]!.id)).toBe(false);
+  });
+
   it("migrates legacy seat ids and missing seat visibility", () => {
     const legacyState = structuredClone(demoAppState) as any;
     delete legacyState.serviceOrderMode;

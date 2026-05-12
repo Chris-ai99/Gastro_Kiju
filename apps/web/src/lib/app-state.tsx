@@ -117,7 +117,7 @@ type DemoActions = {
   printReceipt: (tableId: string, sessionIds?: string[]) => void;
   reprintReceipt: (tableId: string, sessionIdOrIds?: string | string[]) => void;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
-  closePaidOrder: (tableId: string) => { ok: boolean; message?: string };
+  closePaidOrder: (tableId: string) => { ok: boolean; message?: string; archivedTableIds?: string[] };
   recordPartialPayment: (
     tableIds: string[],
     selectedLineItems: PaymentLineItem[],
@@ -187,7 +187,7 @@ type DemoActions = {
   };
   updateTable: (
     tableId: string,
-    patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly">>
+    patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly" | "archivedAt">>
   ) => void;
   setServiceOrderMode: (mode: ServiceOrderMode) => void;
   setDesignMode: (mode: DesignMode) => void;
@@ -389,6 +389,9 @@ const getNextPickupNumber = (tables: TableLayout[]) =>
     const pickupNumber = Number(pickupMatch?.[1] ?? 0);
     return Math.max(maxNumber, Number.isFinite(pickupNumber) ? pickupNumber : 0);
   }, 0) + 1;
+const isPickupTable = (table: TableLayout) =>
+  /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
+  table.note?.trim().toLowerCase().startsWith("zum abholen") === true;
 const resolveTablePlacement = (index: number) => {
   const preset = tablePlacements[index];
   if (preset) {
@@ -2751,13 +2754,24 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (linkedGroup) {
         linkedGroup.active = false;
       }
+      const archivedTableIds = checkoutTableIds.filter((checkoutTableId) => {
+        const table = next.tables.find((entry) => entry.id === checkoutTableId);
+        if (!table || !isPickupTable(table)) return false;
+
+        table.active = false;
+        table.plannedOnly = false;
+        table.archivedAt = closedAt;
+        return true;
+      });
       const tableName =
         next.tables.find((entry) => entry.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
 
       withNotification(next, {
         title: "Bestellung geschlossen",
         body:
-          checkoutTableIds.length > 1
+          archivedTableIds.length > 0
+            ? `${tableName} wurde abgeschlossen und archiviert.`
+            : checkoutTableIds.length > 1
             ? "Gekoppelte Tische wurden abgeschlossen."
             : `${tableName} wurde abgeschlossen.`,
         tone: "success",
@@ -2765,7 +2779,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }, currentUserId);
       emitOperatorFeedback();
       commit(next);
-      return { ok: true };
+      return { ok: true, archivedTableIds };
     },
     [commit, currentUserId, state]
   );
@@ -3397,7 +3411,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const updateTable = useCallback(
     (
       tableId: string,
-      patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly">>
+      patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly" | "archivedAt">>
     ) => {
       const next = structuredClone(state);
       const table = next.tables.find((entry) => entry.id === tableId);
@@ -3406,6 +3420,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       Object.assign(table, patch);
       if (patch.active !== undefined && patch.plannedOnly === undefined) {
         table.plannedOnly = !patch.active;
+      }
+      if (patch.active === true) {
+        table.archivedAt = undefined;
       }
 
       commit(next);

@@ -238,7 +238,7 @@ export const buildKitchenSummary = (
 };
 
 export const buildDashboardSummary = (state: AppState) =>
-  state.tables.map((table) => {
+  state.tables.filter((table) => !table.archivedAt).map((table) => {
     const session = getSessionForTable(state.sessions, table.id);
     return {
       table,

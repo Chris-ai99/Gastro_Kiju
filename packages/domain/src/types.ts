@@ -106,6 +106,7 @@ export interface TableLayout {
   width: number;
   height: number;
   note?: string;
+  archivedAt?: string;
   seats: TableSeat[];
 }
 

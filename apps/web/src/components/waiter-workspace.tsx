@@ -109,6 +109,7 @@ const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
   Abrechnung: "checkout"
 };
 const serviceFeedbackTimeoutMs = 3000;
+const serviceProductFeedbackTimeoutMs = 1000;
 const isCourseStep = (step: WaiterStep): step is CourseKey =>
   step === "drinks" || step === "starter" || step === "main" || step === "dessert";
 
@@ -608,6 +609,11 @@ export const WaiterWorkspace = () => {
     tone: "success" | "alert" | "info";
     title: string;
     detail: string;
+    timeoutMs?: number;
+  } | null>(null);
+  const [addedProductFeedback, setAddedProductFeedback] = useState<{
+    productId: string;
+    token: number;
   } | null>(null);
   const [waitPlannerOpen, setWaitPlannerOpen] = useState(false);
   const [waitCourse, setWaitCourse] = useState<CourseKey>("main");
@@ -615,6 +621,7 @@ export const WaiterWorkspace = () => {
   const [extraIngredientsItemId, setExtraIngredientsItemId] = useState<string | null>(null);
   const [extraIngredientDraftIds, setExtraIngredientDraftIds] = useState<string[]>([]);
   const [sentItemNoteDrafts, setSentItemNoteDrafts] = useState<Record<string, string>>({});
+  const addedProductFeedbackTimerRef = useRef<number | null>(null);
   const sentItemNoteTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingSentItemNotesRef = useRef<
     Record<string, { tableId: string; itemId: string; note: string }>
@@ -1033,10 +1040,19 @@ export const WaiterWorkspace = () => {
 
     const timeoutId = window.setTimeout(() => {
       setServiceFeedback(null);
-    }, serviceFeedbackTimeoutMs);
+    }, serviceFeedback.timeoutMs ?? serviceFeedbackTimeoutMs);
 
     return () => window.clearTimeout(timeoutId);
   }, [serviceFeedback]);
+
+  useEffect(
+    () => () => {
+      if (addedProductFeedbackTimerRef.current) {
+        window.clearTimeout(addedProductFeedbackTimerRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     setReceiptPreview(null);
@@ -1217,6 +1233,32 @@ export const WaiterWorkspace = () => {
     if (!scrollToService) return;
 
     scrollToServiceSection();
+  };
+
+  const handleProductAdd = (productId: string) => {
+    if (!selectedTable) return;
+
+    actions.addItem(selectedTable.id, selectedOrderTarget, productId);
+
+    const productName = resolveProductName(state.products, productId);
+    setServiceFeedback({
+      tone: "success",
+      title: "Hinzugefügt",
+      detail: `1 × ${productName} hinzugefügt`,
+      timeoutMs: serviceProductFeedbackTimeoutMs
+    });
+
+    if (addedProductFeedbackTimerRef.current) {
+      window.clearTimeout(addedProductFeedbackTimerRef.current);
+    }
+
+    setAddedProductFeedback(null);
+    window.requestAnimationFrame(() => {
+      setAddedProductFeedback({ productId, token: Date.now() });
+      addedProductFeedbackTimerRef.current = window.setTimeout(() => {
+        setAddedProductFeedback((current) => (current?.productId === productId ? null : current));
+      }, serviceProductFeedbackTimeoutMs);
+    });
   };
 
   const handleSendCourseToKitchen = () => {
@@ -1550,15 +1592,27 @@ export const WaiterWorkspace = () => {
     if (!selectedTable) return;
 
     const result = actions.closePaidOrder(selectedTable.id);
+    const archivedCurrentTable = result.archivedTableIds?.includes(selectedTable.id) === true;
     setServiceFeedback({
       tone: result.ok ? "success" : "alert",
-      title: result.ok ? "Tisch geschlossen" : "Noch nicht geschlossen",
+      title: result.ok
+        ? archivedCurrentTable
+          ? "Abholtisch archiviert"
+          : "Tisch geschlossen"
+        : "Noch nicht geschlossen",
       detail:
         result.message ??
-        (result.ok
+        (result.ok && archivedCurrentTable
+          ? "Der Abholtisch wurde abgeschlossen und aus der Serviceansicht entfernt."
+          : result.ok
           ? "Es sind keine offenen Positionen mehr vorhanden und der Tisch ist abgeschlossen."
           : "Es sind noch Positionen offen.")
     });
+
+    if (result.ok && archivedCurrentTable) {
+      setSelectedTableId(null);
+      closeOrderWizard();
+    }
   };
 
   const closeOrderWizard = () => {
@@ -2347,8 +2401,9 @@ export const WaiterWorkspace = () => {
               <button
                 key={product.id}
                 type="button"
-                className="kiju-product-card"
-                onClick={() => actions.addItem(selectedTable.id, selectedOrderTarget, product.id)}
+                className={`kiju-product-card${addedProductFeedback?.productId === product.id ? " is-added" : ""}`}
+                data-add-token={addedProductFeedback?.productId === product.id ? addedProductFeedback.token : undefined}
+                onClick={() => handleProductAdd(product.id)}
               >
                 <div>
                   <strong>{product.name}</strong>
@@ -3627,8 +3682,16 @@ export const WaiterWorkspace = () => {
                           visibleProducts.map((product) => (
                             <button
                               key={product.id}
-                              className="kiju-product-card"
-                              onClick={() => actions.addItem(selectedTable.id, selectedOrderTarget, product.id)}
+                              type="button"
+                              className={`kiju-product-card${
+                                addedProductFeedback?.productId === product.id ? " is-added" : ""
+                              }`}
+                              data-add-token={
+                                addedProductFeedback?.productId === product.id
+                                  ? addedProductFeedback.token
+                                  : undefined
+                              }
+                              onClick={() => handleProductAdd(product.id)}
                             >
                               <div>
                                 <strong>{product.name}</strong>

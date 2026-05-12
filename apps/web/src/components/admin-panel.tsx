@@ -71,6 +71,50 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.05-beta",
+    date: "2026-05-12",
+    time: "laufend",
+    type: "Feature",
+    title: "Abholtische nach Abschluss archiviert",
+    summary:
+      "Abgerechnete Abholtische verschwinden automatisch aus dem Service und bleiben im Admin nachvollziehbar.",
+    categories: ["Service", "Abholung", "Abrechnung", "Admin"],
+    changes: [
+      "Abholtische werden beim erfolgreichen Abschluss automatisch archiviert statt gelöscht.",
+      "Archivierte Abholtische bleiben mit Rechnungs- und Umsatzhistorie erhalten.",
+      "Die Admin-Tischverwaltung kennzeichnet archivierte Abholtische und kann sie bei Bedarf wieder aktivieren."
+    ]
+  },
+  {
+    version: "0.9.04-beta",
+    date: "2026-05-12",
+    time: "laufend",
+    type: "Feature",
+    title: "Klick-Feedback für Service-Leistungen",
+    summary:
+      "Beim Antippen von Speisen und Getränken bestätigt die Serviceansicht die Auswahl jetzt direkt sichtbar.",
+    categories: ["Service", "Bestellung", "Mobile", "Oberfläche"],
+    changes: [
+      "Produktkarten leuchten nach dem Antippen kurz auf, ohne die Artikelauswahl zu verschieben.",
+      "Ein kurzes Banner zeigt für eine Sekunde, welche Leistung hinzugefügt wurde.",
+      "Das Feedback gilt für Getränke, Vorspeisen, Hauptspeisen und Nachtisch im Kategorie-Popup und in der bestehenden Artikelauswahl."
+    ]
+  },
+  {
+    version: "0.9.03-beta",
+    date: "2026-05-12",
+    time: "laufend",
+    type: "Fix",
+    title: "Mobile Abschlussansicht ohne überdeckte Küchenaktion",
+    summary:
+      "Die Abschlussansicht der mobilen Bestellung hält Positionskarten und Küchenaktion jetzt sauber getrennt.",
+    categories: ["Service", "Bestellung", "Mobile", "Oberfläche"],
+    changes: [
+      "Die Positionsliste im Kategorie-Abschluss scrollt auf dem Handy wieder in einem eigenen Bereich.",
+      "Die Aktion Alles an Küche senden bleibt unter den Positionen erreichbar und wird nicht mehr von Karten überlagert."
+    ]
+  },
+  {
     version: "0.9.02-beta",
     date: "2026-05-12",
     time: "laufend",
@@ -3497,8 +3541,8 @@ export const AdminPanel = () => {
                           </div>
                           <div className="kiju-admin-action-row">
                             <StatusPill
-                              label={table.active ? "Aktiv" : "Geplant"}
-                              tone={table.active ? "green" : "slate"}
+                              label={table.archivedAt ? "Archiviert" : table.active ? "Aktiv" : "Geplant"}
+                              tone={table.archivedAt ? "amber" : table.active ? "green" : "slate"}
                             />
                             <button
                               type="button"
@@ -3529,7 +3573,11 @@ export const AdminPanel = () => {
                                 actions.updateTable(table.id, { active: event.target.checked })
                               }
                             />
-                            <span>Tisch ist aktiv und im Service sichtbar</span>
+                            <span>
+                              {table.archivedAt
+                                ? "Archivierten Tisch wieder im Service sichtbar machen"
+                                : "Tisch ist aktiv und im Service sichtbar"}
+                            </span>
                           </label>
                         </div>
 

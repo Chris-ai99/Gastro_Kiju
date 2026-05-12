@@ -1002,6 +1002,29 @@ button {
   overflow: hidden;
 }
 
+.kiju-product-card.is-added {
+  animation: kiju-product-added-pulse 1000ms ease-out;
+  border-color: rgba(22, 163, 74, 0.72);
+  background: color-mix(in srgb, var(--surface) 82%, #dcfce7);
+  box-shadow:
+    0 0 0 3px rgba(34, 197, 94, 0.24),
+    0 18px 34px rgba(22, 163, 74, 0.2);
+}
+
+@keyframes kiju-product-added-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  18% {
+    filter: brightness(1.08);
+    box-shadow:
+      0 0 0 5px rgba(34, 197, 94, 0.28),
+      0 20px 38px rgba(22, 163, 74, 0.24);
+  }
+}
+
 .kiju-product-card strong {
   font-size: 1.1rem;
   display: -webkit-box;
@@ -5213,6 +5236,17 @@ button.kiju-admin-link-pill {
     padding-right: 0;
   }
 
+  .kiju-category-review-stage {
+    overflow: hidden;
+  }
+
+  .kiju-category-review-stage .kiju-order-editor__list {
+    max-height: clamp(12rem, 38dvh, 24rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    padding-bottom: 0.35rem;
+  }
+
   .kiju-category-order-actions {
     grid-template-columns: 1fr;
     grid-auto-rows: auto;
@@ -6326,6 +6360,20 @@ html[data-theme="dark"] .kiju-service-drink-delivery__item {
   border-color: rgba(71, 85, 105, 0.72);
   background: rgba(15, 23, 42, 0.9);
   color: var(--slate);
+}
+
+html[data-theme="dark"] .kiju-product-card.is-added {
+  border-color: rgba(74, 222, 128, 0.78);
+  background: color-mix(in srgb, rgba(15, 23, 42, 0.92) 76%, #14532d);
+  box-shadow:
+    0 0 0 3px rgba(74, 222, 128, 0.26),
+    0 18px 34px rgba(34, 197, 94, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiju-product-card.is-added {
+    animation: none;
+  }
 }
 
 html[data-theme="dark"] .kiju-admin-table-dashboard-card__meta span {
