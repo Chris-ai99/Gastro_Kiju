@@ -91,6 +91,7 @@ type PassTicket = {
   ticketNumber: number;
   tableId: string;
   tableName: string;
+  bedienung: string;
   course: CourseKey;
   courseLabel: string;
   sentAt?: string;
@@ -326,11 +327,17 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             ? `${courseLabels[courseTicket.course]} · Nachbestellung ${courseTicket.sequence}`
             : courseLabels[courseTicket.course];
 
+        const bedienung =
+          courseTicket.bedienung?.trim() ||
+          state.users.find((user) => user.id === session.waiterId)?.name?.trim() ||
+          "Service";
+
         const ticket: PassTicket = {
           id: courseTicket.id,
           ticketNumber,
           tableId: table.id,
           tableName: table.name,
+          bedienung,
           course: courseTicket.course,
           courseLabel,
           sentAt: courseTicket.sentAt,
@@ -351,7 +358,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
         return [ticket];
       });
     });
-  }, [config, state.products, state.sessions, state.tables, station, stationClock]);
+  }, [config, state.products, state.sessions, state.tables, state.users, station, stationClock]);
 
   const sortedTickets = useMemo(
     () =>
@@ -449,6 +456,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             <span>
               {ticket.courseLabel} · {ticket.targetSummary}
             </span>
+            <small>Bedienung: {ticket.bedienung}</small>
           </div>
           <div className={`kiju-pass-ticket__state is-${ticket.status}`}>
             <strong>{stateBadge}</strong>

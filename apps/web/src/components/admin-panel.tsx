@@ -608,12 +608,17 @@ export const AdminPanel = () => {
     const tableName =
       state.tables.find((table) => table.id === session.tableId)?.name ??
       session.tableId.replace("table-", "Tisch ");
+    const bedienung =
+      currentUser?.name?.trim() ||
+      state.users.find((user) => user.id === session.waiterId)?.name?.trim() ||
+      "Service";
     const receipt = buildReceiptDocumentFromSessions({
       sessions: [session],
       products: state.products,
       scope: "table",
       tableLabelsById: { [session.tableId]: tableName },
-      openedAt
+      openedAt,
+      bedienung
     });
 
     if (mode === "reprint") {

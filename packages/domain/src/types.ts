@@ -147,6 +147,7 @@ export interface KitchenTicketBatch {
   id: string;
   course: CourseKey;
   itemIds: string[];
+  bedienung?: string;
   status: KitchenStatus;
   sentAt: string;
   releasedAt?: string;
@@ -200,6 +201,7 @@ export interface OrderSession {
   id: string;
   tableId: string;
   waiterId: string;
+  serviceUserIds?: string[];
   status: SessionStatus;
   items: OrderItem[];
   skippedCourses: CourseKey[];
@@ -230,6 +232,7 @@ export interface AppNotification {
   tone: NotificationTone;
   tableId?: string;
   targetRoles?: Role[];
+  targetUserIds?: string[];
   acceptedByUserId?: string;
   acceptedByName?: string;
   sourceNotificationId?: string;
