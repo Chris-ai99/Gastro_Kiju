@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 PROJECT_DIR="/root/Gastro_Kiju/Gastro_Kiju/Gastro_Kiju"
 SERVICE_NAME="gastroweb"
-APP_PORT="3000"
+APP_PORT="3011"
 REQUIRED_NODE_MIN="20.9.0"
 REQUIRED_PNPM="10.22.0"
 
