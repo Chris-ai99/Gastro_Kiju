@@ -460,32 +460,11 @@ export const buildPipaReceiptText = (input: PipaReceiptInput) =>
   buildPipaReceiptDocument(input).lines.map((line) => line.text).join("\n");
 
 const buildFullSessionPositions = (session: OrderSession, products: Product[]) => {
-  const normalPositions: PipaReceiptPosition[] = session.items.map((item) => ({
+  return session.items.map((item) => ({
     name: buildSessionPositionName(item, products),
     menge: item.quantity,
     betrag: calculateItemTotal(item, products)
   }));
-
-  const cancellationPositions: PipaReceiptPosition[] = session.cancellations.flatMap((cancellation) =>
-    cancellation.lineItems.flatMap((lineItem) => {
-      const item = session.items.find((entry) => entry.id === lineItem.itemId);
-      if (!item || item.quantity <= 0) {
-        return [];
-      }
-
-      const unitAmount = Math.round(calculateItemTotal(item, products) / item.quantity);
-
-      return [
-        {
-          name: buildCancellationPositionName(item, products, cancellation.label),
-          menge: lineItem.quantity,
-          betrag: -(unitAmount * lineItem.quantity)
-        }
-      ];
-    })
-  );
-
-  return [...normalPositions, ...cancellationPositions];
 };
 
 const aggregateSelectedLineItems = (lineItems: PaymentLineItem[] | undefined) => {
@@ -579,7 +558,7 @@ export const buildReceiptDocumentFromSessions = ({
           0
         )
       : activeSessions.reduce(
-          (sum, session) => sum + calculateSessionBillableTotal(session, products),
+          (sum, session) => sum + calculateSessionTotal(session, products),
           0
         );
 

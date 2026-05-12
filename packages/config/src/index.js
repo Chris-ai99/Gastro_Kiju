@@ -54,6 +54,7 @@ exports.resolveAppUrl = resolveAppUrl;
 exports.routeConfig = {
     login: "/",
     waiter: "/waiter",
+    bar: "/bar",
     kitchen: "/kitchen",
     admin: "/admin"
 };

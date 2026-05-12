@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.02-beta",
+    date: "2026-05-12",
+    time: "laufend",
+    type: "Fix",
+    title: "Bar-Zugang und Rechnungsbon stabilisiert",
+    summary:
+      "Bar-Konten können zuverlässig in die Serviceansicht wechseln und Rechnungsbons zeigen wieder den vollständigen Tischbetrag ohne Storno-Abzug.",
+    categories: ["Bar", "Service", "Bon"],
+    changes: [
+      "Die Serviceansicht erlaubt jetzt aktive Bar-Konten zusätzlich zu Kellnern und Admins.",
+      "Die Bar-Route ist in der gemeinsamen Routenkonfiguration und im Login sauber hinterlegt.",
+      "Rechnungsbons nutzen den vollständigen Sitzungsbetrag, damit Stornos im Arbeitsfluss nicht als negative Bonpositionen gedruckt werden."
+    ]
+  },
+  {
     version: "0.9.01-beta",
     date: "2026-05-10",
     time: "22:32:47 +02:00",

@@ -34,6 +34,7 @@ export declare const resolveAppUrl: (path?: string) => string;
 export declare const routeConfig: {
     readonly login: "/";
     readonly waiter: "/waiter";
+    readonly bar: "/bar";
     readonly kitchen: "/kitchen";
     readonly admin: "/admin";
 };

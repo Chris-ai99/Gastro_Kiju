@@ -2631,7 +2631,7 @@ export const WaiterWorkspace = () => {
   };
 
   return (
-    <RouteGuard allowedRoles={["waiter", "admin"]}>
+    <RouteGuard allowedRoles={["waiter", "bar", "admin"]}>
       <main className="kiju-page">
         <header className="kiju-topbar">
           <div>
