@@ -2,7 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import {
+  buildBookingStatisticsPrintDocument,
+  buildKitchenPlateLabelPrintDocument,
   buildKitchenTicketPrintDocument,
+  buildPickupTicketPrintDocument,
   buildPrinterTestDocument,
   buildReceiptPrintDocument
 } from "@kiju/print-bridge";
@@ -225,6 +228,100 @@ const createKitchenJob = (request: Extract<CreatePrintJobRequest, { type: "kitch
   };
 };
 
+const createKitchenLabelJob = (request: Extract<CreatePrintJobRequest, { type: "kitchen-label" }>) => {
+  const { batch, session, table, products, itemId, unitIndex, completedAt } = request;
+  const item = session.items.find((entry) => entry.id === itemId);
+  const productName =
+    products.find((entry) => entry.id === item?.productId)?.name ?? "Unbekannter Artikel";
+  const document = buildKitchenPlateLabelPrintDocument({
+    batch,
+    session,
+    table,
+    products,
+    itemId,
+    unitIndex,
+    completedAt
+  });
+  const courseLabel = courseLabels[batch.course as Exclude<CourseKey, "drinks">];
+
+  return {
+    id: createClientId("print-job"),
+    type: "kitchen-label" as const,
+    status: "pending" as const,
+    title: "Tellerbon drucken",
+    subtitle: `${table.name} · ${productName} · ${courseLabel}`,
+    tableId: table.id,
+    tableLabel: table.name,
+    sessionId: session.id,
+    batchId: batch.id,
+    itemId,
+    unitIndex,
+    course: batch.course,
+    sequence: batch.sequence,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    attemptCount: 0,
+    document
+  };
+};
+
+const createPickupTicketJob = (request: Extract<CreatePrintJobRequest, { type: "pickup-ticket" }>) => {
+  const pickupNumber = Math.max(
+    1,
+    Math.floor(Number.isFinite(request.pickupNumber) ? request.pickupNumber : 1)
+  );
+  const tableLabel = request.tableLabel.trim() || `Zum Abholen ${pickupNumber}`;
+  const document = buildPickupTicketPrintDocument({
+    tableLabel,
+    pickupNumber,
+    createdAt: request.createdAt
+  });
+
+  return {
+    id: createClientId("print-job"),
+    type: "pickup-ticket" as const,
+    status: "pending" as const,
+    title: "Abholbon drucken",
+    subtitle: `${tableLabel} · Bon ${pickupNumber}`,
+    tableId: request.tableId,
+    tableLabel,
+    sequence: pickupNumber,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    attemptCount: 0,
+    document
+  };
+};
+
+const createDailyCloseJob = (request: Extract<CreatePrintJobRequest, { type: "daily-close" }>) => {
+  const printableSessions = request.sessions.filter(
+    (session) =>
+      session.items.length > 0 ||
+      session.payments.length > 0 ||
+      session.cancellations.length > 0
+  );
+  const document = buildBookingStatisticsPrintDocument({
+    sessions: printableSessions,
+    tables: request.tables,
+    products: request.products,
+    printedAt: request.printedAt
+  });
+
+  return {
+    id: createClientId("print-job"),
+    type: "daily-close" as const,
+    status: "pending" as const,
+    title: "Statistik drucken",
+    subtitle: `${printableSessions.length} Buchungen · ${
+      printableSessions.filter((session) => session.status === "closed").length
+    } Abschlüsse`,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    attemptCount: 0,
+    document
+  };
+};
+
 const createTestPrintJob = (printer: NetworkPrinterConfig): PersistedPrintJob => ({
   id: createClientId("print-job"),
   type: "test-print",
@@ -367,7 +464,16 @@ export const updatePrinterConfig = async (input: UpdatePrinterConfigRequest) => 
 export const createQueuedPrintJob = async (request: CreatePrintJobRequest) => {
   const result = await withPrintStateMutation(() => {
     const state = loadPrintState();
-    const job = request.type === "kitchen-ticket" ? createKitchenJob(request) : createReceiptJob(request);
+    const job =
+      request.type === "kitchen-ticket"
+        ? createKitchenJob(request)
+        : request.type === "kitchen-label"
+          ? createKitchenLabelJob(request)
+          : request.type === "pickup-ticket"
+            ? createPickupTicketJob(request)
+            : request.type === "daily-close"
+              ? createDailyCloseJob(request)
+              : createReceiptJob(request);
 
     state.version += 1;
     state.updatedAt = job.updatedAt;

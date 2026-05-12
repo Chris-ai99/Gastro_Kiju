@@ -27,7 +27,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CreatePrintJobRequest;
 
-    if (!body || (body.type !== "receipt" && body.type !== "reprint" && body.type !== "kitchen-ticket")) {
+    if (
+      !body ||
+      (body.type !== "receipt" &&
+        body.type !== "reprint" &&
+        body.type !== "daily-close" &&
+        body.type !== "pickup-ticket" &&
+        body.type !== "kitchen-ticket" &&
+        body.type !== "kitchen-label")
+    ) {
       return NextResponse.json(
         {
           ok: false,
@@ -39,7 +47,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (body.type === "kitchen-ticket") {
+    if (body.type === "daily-close") {
+      if (
+        !Array.isArray(body.sessions) ||
+        !Array.isArray(body.tables) ||
+        !Array.isArray(body.products)
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Für die Statistik fehlen Buchungsdaten."
+          },
+          {
+            status: 400
+          }
+        );
+      }
+    } else if (body.type === "pickup-ticket") {
+      if (
+        typeof body.tableId !== "string" ||
+        typeof body.tableLabel !== "string" ||
+        !Number.isFinite(body.pickupNumber)
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Für den Abholbon fehlen Tischnummer oder Bonnummer."
+          },
+          {
+            status: 400
+          }
+        );
+      }
+    } else if (body.type === "kitchen-ticket" || body.type === "kitchen-label") {
       if (body.batch.course === "drinks") {
         return NextResponse.json(
           {

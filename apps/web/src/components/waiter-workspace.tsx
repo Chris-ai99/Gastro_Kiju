@@ -74,15 +74,21 @@ const orderWizardSteps = [
   "Hauptspeise",
   "Nachtisch"
 ] as const;
-const checkoutWizardSteps = ["Abrechnung"] as const;
 const wizardSteps = ["Tisch", ...orderWizardSteps, "Abrechnung"] as const;
 type OrderWizardStepLabel = (typeof orderWizardSteps)[number];
-type CheckoutWizardStepLabel = (typeof checkoutWizardSteps)[number];
-type WizardStepLabel = OrderWizardStepLabel | CheckoutWizardStepLabel;
+type WizardStepLabel = OrderWizardStepLabel | "Abrechnung";
 type WaiterOrderStep = CourseKey | "checkout";
 type WaiterStep = "table" | WaiterOrderStep;
+type CategoryDialogStage = "groups" | "products" | "review";
+type CourseGroupOption = {
+  label: string;
+  products: Product[];
+};
+type RenderEditableItemsOptions = {
+  readOnly?: boolean;
+};
 
-const orderStepSequence: WaiterOrderStep[] = [
+const orderStepSequence: CourseKey[] = [
   "drinks",
   "starter",
   "main",
@@ -127,6 +133,16 @@ type FloorplanHotspot = {
 type FloorplanSeatAnchor = {
   left: number;
   top: number;
+};
+
+type ReceiptPreviewState = {
+  printMode: "receipt" | "reprint";
+  receiptMode: ReceiptDocumentMode;
+  openedAt: string;
+  title: string;
+  tableSummary: string;
+  sessionIds: string[];
+  receipt: ReceiptDocumentInput;
 };
 
 const waiterFloorplanHotspots: Record<string, FloorplanHotspot> = {
@@ -236,11 +252,112 @@ const isItemForTarget = (item: OrderItem, target: OrderTarget) =>
 const serviceTicketCourses: CourseKey[] = ["drinks", "starter", "main", "dessert"];
 const kitchenWaitCourses: CourseKey[] = ["starter", "main", "dessert"];
 const waitMinutePresets = [5, 10, 15, 20, 30] as const;
-const fallbackDrinkSubcategory = "Sonstiges";
+const fallbackCourseGroup = "Sonstiges";
+const fallbackDrinkSubcategory = fallbackCourseGroup;
 const preferredDrinkSubcategoryOrder = ["Alkoholfrei", "Bier/Radler", "Wein"] as const;
+const preferredCourseGroupOrder: Record<CourseKey, string[]> = {
+  drinks: ["Alkoholfrei", "Bier/Radler", "Wein", fallbackCourseGroup],
+  starter: ["Pizzabrot", fallbackCourseGroup],
+  main: ["Pizza", "Pasta", fallbackCourseGroup],
+  dessert: ["Dessert", "Süßes", fallbackCourseGroup]
+};
+
+const inferDrinkSubcategory = (productName: string) => {
+  const normalizedName = productName.toLocaleLowerCase("de-DE");
+
+  if (
+    normalizedName.includes("cola") ||
+    normalizedName.includes("fanta") ||
+    normalizedName.includes("sprite") ||
+    normalizedName.includes("bionade") ||
+    normalizedName.includes("wasser") ||
+    normalizedName.includes("alkoholfrei") ||
+    normalizedName.includes("alk. frei") ||
+    normalizedName.includes("alk. freies")
+  ) {
+    return "Alkoholfrei";
+  }
+
+  if (normalizedName.includes("bier") || normalizedName.includes("radler")) {
+    return "Bier/Radler";
+  }
+
+  if (normalizedName.includes("wein")) {
+    return "Wein";
+  }
+
+  return fallbackDrinkSubcategory;
+};
 
 const getDrinkSubcategory = (product: Product) =>
-  product.drinkSubcategory?.trim() || fallbackDrinkSubcategory;
+  product.drinkSubcategory?.trim() || inferDrinkSubcategory(product.name);
+
+const getFoodCourseGroup = (course: CourseKey, productName: string) => {
+  const normalizedName = productName.toLocaleLowerCase("de-DE");
+
+  if (course === "starter") {
+    if (normalizedName.includes("pizza brot") || normalizedName.includes("pizzabrot")) {
+      return "Pizzabrot";
+    }
+    return fallbackCourseGroup;
+  }
+
+  if (course === "main") {
+    if (normalizedName.includes("pizza")) return "Pizza";
+    if (normalizedName.includes("nudel") || normalizedName.includes("pasta")) return "Pasta";
+    return fallbackCourseGroup;
+  }
+
+  if (course === "dessert") {
+    if (normalizedName.includes("dessert")) return "Dessert";
+    if (
+      normalizedName.includes("nutella") ||
+      normalizedName.includes("süß") ||
+      normalizedName.includes("suess")
+    ) {
+      return "Süßes";
+    }
+    return fallbackCourseGroup;
+  }
+
+  return fallbackCourseGroup;
+};
+
+const getProductCourseGroup = (course: CourseKey, product: Product) =>
+  course === "drinks" ? getDrinkSubcategory(product) : getFoodCourseGroup(course, product.name);
+
+const sortCourseGroups = (course: CourseKey, groups: string[]) => {
+  const preferredOrder = preferredCourseGroupOrder[course] ?? [fallbackCourseGroup];
+
+  return [...groups].sort((left, right) => {
+    const leftPreferredIndex = preferredOrder.indexOf(left);
+    const rightPreferredIndex = preferredOrder.indexOf(right);
+
+    if (leftPreferredIndex !== -1 || rightPreferredIndex !== -1) {
+      if (leftPreferredIndex === -1) return 1;
+      if (rightPreferredIndex === -1) return -1;
+      return leftPreferredIndex - rightPreferredIndex;
+    }
+
+    return left.localeCompare(right, "de");
+  });
+};
+
+const buildCourseGroupOptions = (course: CourseKey, products: Product[]): CourseGroupOption[] => {
+  const productsByGroup = new globalThis.Map<string, Product[]>();
+
+  products.forEach((product) => {
+    const group = getProductCourseGroup(course, product);
+    productsByGroup.set(group, [...(productsByGroup.get(group) ?? []), product]);
+  });
+
+  const groupLabels = new Set([...(preferredCourseGroupOrder[course] ?? []), ...productsByGroup.keys()]);
+
+  return sortCourseGroups(course, [...groupLabels]).map((label) => ({
+    label,
+    products: productsByGroup.get(label) ?? []
+  }));
+};
 
 const sortDrinkSubcategories = (groups: string[]) =>
   [...groups].sort((left, right) => {
@@ -476,21 +593,17 @@ export const WaiterWorkspace = () => {
   const [currentStep, setCurrentStep] = useState<WaiterStep>("table");
   const [isTableActionDialogOpen, setIsTableActionDialogOpen] = useState(false);
   const [isOrderWizardOpen, setIsOrderWizardOpen] = useState(false);
+  const [activeCategoryDialog, setActiveCategoryDialog] = useState<CourseKey | null>(null);
+  const [categoryDialogStage, setCategoryDialogStage] = useState<CategoryDialogStage>("groups");
+  const [activeCourseGroup, setActiveCourseGroup] = useState(fallbackCourseGroup);
+  const [categoryDialogInitialItemIds, setCategoryDialogInitialItemIds] = useState<string[]>([]);
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
   const [showMobileFloorplan, setShowMobileFloorplan] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
   const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
-  const [receiptPreview, setReceiptPreview] = useState<{
-    printMode: "receipt" | "reprint";
-    receiptMode: ReceiptDocumentMode;
-    openedAt: string;
-    title: string;
-    tableSummary: string;
-    sessionIds: string[];
-    receipt: ReceiptDocumentInput;
-  } | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
   const [serviceFeedback, setServiceFeedback] = useState<{
     tone: "success" | "alert" | "info";
     title: string;
@@ -610,6 +723,20 @@ export const WaiterWorkspace = () => {
     () => getOrderableProducts(state.products, activeCourse),
     [activeCourse, state.products]
   );
+  const activeCourseGroups = useMemo(
+    () => buildCourseGroupOptions(activeCourse, currentProducts),
+    [activeCourse, currentProducts]
+  );
+  const selectedCourseGroup = activeCourseGroups.some((group) => group.label === activeCourseGroup)
+    ? activeCourseGroup
+    : activeCourseGroups[0]?.label ?? fallbackCourseGroup;
+  const categoryDialogProducts = useMemo(
+    () =>
+      currentProducts.filter(
+        (product) => getProductCourseGroup(activeCourse, product) === selectedCourseGroup
+      ),
+    [activeCourse, currentProducts, selectedCourseGroup]
+  );
   const drinkSubcategories = useMemo(() => {
     if (activeCourse !== "drinks") return [];
 
@@ -637,6 +764,13 @@ export const WaiterWorkspace = () => {
       setActiveDrinkSubcategory(nextDrinkSubcategory);
     }
   }, [activeCourse, activeDrinkSubcategory, drinkSubcategories]);
+
+  useEffect(() => {
+    if (!activeCategoryDialog || activeCourseGroups.length === 0) return;
+    if (activeCourseGroups.some((group) => group.label === activeCourseGroup)) return;
+
+    setActiveCourseGroup(activeCourseGroups[0]?.label ?? fallbackCourseGroup);
+  }, [activeCategoryDialog, activeCourseGroup, activeCourseGroups]);
 
   const activeTableCount = dashboard.filter(
     (entry) => entry.status !== "idle" && entry.status !== "planned"
@@ -714,12 +848,20 @@ export const WaiterWorkspace = () => {
     () => editableItems.filter((item) => item.sentAt && !isOrderItemCanceled(item)),
     [editableItems]
   );
+  const categoryDialogInitialItemIdSet = useMemo(
+    () => new Set(categoryDialogInitialItemIds),
+    [categoryDialogInitialItemIds]
+  );
+  const categoryDialogNewItems = useMemo(
+    () => newEditableItems.filter((item) => !categoryDialogInitialItemIdSet.has(item.id)),
+    [categoryDialogInitialItemIdSet, newEditableItems]
+  );
+  const categoryDialogExistingUnsentItems = useMemo(
+    () => newEditableItems.filter((item) => categoryDialogInitialItemIdSet.has(item.id)),
+    [categoryDialogInitialItemIdSet, newEditableItems]
+  );
+  const categoryDialogSentItems = sentEditableItems;
   const revisableSentItemCount = sentEditableItems.filter((item) => canReviseSentItem(item)).length;
-  const hasPendingKitchenItems =
-    selectedSession?.items.some((item) => item.category !== "drinks" && !item.sentAt) ?? false;
-  const hasPendingDrinkItems =
-    selectedSession?.items.some((item) => item.category === "drinks" && !item.sentAt) ?? false;
-  const hasPendingOrderItems = hasPendingKitchenItems || hasPendingDrinkItems;
   const tableTargetItems = useMemo(
     () => (usesSeatMode ? getTableTargetItems(selectedSession) : selectedSession?.items ?? []),
     [selectedSession, usesSeatMode]
@@ -968,22 +1110,64 @@ export const WaiterWorkspace = () => {
       return sum + calculateSessionOpenTotal(session, state.products);
     }, 0);
 
-  const openOrderWizard = (step: WaiterOrderStep) => {
+  const openOrderWizard = (step: WaiterStep) => {
     setCurrentStep(step);
+    setActiveCategoryDialog(null);
+    setCategoryDialogStage("groups");
+    setCategoryDialogInitialItemIds([]);
     setIsTableActionDialogOpen(false);
     setIsOrderWizardOpen(true);
   };
 
-  const openTableActionForSelection = (tableId: string) => {
-    const openTotal = getCheckoutOpenTotalForTable(tableId);
-    if (openTotal > 0) {
-      setCurrentStep("table");
-      setIsOrderWizardOpen(false);
-      setIsTableActionDialogOpen(true);
-      return;
-    }
+  const openTableActionForSelection = () => {
+    setCurrentStep("table");
+    setActiveCategoryDialog(null);
+    setCategoryDialogStage("groups");
+    setCategoryDialogInitialItemIds([]);
+    setIsOrderWizardOpen(false);
+    setIsTableActionDialogOpen(true);
+  };
 
-    openOrderWizard("drinks");
+  const openCategoryDialog = (course: CourseKey) => {
+    const nextProducts = getOrderableProducts(state.products, course);
+    const initialGroup = buildCourseGroupOptions(course, nextProducts)[0]?.label ?? fallbackCourseGroup;
+    const initialItemIds =
+      selectedSession?.items
+        .filter((item) => item.category === course && !isOrderItemCanceled(item))
+        .map((item) => item.id) ?? [];
+
+    setCurrentStep(course);
+    setActiveCategoryDialog(course);
+    setCategoryDialogStage("groups");
+    setActiveCourseGroup(initialGroup);
+    setCategoryDialogInitialItemIds(initialItemIds);
+    if (course === "drinks") {
+      setActiveDrinkSubcategory(initialGroup);
+    }
+    setWaitPlannerOpen(false);
+  };
+
+  const closeCategoryDialog = () => {
+    flushPendingSentItemNotes();
+    setActiveCategoryDialog(null);
+    setCategoryDialogStage("groups");
+    setCategoryDialogInitialItemIds([]);
+    setWaitPlannerOpen(false);
+    setCurrentStep("table");
+  };
+
+  const openCategoryProductGroup = (group: string) => {
+    setActiveCourseGroup(group);
+    if (activeCourse === "drinks") {
+      setActiveDrinkSubcategory(group);
+    }
+    setWaitPlannerOpen(false);
+    setCategoryDialogStage("products");
+  };
+
+  const openCategoryReview = () => {
+    setWaitPlannerOpen(false);
+    setCategoryDialogStage("review");
   };
 
   const scrollToServiceSection = () => {
@@ -1003,7 +1187,7 @@ export const WaiterWorkspace = () => {
     setSelectedSeatId(usesSeatMode ? getVisibleSeats(nextTable.seats)[0]?.id ?? "" : "");
 
     if (isWaiterView) {
-      openTableActionForSelection(tableId);
+      openTableActionForSelection();
       return;
     }
 
@@ -1026,7 +1210,7 @@ export const WaiterWorkspace = () => {
     setSelectedSeatId(seatId);
 
     if (isWaiterView) {
-      openTableActionForSelection(tableId);
+      openTableActionForSelection();
       return;
     }
 
@@ -1184,6 +1368,16 @@ export const WaiterWorkspace = () => {
     setReceiptPreview(nextPreview);
   };
 
+  const openReceiptCheck = (receiptMode: ReceiptDocumentMode) => {
+    const pinnedReceiptMode = checkoutTableIds.length > 1 ? "full" : "table";
+    if (receiptMode === pinnedReceiptMode) {
+      setReceiptPreview(null);
+      return;
+    }
+
+    openReceiptPreview(receiptMode, "receipt");
+  };
+
   const toggleMobileFloorplan = () => {
     setShowMobileFloorplan((current) => {
       const next = !current;
@@ -1200,19 +1394,19 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleReceiptPrint = async () => {
-    if (!selectedTable || !selectedSession || !receiptPreview) return;
-    const tableName = receiptPreview.tableSummary;
+  const handleReceiptPreviewPrint = async (preview: ReceiptPreviewState, clearAfterSuccess: boolean) => {
+    if (!selectedTable || !selectedSession) return;
+    const tableName = preview.tableSummary;
 
-    if (receiptPreview.printMode === "reprint") {
-      actions.reprintReceipt(selectedTable.id, receiptPreview.sessionIds);
+    if (preview.printMode === "reprint") {
+      actions.reprintReceipt(selectedTable.id, preview.sessionIds);
     } else {
-      actions.printReceipt(selectedTable.id, receiptPreview.sessionIds);
+      actions.printReceipt(selectedTable.id, preview.sessionIds);
     }
 
     const result = await createPrintJob({
-      type: receiptPreview.printMode,
-      receipt: receiptPreview.receipt,
+      type: preview.printMode,
+      receipt: preview.receipt,
       tableId: selectedTable.id,
       tableLabel: tableName
     });
@@ -1221,10 +1415,10 @@ export const WaiterWorkspace = () => {
       tone: result.ok ? "success" : "alert",
       title:
         result.ok
-          ? receiptPreview.printMode === "reprint"
+          ? preview.printMode === "reprint"
             ? "Reprint gesendet"
             : "Bon gesendet"
-          : receiptPreview.printMode === "reprint"
+          : preview.printMode === "reprint"
             ? "Reprint nicht gesendet"
             : "Bon nicht gesendet",
       detail: result.ok
@@ -1232,7 +1426,7 @@ export const WaiterWorkspace = () => {
         : result.message ?? "Der Bon konnte nicht an den Netzwerkdrucker gesendet werden."
     });
 
-    if (result.ok) {
+    if (result.ok && clearAfterSuccess) {
       setReceiptPreview(null);
     }
   };
@@ -1371,37 +1565,9 @@ export const WaiterWorkspace = () => {
     flushPendingSentItemNotes();
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(false);
+    setActiveCategoryDialog(null);
+    setWaitPlannerOpen(false);
     setCurrentStep("table");
-  };
-
-  const finishOrderWizard = () => {
-    if (!selectedTable || !selectedSession) {
-      closeOrderWizard();
-      return;
-    }
-
-    if (!hasPendingOrderItems) {
-      closeOrderWizard();
-      return;
-    }
-
-    const sendCourse: CourseKey = hasPendingKitchenItems
-      ? isCourseStep(currentStep) && currentStep !== "drinks"
-        ? currentStep
-        : "main"
-      : "drinks";
-    const result = actions.sendCourseToKitchen(selectedTable.id, sendCourse);
-
-    if (!result.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Bestellung nicht abgeschlossen",
-        detail: result.message ?? "Die neuen Positionen konnten noch nicht gesendet werden."
-      });
-      return;
-    }
-
-    closeOrderWizard();
   };
 
   const goBack = () => {
@@ -1467,8 +1633,6 @@ export const WaiterWorkspace = () => {
     currentStep === "table"
       ? "Tisch"
       : waiterStepLabels[currentStep];
-  const orderWizardCurrentStepLabel =
-    currentStep === "table" ? waiterStepLabels.drinks : waiterStepLabels[currentStep];
   const canGoNext =
     currentStep === "table"
       ? Boolean(selectedTable)
@@ -1477,14 +1641,51 @@ export const WaiterWorkspace = () => {
         : true;
   const nextButtonLabel =
     currentStep === "checkout" ? "Abschließen" : "Weiter";
-const sendCourseActionLabel =
-  activeCourse === "drinks"
-    ? sentEditableItems.length > 0
-      ? "Neue Getränke an Bar senden"
-      : "Getränke an Bar senden"
-    : sentEditableItems.length > 0
-      ? "Nachbestellung an Küche senden"
-      : "Alles an Küche senden";
+  const sendCourseActionLabel =
+    activeCourse === "drinks"
+      ? sentEditableItems.length > 0
+        ? "Neue Getränke an Bar senden"
+        : "Getränke an Bar senden"
+      : sentEditableItems.length > 0
+        ? "Nachbestellung an Küche senden"
+        : "Alles an Küche senden";
+
+  const handleCreatePickupTable = async () => {
+    const result = actions.createPickupTable();
+
+    if (!result.ok || !result.tableId || !result.tableName || !result.pickupNumber) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abholbon nicht erstellt",
+        detail: result.message ?? "Der Abholtisch konnte nicht angelegt werden."
+      });
+      return;
+    }
+
+    setSelectedTableId(result.tableId);
+    setSelectedSeatId(usesSeatMode ? result.seatId ?? "" : "");
+    setReceiptPreview(null);
+    setSelectedPaymentQuantities({});
+    setIsLinkTablesOpen(false);
+    openOrderWizard("table");
+
+    const printResult = await createPrintJob({
+      type: "pickup-ticket",
+      tableId: result.tableId,
+      tableLabel: result.tableName,
+      pickupNumber: result.pickupNumber,
+      createdAt: result.createdAt
+    });
+
+    setServiceFeedback({
+      tone: printResult.ok ? "success" : "alert",
+      title: printResult.ok ? "Abholbon erstellt" : "Abholbon erstellt, Druck prüfen",
+      detail: printResult.ok
+        ? `${result.tableName} ist geöffnet und der Kurzbon wurde an den Drucker gesendet.`
+        : printResult.message ??
+          `${result.tableName} ist geöffnet, aber der Kurzbon konnte nicht gedruckt werden.`
+    });
+  };
 
   const toggleLinkTableSelection = (tableId: string) => {
     setLinkTableSelection((current) =>
@@ -1600,7 +1801,11 @@ const sendCourseActionLabel =
     handleCloseExtraIngredientsDialog();
   };
 
-  const renderEditableItems = (items: OrderItem[], emptyMessage: string) => {
+  const renderEditableItems = (
+    items: OrderItem[],
+    emptyMessage: string,
+    options: RenderEditableItemsOptions = {}
+  ) => {
     if (!selectedTable) return null;
 
     if (items.length === 0) {
@@ -1613,8 +1818,8 @@ const sendCourseActionLabel =
 
     return items.map((item) => {
       const isSent = Boolean(item.sentAt);
-      const canEditItem = canReviseSentItem(item);
-      const isLocked = !canEditItem;
+      const canEditItem = !options.readOnly && canReviseSentItem(item);
+      const isLocked = options.readOnly || !canEditItem;
       const product = getProductById(state.products, item.productId);
       const supportsExtraIngredients = product?.supportsExtraIngredients === true;
       const extraIngredientLabels = resolveExtraIngredientLabels(
@@ -1684,57 +1889,63 @@ const sendCourseActionLabel =
 
             <div className="kiju-inline-field kiju-inline-field--compact">
               <span>Menge</span>
-              <div className="kiju-quantity-control">
-                <button
-                  type="button"
-                  className="kiju-button kiju-button--secondary"
-                  onClick={() =>
-                    actions.updateItem(selectedTable.id, item.id, {
-                      quantity: Math.max(1, item.quantity - 1)
-                    })
-                  }
-                  disabled={isLocked || item.quantity <= 1}
-                >
-                  <Minus size={14} />
-                </button>
+              {options.readOnly ? (
                 <strong>{item.quantity}</strong>
-                <button
-                  type="button"
-                  className="kiju-button kiju-button--secondary"
-                  onClick={() =>
-                    actions.updateItem(selectedTable.id, item.id, {
-                      quantity: item.quantity + 1
-                    })
-                  }
-                  disabled={isLocked}
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
+              ) : (
+                <div className="kiju-quantity-control">
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--secondary"
+                    onClick={() =>
+                      actions.updateItem(selectedTable.id, item.id, {
+                        quantity: Math.max(1, item.quantity - 1)
+                      })
+                    }
+                    disabled={isLocked || item.quantity <= 1}
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <strong>{item.quantity}</strong>
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--secondary"
+                    onClick={() =>
+                      actions.updateItem(selectedTable.id, item.id, {
+                        quantity: item.quantity + 1
+                      })
+                    }
+                    disabled={isLocked}
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="kiju-order-item-card__actions">
-              {supportsExtraIngredients ? (
+            {!options.readOnly ? (
+              <div className="kiju-order-item-card__actions">
+                {supportsExtraIngredients ? (
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--secondary"
+                    onClick={() => handleOpenExtraIngredientsDialog(item)}
+                    disabled={isLocked}
+                  >
+                    <Plus size={14} />
+                    Extra Zutat
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="kiju-button kiju-button--secondary"
-                  onClick={() => handleOpenExtraIngredientsDialog(item)}
+                  className="kiju-button kiju-button--danger kiju-order-item-card__delete"
+                  onClick={() => handleItemRemoval(item)}
                   disabled={isLocked}
                 >
-                  <Plus size={14} />
-                  Extra Zutat
+                  <Trash2 size={14} />
+                  {isSent ? "Storno" : "Löschen"}
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className="kiju-button kiju-button--danger kiju-order-item-card__delete"
-                onClick={() => handleItemRemoval(item)}
-                disabled={isLocked}
-              >
-                <Trash2 size={14} />
-                {isSent ? "Storno" : "Löschen"}
-              </button>
-            </div>
+              </div>
+            ) : null}
           </div>
 
           {extraIngredientLabels.length > 0 ? (
@@ -1744,29 +1955,38 @@ const sendCourseActionLabel =
             </div>
           ) : null}
 
-          <label className="kiju-inline-field kiju-inline-field--note">
-            <span>Notiz</span>
-            <input
-              name={`item-note-${item.id}`}
-              value={noteValue}
-              disabled={isLocked}
-              onChange={(event) => {
-                if (isSent) {
-                  scheduleSentItemNoteDraft(selectedTable.id, item.id, event.target.value);
-                  return;
-                }
+          {options.readOnly ? (
+            item.note ? (
+              <div className="kiju-order-item-card__detail">
+                <span>Notiz</span>
+                <strong>{item.note}</strong>
+              </div>
+            ) : null
+          ) : (
+            <label className="kiju-inline-field kiju-inline-field--note">
+              <span>Notiz</span>
+              <input
+                name={`item-note-${item.id}`}
+                value={noteValue}
+                disabled={isLocked}
+                onChange={(event) => {
+                  if (isSent) {
+                    scheduleSentItemNoteDraft(selectedTable.id, item.id, event.target.value);
+                    return;
+                  }
 
-                actions.updateItem(selectedTable.id, item.id, { note: event.target.value });
-              }}
-              onBlur={() => {
-                const pendingDraft = pendingSentItemNotesRef.current[sentItemNoteDraftKey];
-                if (pendingDraft) {
-                  commitSentItemNoteDraft(pendingDraft.tableId, pendingDraft.itemId, pendingDraft.note);
-                }
-              }}
-              placeholder="Zum Beispiel ohne Zwiebeln"
-            />
-          </label>
+                  actions.updateItem(selectedTable.id, item.id, { note: event.target.value });
+                }}
+                onBlur={() => {
+                  const pendingDraft = pendingSentItemNotesRef.current[sentItemNoteDraftKey];
+                  if (pendingDraft) {
+                    commitSentItemNoteDraft(pendingDraft.tableId, pendingDraft.itemId, pendingDraft.note);
+                  }
+                }}
+                placeholder="Zum Beispiel ohne Zwiebeln"
+              />
+            </label>
+          )}
         </article>
       );
     });
@@ -1806,9 +2026,51 @@ const sendCourseActionLabel =
     );
   };
 
-  const receiptPreviewDocument = receiptPreview
-    ? buildReceiptPrintDocument(receiptPreview.receipt)
-    : null;
+  const renderCategoryDialogReviewItems = () => {
+    const emptyMessage = `Für ${selectedTargetLabel} wurde in ${courseLabels[activeCourse]} noch nichts erfasst.`;
+
+    if (
+      categoryDialogNewItems.length === 0 &&
+      categoryDialogExistingUnsentItems.length === 0 &&
+      categoryDialogSentItems.length === 0
+    ) {
+      return renderEditableItems([], emptyMessage);
+    }
+
+    return (
+      <div className="kiju-order-editor__groups">
+        {categoryDialogNewItems.length > 0 ? (
+          <section className="kiju-order-editor__group">
+            <div className="kiju-order-editor__group-title">
+              <strong>Neu ausgewählt</strong>
+              <span>{categoryDialogNewItems.length} Positionen</span>
+            </div>
+            {renderEditableItems(categoryDialogNewItems, emptyMessage)}
+          </section>
+        ) : null}
+
+        {categoryDialogExistingUnsentItems.length > 0 ? (
+          <section className="kiju-order-editor__group">
+            <div className="kiju-order-editor__group-title">
+              <strong>Noch nicht gesendet</strong>
+              <span>{categoryDialogExistingUnsentItems.length} Positionen</span>
+            </div>
+            {renderEditableItems(categoryDialogExistingUnsentItems, emptyMessage)}
+          </section>
+        ) : null}
+
+        {categoryDialogSentItems.length > 0 ? (
+          <section className="kiju-order-editor__group">
+            <div className="kiju-order-editor__group-title">
+              <strong>Bereits gesendet</strong>
+              <span>Verlauf</span>
+            </div>
+            {renderEditableItems(categoryDialogSentItems, emptyMessage, { readOnly: true })}
+          </section>
+        ) : null}
+      </div>
+    );
+  };
 
   const renderCheckoutOpenEntries = () => {
     if (checkoutOpenGroups.length === 0) {
@@ -1901,30 +2163,40 @@ const sendCourseActionLabel =
     );
   };
 
-  const renderReceiptPreviewPanel = () => {
-    if (!receiptPreview || !receiptPreviewDocument) return null;
+  const renderReceiptPreviewPanel = (
+    activeReceiptPreview: ReceiptPreviewState,
+    isPinnedOverview: boolean
+  ) => {
+    const receiptPreviewDocument = buildReceiptPrintDocument(activeReceiptPreview.receipt);
 
     const receiptModeLabel =
-      receiptPreview.receiptMode === "full"
+      activeReceiptPreview.receiptMode === "full"
         ? "Gesamtbon"
-        : receiptPreview.receiptMode === "table"
+        : activeReceiptPreview.receiptMode === "table"
           ? "Tisch-Bon"
           : "Teil-Bon";
 
     return (
-      <section className="kiju-receipt-preview-panel" aria-label="Bon-Vorschau">
+      <section
+        className={`kiju-receipt-preview-panel ${
+          isPinnedOverview ? "is-overview" : "is-preview"
+        }`}
+        aria-label={isPinnedOverview ? "Bon-Übersicht" : "Bon-Vorschau"}
+      >
         <div className="kiju-receipt-preview-panel__header">
           <div>
-            <span className="kiju-eyebrow">Bon-Vorschau</span>
-            <strong>{receiptPreview.title}</strong>
+            <span className="kiju-eyebrow">
+              {isPinnedOverview ? "Bon-Übersicht" : "Bon-Vorschau"}
+            </span>
+            <strong>{isPinnedOverview ? "Aktuelle Bon-Übersicht" : activeReceiptPreview.title}</strong>
             <small>
-              {receiptPreview.tableSummary} · {euro(receiptPreview.receipt.gesamt)}
+              {activeReceiptPreview.tableSummary} · {euro(activeReceiptPreview.receipt.gesamt)}
             </small>
           </div>
           <div className="kiju-receipt-preview-panel__meta">
             <StatusPill label={receiptModeLabel} tone="navy" />
             <StatusPill
-              label={receiptPreview.printMode === "reprint" ? "Reprint" : "Erstdruck"}
+              label={activeReceiptPreview.printMode === "reprint" ? "Reprint" : "Erstdruck"}
               tone="slate"
             />
           </div>
@@ -1933,20 +2205,426 @@ const sendCourseActionLabel =
         <ThermalReceiptPaper document={receiptPreviewDocument} />
 
         <div className="kiju-receipt-preview-panel__actions">
+          {!isPinnedOverview ? (
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={() => setReceiptPreview(null)}
+            >
+              Zurück bearbeiten
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="kiju-button kiju-button--primary"
+            onClick={() => void handleReceiptPreviewPrint(activeReceiptPreview, !isPinnedOverview)}
+          >
+            Bon drucken
+          </button>
+        </div>
+      </section>
+    );
+  };
+
+  const renderPinnedReceiptOverviewPanel = () => {
+    const pinnedReceiptOverview = buildReceiptPreviewState(
+      checkoutTableIds.length > 1 ? "full" : "table",
+      "receipt"
+    );
+    if (!pinnedReceiptOverview) return null;
+
+    return renderReceiptPreviewPanel(pinnedReceiptOverview, true);
+  };
+
+  const renderReceiptDraftPreviewPanel = () =>
+    receiptPreview ? renderReceiptPreviewPanel(receiptPreview, false) : null;
+
+  const getCourseItemQuantity = (course: CourseKey) =>
+    selectedSession?.items
+      .filter((item) => item.category === course && !isOrderItemCanceled(item))
+      .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+
+  const renderCourseCategoryGrid = () => (
+    <div className="kiju-category-start">
+      <div className="kiju-category-start__header">
+        <span className="kiju-eyebrow">Bestellung</span>
+        <strong>Kategorie wählen</strong>
+      </div>
+      <div className="kiju-course-choice-grid kiju-category-choice-grid" aria-label="Bestellkategorien">
+        {orderStepSequence.map((course, index) => {
+          const itemCount = getCourseItemQuantity(course);
+          const ticketState = selectedSession ? resolveServiceCourseStatus(selectedSession, course) : null;
+
+          return (
+            <button
+              key={course}
+              type="button"
+              className="kiju-course-choice kiju-category-choice"
+              onClick={() => openCategoryDialog(course)}
+            >
+              <span className="kiju-category-choice__number">{index + 1}</span>
+              <span className="kiju-category-choice__copy">
+                <strong>{courseLabels[course]}</strong>
+                <small>
+                  {itemCount === 0
+                    ? "Noch nichts erfasst"
+                    : `${itemCount} ${itemCount === 1 ? "Position" : "Positionen"}`}
+                </small>
+              </span>
+              <StatusPill
+                label={ticketState ? formatCourseStatusLabel(ticketState, course) : "Bereit"}
+                tone={
+                  ticketState
+                    ? ticketStatusDisplayTones[ticketState.status] ?? "slate"
+                    : "slate"
+                }
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderCategoryGroupSelection = () => (
+    <section className="kiju-wizard-panel kiju-category-group-stage">
+      <div className="kiju-wizard-panel__header">
+        <div>
+          <span className="kiju-eyebrow">{courseLabels[activeCourse]}</span>
+          <strong>Unterkategorie wählen</strong>
+        </div>
+        <StatusPill
+          label={formatCourseStatusLabel(activeCourseTicketState, activeCourse)}
+          tone={
+            activeCourseTicketState
+              ? ticketStatusDisplayTones[activeCourseTicketState.status] ?? "slate"
+              : "slate"
+          }
+        />
+      </div>
+      <div className="kiju-category-group-grid" aria-label="Unterkategorien">
+        {activeCourseGroups.map((group) => {
+          const productCount = group.products.length;
+
+          return (
+            <button
+              key={group.label}
+              type="button"
+              className="kiju-category-group-choice"
+              onClick={() => openCategoryProductGroup(group.label)}
+            >
+              <span>{group.label}</span>
+              <strong>
+                {productCount === 0
+                  ? "Keine Artikel"
+                  : `${productCount} ${productCount === 1 ? "Artikel" : "Artikel"}`}
+              </strong>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  const renderActiveCourseProductSelection = () => {
+    if (!selectedTable) return null;
+
+    return (
+      <section className="kiju-wizard-panel kiju-category-product-stage">
+        <div className="kiju-wizard-panel__header">
+          <div>
+            <span className="kiju-eyebrow">{courseLabels[activeCourse]}</span>
+            <strong>{selectedCourseGroup}</strong>
+          </div>
+          <StatusPill
+            label={`${categoryDialogNewItems.length} neu ausgewählt`}
+            tone={categoryDialogNewItems.length > 0 ? "green" : "slate"}
+          />
+        </div>
+        <div className="kiju-product-grid">
+          {categoryDialogProducts.length > 0 ? (
+            categoryDialogProducts.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                className="kiju-product-card"
+                onClick={() => actions.addItem(selectedTable.id, selectedOrderTarget, product.id)}
+              >
+                <div>
+                  <strong>{product.name}</strong>
+                  <p>{product.description}</p>
+                </div>
+                <div className="kiju-product-footer">
+                  <StatusPill label={`${product.taxRate}% MwSt`} tone="slate" />
+                  <span>{euro(product.priceCents)}</span>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="kiju-inline-panel">
+              <span>
+                {activeCourse === "drinks"
+                  ? "In dieser Gruppe ist noch kein Getränk angelegt."
+                  : `Für ${courseLabels[activeCourse]} ist noch keine Leistung angelegt.`}
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  const renderCategoryReview = () => (
+    <section className="kiju-wizard-panel kiju-order-editor kiju-category-review-stage">
+      <div className="kiju-order-editor__header">
+        <div>
+          <span className="kiju-eyebrow">{selectedTargetLabel}</span>
+          <strong>Abschluss ({editableItems.length})</strong>
+        </div>
+        <StatusPill label={syncStatusLabel} tone={syncStatusTone} />
+      </div>
+      <div className="kiju-order-editor__list">
+        {renderCategoryDialogReviewItems()}
+      </div>
+    </section>
+  );
+
+  const renderCategoryDialogContent = () => {
+    if (categoryDialogStage === "groups") return renderCategoryGroupSelection();
+    if (categoryDialogStage === "products") return renderActiveCourseProductSelection();
+
+    return renderCategoryReview();
+  };
+
+  const renderCategoryDialogFooter = () => {
+    if (categoryDialogStage === "groups") {
+      return (
+        <button
+          type="button"
+          className="kiju-button kiju-button--secondary"
+          onClick={closeCategoryDialog}
+        >
+          Zurück
+        </button>
+      );
+    }
+
+    if (categoryDialogStage === "products") {
+      return (
+        <div className="kiju-category-order-footer__actions">
           <button
             type="button"
             className="kiju-button kiju-button--secondary"
-            onClick={() => setReceiptPreview(null)}
+            onClick={() => setCategoryDialogStage("groups")}
           >
-            Zurück bearbeiten
+            Zurück
           </button>
           <button
             type="button"
             className="kiju-button kiju-button--primary"
-            onClick={handleReceiptPrint}
+            onClick={openCategoryReview}
           >
-            Bon drucken
+            Abschließen
           </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="kiju-category-order-footer__actions">
+        <button
+          type="button"
+          className="kiju-button kiju-button--secondary"
+          onClick={() => setCategoryDialogStage("products")}
+        >
+          Zurück zur Auswahl
+        </button>
+        <button
+          type="button"
+          className="kiju-button kiju-button--primary"
+          onClick={closeCategoryDialog}
+        >
+          Fertig
+        </button>
+      </div>
+    );
+  };
+
+  const renderCourseWaitPanel = () =>
+    waitPlannerOpen ? (
+      <div className="kiju-course-wait-panel">
+        <div className="kiju-course-wait-panel__header">
+          <div>
+            <strong>Gang warten lassen</strong>
+            <span>Wähle eine gebuchte Kategorie und die Wartezeit für die Küche.</span>
+          </div>
+          <button
+            type="button"
+            className="kiju-button kiju-button--secondary"
+            onClick={() => setWaitPlannerOpen(false)}
+            aria-label="Wartezeit-Auswahl schließen"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="kiju-course-wait-panel__fields">
+          <label className="kiju-inline-field">
+            <span>Kategorie</span>
+            <select
+              name="wait-course"
+              value={waitCourse}
+              onChange={(event) => setWaitCourse(event.target.value as CourseKey)}
+            >
+              {waitableCourses.map((entry) => (
+                <option key={entry.course} value={entry.course}>
+                  {courseLabels[entry.course]} · {entry.itemCount}{" "}
+                  {entry.itemCount === 1 ? "Position" : "Positionen"}
+                  {entry.isWaiting ? " · wartet bereits" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="kiju-inline-field">
+            <span>Minuten</span>
+            <input
+              name="wait-minutes"
+              type="number"
+              min={1}
+              max={180}
+              value={waitMinutes}
+              onChange={(event) => setWaitMinutes(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="kiju-course-wait-panel__presets">
+          {waitMinutePresets.map((minutes) => (
+            <button
+              key={minutes}
+              type="button"
+              className={`kiju-wait-preset${
+                waitMinutes === String(minutes) ? " is-selected" : ""
+              }`}
+              onClick={() => setWaitMinutes(String(minutes))}
+            >
+              {minutes} Min.
+            </button>
+          ))}
+        </div>
+        <div className="kiju-course-wait-panel__actions">
+          <button
+            type="button"
+            className="kiju-button kiju-button--secondary"
+            onClick={() => setWaitPlannerOpen(false)}
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            className="kiju-button kiju-button--primary"
+            onClick={confirmCourseWait}
+          >
+            Wartezeit bestätigen
+          </button>
+        </div>
+      </div>
+    ) : null;
+
+  const renderActiveCategoryDialog = () => {
+    if (!selectedTable || !activeCategoryDialog || currentStep !== activeCategoryDialog) return null;
+
+    return (
+      <section
+        className="kiju-service-section kiju-order-wizard-overlay kiju-category-order-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="kiju-category-dialog-title"
+      >
+        <div className="kiju-order-wizard-modal kiju-category-order-modal" tabIndex={-1}>
+          <header className="kiju-category-order-header">
+            <div>
+              <span className="kiju-eyebrow">{selectedTable.name}</span>
+              <h2 id="kiju-category-dialog-title">{courseLabels[activeCategoryDialog]}</h2>
+              <p>
+                {linkedTableGroup ? `Gemeinsame Abrechnung: ${linkedTableGroup.label}` : selectedTargetLabel}
+                {" · "}
+                {categoryDialogStage === "groups"
+                  ? "Unterkategorie wählen"
+                  : categoryDialogStage === "products"
+                    ? selectedCourseGroup
+                    : "Abschluss"}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={closeCategoryDialog}
+            >
+              <X size={16} />
+              Schließen
+            </button>
+          </header>
+
+          <div className="kiju-category-order-body">
+            {usesSeatMode && visibleSeats.length > 0 ? (
+              <div className="kiju-seat-row kiju-order-wizard-seat-row" aria-label="Sitzplatz auswählen">
+                {visibleSeats.map((seat) => (
+                  <button
+                    key={seat.id}
+                    type="button"
+                    className={`kiju-seat-chip ${seat.id === selectedSeatId ? "is-selected" : ""}`}
+                    onClick={() => setSelectedSeatId(seat.id)}
+                  >
+                    {seat.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {renderCategoryDialogContent()}
+
+            {categoryDialogStage === "review" ? renderCourseWaitPanel() : null}
+
+            {categoryDialogStage === "review" ? (
+              <div className="kiju-step-actions kiju-wizard-service-actions kiju-category-order-actions">
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={openWaitPlanner}
+                >
+                  <Clock3 size={18} />
+                  {serviceLabels.waiting}
+                </button>
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={() => actions.skipCourse(selectedTable.id, activeCourse)}
+                >
+                  Gang überspringen
+                </button>
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--primary"
+                  onClick={handleSendCourseToKitchen}
+                >
+                  {activeCourse === "drinks" ? (
+                    <>
+                      <Bell size={18} />
+                      {sendCourseActionLabel}
+                    </>
+                  ) : (
+                    <>
+                      <ChefHat size={18} />
+                      {sendCourseActionLabel}
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="kiju-wizard-footer kiju-category-order-footer">
+            {renderCategoryDialogFooter()}
+          </div>
         </div>
       </section>
     );
@@ -2255,6 +2933,14 @@ const sendCourseActionLabel =
               <div className="kiju-step-actions">
                 <button
                   type="button"
+                  className="kiju-button kiju-button--primary"
+                  onClick={() => void handleCreatePickupTable()}
+                >
+                  <ShoppingBag size={18} />
+                  Abholbon erstellen
+                </button>
+                <button
+                  type="button"
                   className="kiju-button kiju-button--secondary"
                   onClick={() => setIsLinkTablesOpen((current) => !current)}
                   aria-expanded={isLinkTablesOpen}
@@ -2421,7 +3107,7 @@ const sendCourseActionLabel =
                 <button
                   type="button"
                   className="kiju-table-action-choice"
-                  onClick={() => openOrderWizard("drinks")}
+                  onClick={() => openOrderWizard("table")}
                 >
                   <ChefHat size={24} />
                   <strong>Bestellen</strong>
@@ -2472,43 +3158,6 @@ const sendCourseActionLabel =
                       : "Bestellung, Küche und Abrechnung für den aktiven Tisch."}
                   </p>
                 </div>
-                <div className="kiju-order-wizard-header__meta" aria-label="Aktueller Service-Stand">
-                  <div className="kiju-order-wizard-stat">
-                    <span>Status</span>
-                    <StatusPill
-                      label={
-                        selectedDashboardEntry
-                          ? statusLabel[selectedDashboardEntry.status] ?? "Status"
-                          : "Bereit"
-                      }
-                      tone={
-                        selectedDashboardEntry
-                          ? toneByStatus[selectedDashboardEntry.status] ?? "slate"
-                          : "slate"
-                      }
-                    />
-                  </div>
-                  <div className="kiju-order-wizard-stat">
-                    <span>Artikel</span>
-                    <strong>{sessionItemCount}</strong>
-                  </div>
-                  <div className="kiju-order-wizard-stat">
-                    <span>Summe</span>
-                    <strong>{euro(sessionTotal)}</strong>
-                  </div>
-                  <div className="kiju-order-wizard-stat">
-                    <span>Sync</span>
-                    <StatusPill label={syncStatusLabel} tone={syncStatusTone} />
-                  </div>
-                  <button
-                    type="button"
-                    className="kiju-button kiju-button--secondary"
-                    onClick={closeOrderWizard}
-                  >
-                    <Map size={18} />
-                    Tisch wechseln
-                  </button>
-                </div>
               </header>
 
               {primaryServiceDeliveryNotification ? (
@@ -2544,12 +3193,6 @@ const sendCourseActionLabel =
                   </article>
                 </section>
               ) : null}
-
-              <ProgressSteps
-                steps={(currentStep === "checkout" ? checkoutWizardSteps : orderWizardSteps).map((step) => step)}
-                currentStep={orderWizardCurrentStepLabel}
-                onStepSelect={selectWizardStep}
-              />
 
               <div className="kiju-order-wizard-body">
                 {usesSeatMode && visibleSeats.length > 0 ? (
@@ -2672,7 +3315,7 @@ const sendCourseActionLabel =
                           <button
                             type="button"
                             className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("full", "receipt")}
+                            onClick={() => openReceiptCheck("full")}
                             disabled={!canPreviewFullReceipt}
                           >
                             Gesamtbon prüfen
@@ -2680,7 +3323,7 @@ const sendCourseActionLabel =
                           <button
                             type="button"
                             className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("table", "receipt")}
+                            onClick={() => openReceiptCheck("table")}
                             disabled={!canPreviewTableReceipt}
                           >
                             Tisch-Bon prüfen
@@ -2704,246 +3347,42 @@ const sendCourseActionLabel =
                         </div>
                       </section>
 
-                      {renderReceiptPreviewPanel()}
-                    </div>
-                  </div>
-                ) : isCourseStep(currentStep) ? (
-                  <div className="kiju-wizard-items-layout">
-                    <section className="kiju-wizard-panel">
-                      <div className="kiju-wizard-panel__header">
-                        <div>
-                          <span className="kiju-eyebrow">{courseLabels[activeCourse]}</span>
-                          <strong>Artikel auswählen</strong>
-                        </div>
-                        <StatusPill
-                          label={formatCourseStatusLabel(activeCourseTicketState, activeCourse)}
-                          tone={
-                            activeCourseTicketState
-                              ? ticketStatusDisplayTones[activeCourseTicketState.status] ?? "slate"
-                              : "slate"
-                          }
-                        />
-                      </div>
-                      {activeCourse === "drinks" && drinkSubcategories.length > 0 ? (
-                        <div className="kiju-drink-group-tabs" aria-label="Getränkegruppen">
-                          {drinkSubcategories.map((group) => (
-                            <button
-                              key={group}
-                              type="button"
-                              className={`kiju-drink-group-tab ${
-                                group === selectedDrinkSubcategory ? "is-selected" : ""
-                              }`}
-                              onClick={() => setActiveDrinkSubcategory(group)}
-                            >
-                              {group}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      <div className="kiju-product-grid">
-                        {visibleProducts.length > 0 ? (
-                          visibleProducts.map((product) => (
-                            <button
-                              key={product.id}
-                              type="button"
-                              className="kiju-product-card"
-                              onClick={() => actions.addItem(selectedTable.id, selectedOrderTarget, product.id)}
-                            >
-                              <div>
-                                <strong>{product.name}</strong>
-                                <p>{product.description}</p>
-                              </div>
-                              <div className="kiju-product-footer">
-                                <StatusPill label={`${product.taxRate}% MwSt`} tone="slate" />
-                                <span>{euro(product.priceCents)}</span>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="kiju-inline-panel">
-                            <span>
-                              {activeCourse === "drinks"
-                                ? "In dieser Gruppe ist noch kein Getränk angelegt."
-                                : `Für ${courseLabels[activeCourse]} ist noch keine Leistung angelegt.`}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </section>
-
-                    <section className="kiju-wizard-panel kiju-order-editor">
-                      <div className="kiju-order-editor__header">
-                        <div>
-                          <span className="kiju-eyebrow">{selectedTargetLabel}</span>
-                          <strong>Erfasste Leistungen ({editableItems.length})</strong>
-                        </div>
-                        <StatusPill label={syncStatusLabel} tone={syncStatusTone} />
-                      </div>
-                      <div className="kiju-order-editor__list">
-                        {renderActiveCourseItems(
-                          `Für ${selectedTargetLabel} wurde in ${courseLabels[activeCourse]} noch nichts erfasst.`
-                        )}
-                      </div>
-                    </section>
-
-                    {waitPlannerOpen ? (
-                      <div className="kiju-course-wait-panel">
-                        <div className="kiju-course-wait-panel__header">
-                          <div>
-                            <strong>Gang warten lassen</strong>
-                            <span>Wähle eine gebuchte Kategorie und die Wartezeit für die Küche.</span>
-                          </div>
-                          <button
-                            type="button"
-                            className="kiju-button kiju-button--secondary"
-                            onClick={() => setWaitPlannerOpen(false)}
-                            aria-label="Wartezeit-Auswahl schließen"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                        <div className="kiju-course-wait-panel__fields">
-                          <label className="kiju-inline-field">
-                            <span>Kategorie</span>
-                            <select
-                              name="wait-course"
-                              value={waitCourse}
-                              onChange={(event) => setWaitCourse(event.target.value as CourseKey)}
-                            >
-                              {waitableCourses.map((entry) => (
-                                <option key={entry.course} value={entry.course}>
-                                  {courseLabels[entry.course]} · {entry.itemCount}{" "}
-                                  {entry.itemCount === 1 ? "Position" : "Positionen"}
-                                  {entry.isWaiting ? " · wartet bereits" : ""}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="kiju-inline-field">
-                            <span>Minuten</span>
-                            <input
-                              name="wait-minutes"
-                              type="number"
-                              min={1}
-                              max={180}
-                              value={waitMinutes}
-                              onChange={(event) => setWaitMinutes(event.target.value)}
-                            />
-                          </label>
-                        </div>
-                        <div className="kiju-course-wait-panel__presets">
-                          {waitMinutePresets.map((minutes) => (
-                            <button
-                              key={minutes}
-                              type="button"
-                              className={`kiju-wait-preset${
-                                waitMinutes === String(minutes) ? " is-selected" : ""
-                              }`}
-                              onClick={() => setWaitMinutes(String(minutes))}
-                            >
-                              {minutes} Min.
-                            </button>
-                          ))}
-                        </div>
-                        <div className="kiju-course-wait-panel__actions">
-                          <button
-                            type="button"
-                            className="kiju-button kiju-button--secondary"
-                            onClick={() => setWaitPlannerOpen(false)}
-                          >
-                            Abbrechen
-                          </button>
-                          <button
-                            type="button"
-                            className="kiju-button kiju-button--primary"
-                            onClick={confirmCourseWait}
-                          >
-                            Wartezeit bestätigen
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="kiju-step-actions kiju-wizard-service-actions">
-                      <button
-                        type="button"
-                        className="kiju-button kiju-button--secondary"
-                        onClick={openWaitPlanner}
-                      >
-                        <Clock3 size={18} />
-                        {serviceLabels.waiting}
-                      </button>
-                      <button
-                        type="button"
-                        className="kiju-button kiju-button--secondary"
-                        onClick={() => actions.skipCourse(selectedTable.id, activeCourse)}
-                      >
-                        Gang überspringen
-                      </button>
-                      <button
-                        type="button"
-                        className="kiju-button kiju-button--primary"
-                        onClick={handleSendCourseToKitchen}
-                      >
-                        {activeCourse === "drinks" ? (
-                          <>
-                            <Bell size={18} />
-                            {sendCourseActionLabel}
-                          </>
-                        ) : (
-                          <>
-                            <ChefHat size={18} />
-                            {sendCourseActionLabel}
-                          </>
-                        )}
-                      </button>
+                      {renderPinnedReceiptOverviewPanel()}
+                      {renderReceiptDraftPreviewPanel()}
                     </div>
                   </div>
                 ) : (
-                  <div className="kiju-empty-state kiju-empty-state--compact">
-                    <strong>{selectedTable.name} ist ausgewählt</strong>
-                    <span>Gehe mit Weiter in den ersten Gang.</span>
-                  </div>
+                  renderCourseCategoryGrid()
                 )}
 
               </div>
 
-              <div className="kiju-wizard-footer">
+              <div className="kiju-wizard-footer kiju-wizard-footer--simple">
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
-                  onClick={goBack}
+                  onClick={currentStep === "checkout" ? goBack : closeOrderWizard}
                 >
-                  Zurück
+                  {currentStep === "checkout" ? "Zurück" : "Zum Raumplan"}
                 </button>
-                <div className="kiju-wizard-footer__status">
-                  <span>Schritt</span>
-                  <strong>{orderWizardCurrentStepLabel}</strong>
-                </div>
                 <div className="kiju-wizard-footer__actions">
-                  {isCourseStep(currentStep) ? (
+                  {currentStep === "checkout" ? (
                     <button
                       type="button"
-                      className="kiju-button kiju-button--secondary"
-                      onClick={finishOrderWizard}
+                      className="kiju-button kiju-button--primary"
+                      onClick={goNext}
+                      disabled={!canGoNext}
                     >
-                      Fertig
+                      {nextButtonLabel}
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="kiju-button kiju-button--primary"
-                    onClick={goNext}
-                    disabled={!canGoNext}
-                  >
-                    {nextButtonLabel}
-                  </button>
                 </div>
               </div>
             </div>
           </section>
           ) : null}
+
+          {renderActiveCategoryDialog()}
 
           {!isWaiterView ? (
           <section
@@ -3037,7 +3476,7 @@ const sendCourseActionLabel =
                         onClick={isWaiterView ? closeOrderWizard : () => setCurrentStep("table")}
                       >
                         <Map size={18} />
-                        Tisch wechseln
+                        Tischauswahl
                       </button>
                       <button
                         type="button"
@@ -3132,14 +3571,14 @@ const sendCourseActionLabel =
                         <SectionCard title="Gesamt-, Tisch- und Teilbon" eyebrow="Bons">
                           <button
                             className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("full", "receipt")}
+                            onClick={() => openReceiptCheck("full")}
                             disabled={!canPreviewFullReceipt}
                           >
                             Gesamtbon prüfen
                           </button>
                           <button
                             className="kiju-button kiju-button--secondary"
-                            onClick={() => openReceiptPreview("table", "receipt")}
+                            onClick={() => openReceiptCheck("table")}
                             disabled={!canPreviewTableReceipt}
                           >
                             Tisch-Bon prüfen
@@ -3160,7 +3599,8 @@ const sendCourseActionLabel =
                           </button>
                         </SectionCard>
 
-                        {renderReceiptPreviewPanel()}
+                        {renderPinnedReceiptOverviewPanel()}
+                        {renderReceiptDraftPreviewPanel()}
                       </div>
                     </div>
                   ) : isCourseStep(currentStep) ? (

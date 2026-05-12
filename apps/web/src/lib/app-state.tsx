@@ -53,8 +53,6 @@ import {
   type PropsWithChildren
 } from "react";
 
-import { createPrintJob } from "./print-client";
-
 const STORAGE_KEY = "kiju-app-state-v2";
 const AUTH_KEY = "kiju-auth-session-v1";
 const LEGACY_AUTH_KEY = "kiju-auth-v2";
@@ -67,6 +65,13 @@ type SharedSyncState = {
   status: "connecting" | "online" | "offline";
   lastSyncedAt?: string;
   usingSharedState: boolean;
+};
+
+type KitchenUnitCycleResult = {
+  ok: boolean;
+  nextStatus?: KitchenUnitStatus;
+  changedAt?: string;
+  message?: string;
 };
 
 type WorkspaceRole = Role;
@@ -105,7 +110,7 @@ type DemoActions = {
     batchId: string,
     itemId: string,
     unitIndex: number
-  ) => void;
+  ) => KitchenUnitCycleResult;
   reopenKitchenBatch: (tableId: string, batchId: string) => void;
   releaseCourse: (tableId: string, course: CourseKey, batchId?: string) => void;
   markCourseCompleted: (tableId: string, course: CourseKey, batchId?: string) => void;
@@ -171,6 +176,15 @@ type DemoActions = {
     active: boolean;
     note?: string;
   }) => { ok: boolean; message?: string };
+  createPickupTable: () => {
+    ok: boolean;
+    tableId?: string;
+    tableName?: string;
+    seatId?: string;
+    pickupNumber?: number;
+    createdAt?: string;
+    message?: string;
+  };
   updateTable: (
     tableId: string,
     patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly">>
@@ -368,6 +382,12 @@ const getNextTableNumber = (tables: TableLayout[]) =>
     const nameMatch = table.name.match(/(\d+)/);
     const nextNumber = Number(idMatch?.[1] ?? nameMatch?.[1] ?? 0);
     return Math.max(maxNumber, nextNumber);
+  }, 0) + 1;
+const getNextPickupNumber = (tables: TableLayout[]) =>
+  tables.reduce((maxNumber, table) => {
+    const pickupMatch = table.name.trim().match(/^Zum Abholen\s+(\d+)$/i);
+    const pickupNumber = Number(pickupMatch?.[1] ?? 0);
+    return Math.max(maxNumber, Number.isFinite(pickupNumber) ? pickupNumber : 0);
   }, 0) + 1;
 const resolveTablePlacement = (index: number) => {
   const preset = tablePlacements[index];
@@ -1262,6 +1282,13 @@ const completeCourseOrBatch = (
     session.status = "ready-to-bill";
   }
 
+  const targetWaiterIds = [
+    ...new Set(courseItems.map((item) => item.createdByUserId ?? session.waiterId))
+  ];
+  if (targetWaiterIds.length === 0) {
+    targetWaiterIds.push(session.waiterId);
+  }
+
   if (course === "drinks") {
     withNotification(next, {
       kind: "service-drinks",
@@ -1270,7 +1297,9 @@ const completeCourseOrBatch = (
       title: "Getränke an den Tisch",
       body: `${tableName}: ${summarizeServiceItems(courseItems, next.products, table)}.`,
       tone: "info",
-      tableId
+      tableId,
+      targetRoles: ["waiter"],
+      targetUserIds: targetWaiterIds
     });
     return;
   }
@@ -1282,7 +1311,9 @@ const completeCourseOrBatch = (
     title: `${courseLabels[course]} fertig`,
     body: `${summarizeCourseItems(courseItems, next.products)} für ${tableName} ist fertig.`,
     tone: "success",
-    tableId
+    tableId,
+    targetRoles: ["waiter"],
+    targetUserIds: targetWaiterIds
   });
 };
 
@@ -1930,6 +1961,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         category: product.category,
         quantity: 1,
         createdAt: new Date().toISOString(),
+        createdByUserId: waiterId,
         modifiers: []
       });
 
@@ -2191,7 +2223,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const sentAt = new Date().toISOString();
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
-      const kitchenPrintRequests: Parameters<typeof createPrintJob>[0][] = [];
       const pendingDrinkItems = session.items.filter(
         (item) => item.category === "drinks" && !item.sentAt && !isOrderItemCanceled(item)
       );
@@ -2271,16 +2302,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         if (shouldWait) {
           waitingKitchenCourseLabels.push(batchLabel);
         }
-        if (table) {
-          kitchenPrintRequests.push({
-            type: "kitchen-ticket",
-            session: structuredClone(session),
-            table: structuredClone(table),
-            products: structuredClone(next.products),
-            batch: structuredClone(batch)
-          });
-        }
-
         withNotification(next, {
           title: shouldWait
             ? `${batchLabel} wartet`
@@ -2296,9 +2317,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.status = "waiting";
       emitOperatorFeedback();
       commit(next);
-      if (kitchenPrintRequests.length > 0) {
-        void Promise.all(kitchenPrintRequests.map((request) => createPrintJob(request)));
-      }
       return {
         ok: true,
         message:
@@ -2321,17 +2339,19 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (tableId: string, batchId: string, itemId: string, unitIndex: number) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
+      if (!session) return { ok: false, message: "Bestellung wurde nicht gefunden." };
 
       const batch = session.kitchenTicketBatches.find((entry) => entry.id === batchId);
-      if (!batch || batch.status !== "ready") return;
+      if (!batch || batch.status !== "ready") {
+        return { ok: false, message: "Küchenbon ist nicht bereit zur Bearbeitung." };
+      }
 
       const item = getBatchItems(session, batch).find((entry) => entry.id === itemId);
-      if (!item) return;
+      if (!item) return { ok: false, message: "Position wurde nicht gefunden." };
 
       const changedAt = new Date().toISOString();
       const nextStatus = cycleKitchenUnitState(item, unitIndex, changedAt);
-      if (!nextStatus) return;
+      if (!nextStatus) return { ok: false, message: "Portion konnte nicht aktualisiert werden." };
 
       if (isKitchenBatchCompletedByUnits(session, batch)) {
         completeCourseOrBatch(next, session, tableId, batch.course, changedAt, batch);
@@ -2341,6 +2361,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       emitOperatorFeedback();
       commit(next);
+      return { ok: true, nextStatus, changedAt };
     },
     [commit, state]
   );
@@ -2453,6 +2474,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (sessions.length === 0) return;
 
       const printedAt = new Date().toISOString();
+      const tableName =
+        next.tables.find((entry) => entry.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
 
       sessions.forEach((session) => {
         session.receipt.printedAt = printedAt;
@@ -2462,7 +2485,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       withNotification(next, {
         kind: "admin-receipt-alarm",
         title: "Rechnung gedruckt",
-        body: `${tableId.replace("table-", "Tisch ")} hat gerade eine Rechnung gedruckt. Bitte Abrechnung prüfen.`,
+        body: `${tableName} hat gerade eine Rechnung gedruckt. Bitte Abrechnung prüfen.`,
         tone: "alert",
         tableId,
         targetRoles: ["admin"]
@@ -2502,6 +2525,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (targetSessions.length === 0) return;
 
       const reprintedAt = new Date().toISOString();
+      const tableName =
+        next.tables.find((entry) => entry.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
       targetSessions.forEach((session) => {
         session.receipt.printedAt ??= reprintedAt;
         session.receipt.reprintedAt = reprintedAt;
@@ -2510,7 +2535,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       withNotification(next, {
         kind: "admin-receipt-alarm",
         title: "Rechnung erneut gedruckt",
-        body: `${tableId.replace("table-", "Tisch ")} hat gerade einen Rechnungs-Reprint gedruckt. Bitte Abrechnung prüfen.`,
+        body: `${tableName} hat gerade einen Rechnungs-Reprint gedruckt. Bitte Abrechnung prüfen.`,
         tone: "alert",
         tableId,
         targetRoles: ["admin"]
@@ -2526,6 +2551,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
       if (!session || !session.receipt.printedAt) return;
+      const tableName =
+        next.tables.find((entry) => entry.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
 
       const openLineItems = getOpenLineItems(session).map(({ item, openQuantity }) => ({
         itemId: item.id,
@@ -2554,7 +2581,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       withNotification(next, {
         title: "Bestellung geschlossen",
-        body: `${tableId.replace("table-", "Tisch ")} wurde abgeschlossen.`,
+        body: `${tableName} wurde abgeschlossen.`,
         tone: "success",
         tableId
       }, currentUserId);
@@ -2724,10 +2751,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (linkedGroup) {
         linkedGroup.active = false;
       }
+      const tableName =
+        next.tables.find((entry) => entry.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
 
       withNotification(next, {
         title: "Bestellung geschlossen",
-        body: `${checkoutTableIds.length > 1 ? "Gekoppelte Tische" : tableId.replace("table-", "Tisch ")} wurden abgeschlossen.`,
+        body:
+          checkoutTableIds.length > 1
+            ? "Gekoppelte Tische wurden abgeschlossen."
+            : `${tableName} wurde abgeschlossen.`,
         tone: "success",
         tableId
       }, currentUserId);
@@ -3322,6 +3354,46 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, currentUserId, state]
   );
 
+  const createPickupTable = useCallback(() => {
+    const next = structuredClone(state);
+    const nextNumber = getNextTableNumber(next.tables);
+    const pickupNumber = getNextPickupNumber(next.tables);
+    const tableId = `table-${nextNumber}`;
+    const tableName = `Zum Abholen ${pickupNumber}`;
+    const createdAt = new Date().toISOString();
+    const seatCount = 1;
+    const seats = createSeats(tableId, seatCount);
+
+    next.deletedTableIds = (next.deletedTableIds ?? []).filter((deletedId) => deletedId !== tableId);
+    next.tables.push({
+      id: tableId,
+      name: tableName,
+      seatCount,
+      active: true,
+      plannedOnly: false,
+      note: `Zum Abholen · Bon ${pickupNumber}`,
+      seats,
+      ...resolveTablePlacement(next.tables.length)
+    });
+
+    withNotification(next, {
+      title: "Abholbon angelegt",
+      body: `${tableName} wurde als normaler Tisch angelegt.`,
+      tone: "success"
+    }, currentUserId);
+    emitOperatorFeedback();
+    commit(next);
+
+    return {
+      ok: true,
+      tableId,
+      tableName,
+      seatId: seats[0]?.id,
+      pickupNumber,
+      createdAt
+    };
+  }, [commit, currentUserId, state]);
+
   const updateTable = useCallback(
     (
       tableId: string,
@@ -3619,6 +3691,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       !isNotificationExpired(notification, notificationClock) &&
       (!notification.targetRoles?.length ||
         (currentUser ? notification.targetRoles.includes(currentUser.role) : false)) &&
+      (!notification.targetUserIds?.length ||
+        (currentUserId ? notification.targetUserIds.includes(currentUserId) : false)) &&
       ((notification.kind !== "service-drinks-accepted" &&
         notification.kind !== "service-course-ready-accepted") ||
         !notification.acceptedByUserId ||
@@ -3669,6 +3743,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         updateUser,
         deleteUser,
         createTable,
+        createPickupTable,
         updateTable,
         setServiceOrderMode,
         setDesignMode,
@@ -3691,6 +3766,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       createPartyGroup,
       createProduct,
       createTable,
+      createPickupTable,
       createUser,
       cycleKitchenItemUnitStatus,
       reopenKitchenBatch,

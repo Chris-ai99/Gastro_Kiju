@@ -82,6 +82,7 @@ export interface OrderItem {
     quantity: number;
     note?: string;
     modifiers: OrderModifierSelection[];
+    createdByUserId?: string;
     sentAt?: string;
     preparedAt?: string;
     servedAt?: string;
@@ -135,6 +136,7 @@ export interface AppNotification {
     tone: NotificationTone;
     tableId?: string;
     targetRoles?: Role[];
+    targetUserIds?: string[];
     acceptedByUserId?: string;
     acceptedByName?: string;
     sourceNotificationId?: string;

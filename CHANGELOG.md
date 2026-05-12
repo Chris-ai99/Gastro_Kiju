@@ -1,5 +1,140 @@
 # Changelog
 
+## 0.9.01-beta
+- Datum: 2026-05-10
+- Uhrzeit: 22:32:47 +02:00
+- Typ: Feature
+- Zusammenfassung:
+  Der Service-Bestellfluss führt nach jeder Hauptkategorie über Unterkategorien in eine reine Artikelauswahl und danach in eine Abschlussansicht.
+- Änderungen:
+  Getränke, Vorspeise, Hauptspeise und Nachtisch öffnen zuerst passende Untergruppen wie Alkoholfrei, Bier/Radler, Pizza, Pasta, Dessert oder Sonstiges.
+  In der Artikelauswahl werden keine erfassten Positionen und keine Senden-, Warten- oder Überspringen-Aktionen mehr angezeigt.
+  Die Abschlussansicht trennt neu ausgewählte, noch nicht gesendete und bereits gesendete Positionen; nur ungesendete Positionen bleiben bearbeitbar.
+  Die neuen Service-Flächen sind für Handy und Tablet auf vertikales Touch-Scrollen ausgelegt.
+
+## 0.9.00-beta
+- Datum: 2026-05-10
+- Uhrzeit: 22:08:35 +02:00
+- Typ: Feature
+- Zusammenfassung:
+  Der Service-Bestellfluss startet nach „Bestellen“ mit vier Kategorien und öffnet die Artikelauswahl je Gang in einem eigenen Popup.
+- Änderungen:
+  Die obere Statistikleiste im Service-Wizard wurde entfernt und sichtbare Tischwechsel-Texte wurden durch neutrale Navigation ersetzt.
+  Getränke, Vorspeise, Hauptspeise und Nachtisch öffnen jeweils ein eigenes Popup mit Mehrfachauswahl und den vorhandenen Positionsaktionen.
+  Scrollbare Service-Popups und Listen sind für Handy und Tablet auf vertikales Touch-Scrollen ausgelegt.
+
+## 0.8.21-beta
+- Datum: 2026-05-07
+- Uhrzeit: 22:35:40 +02:00
+- Typ: Feature
+- Zusammenfassung:
+  In der Service-Tischübersicht kann jetzt ein Abholbon als normaler Tisch erstellt und gedruckt werden.
+- Änderungen:
+  Der neue Button Abholbon erstellen legt fortlaufende Abholtische wie Zum Abholen 1 an.
+  Der Abholtisch wird direkt geöffnet und kann wie jeder andere Tisch bestellt und abgerechnet werden.
+  Ein kurzer Abholbon mit Nummer, Tisch-/Bon-Name und Uhrzeit wird als eigener Druckjob gesendet.
+
+## 0.8.20-beta
+- Datum: 2026-05-07
+- Uhrzeit: 21:44:20 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Pizza- und Produktnamen werden auf Handybreite vollständig angezeigt.
+- Änderungen:
+  Produktkarten im Service dürfen Namen auf kleinen Bildschirmen mehrzeilig umbrechen.
+  Gebuchte Positionen und Gruppenzuordnungen schneiden lange Produktnamen mobil nicht mehr ab.
+  Admin-Buchungszeilen zeigen lange Pizza-Namen auf Handybreite vollständig statt gekürzt.
+
+## 0.8.19-beta
+- Datum: 2026-05-07
+- Uhrzeit: 21:02:41 +02:00
+- Typ: Feature
+- Zusammenfassung:
+  Im Admin-Cockpit kann jetzt eine Statistik zu Buchungen und Abrechnungen gedruckt werden.
+- Änderungen:
+  Der neue Statistikdruck läuft über die bestehende Druckwarteschlange.
+  Der Ausdruck zeigt Zahlarten, Produktsummen, Buchungen je Tisch, Abrechnungen, Stornos und offene Beträge.
+  Die Druckerübersicht kennzeichnet diese Jobs als `Statistik`.
+
+## 0.8.18-beta
+- Datum: 2026-05-07
+- Uhrzeit: 20:46:51 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Teller-Bons aus der Küche nennen das Gericht jetzt noch eindeutiger direkt auf dem Klebebon.
+- Änderungen:
+  Der Teller-Bon wird weiterhin beim Fertig-Abhaken einer einzelnen Küchenportion erzeugt.
+  Die Druckvorlage hebt das Gericht mit einer eigenen `GERICHT:`-Zeile hervor.
+  Tisch, Platz, Uhrzeit, Portion und Nachbestellung bleiben auf dem Teller-Bon sichtbar.
+
+## 0.8.17-beta
+- Datum: 2026-05-07
+- Uhrzeit: 20:36:24 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die Bon-Übersicht bleibt in der Service-Abrechnung dauerhaft sichtbar, auch wenn ein Teil-Bon geprüft wird.
+- Änderungen:
+  Die feste Bon-Übersicht wird getrennt von der optionalen Bon-Vorschau gerendert.
+  Teil-Bons erscheinen zusätzlich zur Übersicht, statt die Gesamt- oder Tischübersicht zu ersetzen.
+  Die Checkout-Bonflächen behalten auf kleinen Bildschirmen eine klare Stapelung.
+
+## 0.8.16-beta
+- Datum: 2026-05-07
+- Uhrzeit: 20:27:49 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die Küchenansicht lädt lokal wieder stabil und zeigt Tisch- sowie Platztexte klarer an.
+- Änderungen:
+  Das Theme-Initialisierungsskript wird Next-kompatibel über `next/script` eingebunden.
+  Küchenbons zeigen Ziele jetzt als `Ganzer Tisch` oder `Platz P1`, statt unklarer Kurztexte.
+  Tisch-, Status- und Produkttexte in der Küchenwand sind robuster gegen lange Beschriftungen und Umbrüche.
+
+## 0.8.15-beta
+- Datum: 2026-05-04
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Gericht-Bons werden nicht mehr beim Senden an die Küche gedruckt, sondern erst beim Fertig-Abhaken der einzelnen Portion.
+- Änderungen:
+  Automatische Küchenbon-Druckjobs beim Senden an die Küche wurden entfernt.
+  Tellerbons bleiben an das einzelne Abhaken einer Portion gebunden.
+  Die Druckbreite wurde kompakter eingestellt und zentrierte Bon-Zeilen werden nicht mehr mit zusätzlichen Leerzeichen verschoben.
+
+## 0.8.14-beta
+- Datum: 2026-05-04
+- Uhrzeit: laufend
+- Typ: Feature
+- Zusammenfassung:
+  Die Abrechnung zeigt die Bon-Übersicht dauerhaft und fertige Einzelportionen erzeugen Tellerbons für die Küche.
+- Änderungen:
+  Die Bon-Übersicht bleibt im Abrechnungsbereich sichtbar, auch wenn Positionen gesplittet oder bereits bezahlt wurden.
+  Einzelne fertig abgehakte Küchenportionen legen automatisch einen Tellerbon-Druckjob an.
+  Der neue Tellerbon enthält Gericht, Tisch, Platz, Portion, Nachbestellung und Uhrzeit.
+
+## 0.8.13-beta
+- Datum: 2026-05-04
+- Uhrzeit: 15:59:32 +02:00
+- Typ: Änderung
+- Zusammenfassung:
+  Der Epson TM-T70II ist als aktiver LAN-Bondrucker unter 192.168.178.102 eingerichtet.
+- Änderungen:
+  Die lokale Druckerkonfiguration nutzt jetzt die erreichbare Drucker-IP 192.168.178.102.
+  Der Netzwerkdruck bleibt auf dem ESC/POS-Port 9100 aktiviert.
+  Die Druckwarteschlange zeigt Tellerbon-Jobs jetzt mit eigenem deutschen Label an.
+  Vorhandene fehlgeschlagene Druckjobs bleiben unverändert, damit keine alten Bons automatisch nachgedruckt werden.
+
+## 0.8.12-beta
+- Datum: 2026-05-04
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Fertige Getränke und Speisen werden nur noch dem Kellner angezeigt, der die Bestellung aufgenommen hat.
+- Änderungen:
+  Neue Positionen speichern den aufnehmenden Service-Mitarbeiter für spätere Abholmeldungen.
+  Fertigmeldungen aus Küche und Bar erhalten die zuständigen Service-Mitarbeiter als Zielkonto.
+  Die Hinweisfilter berücksichtigen gezielte Nutzerzustellung zusätzlich zur Rollenfreigabe.
+  Andere Kellner bekommen keine fremden Abholmeldungen mehr in ihrem Menü.
+
 ## 0.5.02-beta
 - Datum: 2026-03-29
 - Uhrzeit: 02:20:00 +02:00

@@ -2,6 +2,7 @@ import type { ReceiptDocumentInput } from "@kiju/print-bridge";
 import type {
   KitchenTicketBatch,
   NetworkPrinterConfig,
+  OrderItem,
   OrderSession,
   PersistedPrintJob,
   Product,
@@ -24,6 +25,30 @@ export type CreatePrintJobRequest =
       table: TableLayout;
       products: Product[];
       batch: KitchenTicketBatch;
+    }
+  | {
+      type: "daily-close";
+      sessions: OrderSession[];
+      tables: TableLayout[];
+      products: Product[];
+      printedAt?: string;
+    }
+  | {
+      type: "pickup-ticket";
+      tableId: string;
+      tableLabel: string;
+      pickupNumber: number;
+      createdAt?: string;
+    }
+  | {
+      type: "kitchen-label";
+      session: OrderSession;
+      table: TableLayout;
+      products: Product[];
+      batch: KitchenTicketBatch;
+      itemId: OrderItem["id"];
+      unitIndex: number;
+      completedAt: string;
     };
 
 export type UpdatePrinterConfigRequest = Pick<NetworkPrinterConfig, "enabled" | "host" | "port">;

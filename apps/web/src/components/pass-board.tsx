@@ -28,6 +28,7 @@ import {
 } from "@kiju/domain";
 
 import { useDemoApp } from "../lib/app-state";
+import { createPrintJob } from "../lib/print-client";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
 
@@ -196,14 +197,15 @@ const resolveTargetLabel = (
   table: { id: string; seats: { id: string; label: string }[] }
 ) => {
   if (item.target.type === "table") {
-    return "Tisch";
+    return "Ganzer Tisch";
   }
 
   const seatId = item.target.seatId;
-  return (
+  const seatLabel =
     table.seats.find((seat) => seat.id === seatId)?.label ??
-    seatId.replace(`${table.id}-seat-`, "P")
-  );
+    seatId.replace(`${table.id}-seat-`, "P");
+
+  return `Platz ${seatLabel}`;
 };
 
 const buildTargetSummary = (items: OrderItem[]) => {
@@ -421,6 +423,44 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
 
   const openPortionCount = allOpenItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const handleKitchenUnitStatusChange = async (
+    ticket: PassTicket,
+    line: PassTicketLine,
+    unit: PassTicketUnit
+  ) => {
+    const session = getSessionForTable(state.sessions, ticket.tableId);
+    const table = state.tables.find((entry) => entry.id === ticket.tableId);
+    const batch = session?.kitchenTicketBatches.find((entry) => entry.id === ticket.id);
+    if (!session || !table || !batch) return;
+
+    const result = actions.cycleKitchenItemUnitStatus(
+      ticket.tableId,
+      ticket.id,
+      line.id,
+      unit.unitIndex
+    );
+
+    if (!result.ok || result.nextStatus !== "completed" || !result.changedAt) {
+      return;
+    }
+
+    const printResult = await createPrintJob({
+      type: "kitchen-label",
+      session,
+      table,
+      products: state.products,
+      batch,
+      itemId: line.id,
+      unitIndex: unit.unitIndex,
+      completedAt: result.changedAt
+    });
+
+    if (!printResult.ok) {
+      // Die Portion bleibt fertig, auch wenn der Drucker gerade nicht erreichbar ist.
+      console.warn(printResult.message ?? "Tellerbon konnte nicht gedruckt werden.");
+    }
+  };
+
   const renderLineCopy = (line: PassTicketLine) => (
     <div className="kiju-pass-ticket__line-copy">
       <strong>{line.productName}</strong>
@@ -504,14 +544,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                   <button
                     type="button"
                     className="kiju-pass-ticket__line-button"
-                    onClick={() =>
-                      actions.cycleKitchenItemUnitStatus(
-                        ticket.tableId,
-                        ticket.id,
-                        line.id,
-                        unit.unitIndex
-                      )
-                    }
+                    onClick={() => void handleKitchenUnitStatusChange(ticket, line, unit)}
                     disabled={!canToggleKitchenUnits || Boolean(line.canceledAt)}
                     aria-label={`${ticket.tableName}, ${ticket.courseLabel}, ${line.productName}: aktuell ${
                       kitchenUnitStatusLabels[unit.status]
@@ -540,14 +573,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                         key={unit.id}
                         type="button"
                         className={`kiju-pass-ticket__unit is-${unit.status}`}
-                        onClick={() =>
-                          actions.cycleKitchenItemUnitStatus(
-                            ticket.tableId,
-                            ticket.id,
-                            line.id,
-                            unit.unitIndex
-                          )
-                        }
+                        onClick={() => void handleKitchenUnitStatusChange(ticket, line, unit)}
                         disabled={!canToggleKitchenUnits || Boolean(line.canceledAt)}
                         aria-label={`${ticket.tableName}, ${ticket.courseLabel}, ${line.productName}, Portion ${
                           unit.unitIndex + 1

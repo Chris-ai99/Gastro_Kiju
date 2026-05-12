@@ -3,6 +3,11 @@ import {
   calculateLineItemsTotal,
   calculateOpenItemQuantity,
   calculateSessionBillableTotal,
+  calculateSessionCanceledTotal,
+  calculateSessionOpenTotal,
+  calculateSessionPaidTotal,
+  calculateSessionTotal,
+  paymentLabels,
   type KitchenTicketBatch,
   type OrderItem,
   type OrderSession,
@@ -13,11 +18,11 @@ import {
   type ThermalPrintLine
 } from "@kiju/domain";
 
-const THERMAL_LINE_WIDTH = 48;
-const RECEIPT_ARTICLE_WIDTH = 30;
+const THERMAL_LINE_WIDTH = 42;
+const RECEIPT_ARTICLE_WIDTH = 24;
 const RECEIPT_QUANTITY_WIDTH = 4;
 const RECEIPT_AMOUNT_WIDTH = 12;
-const RECEIPT_SUMMARY_LABEL_WIDTH = 35;
+const RECEIPT_SUMMARY_LABEL_WIDTH = 29;
 const SEPARATOR = "-".repeat(THERMAL_LINE_WIDTH);
 const STRONG_SEPARATOR = "=".repeat(THERMAL_LINE_WIDTH);
 const DEFAULT_CANCELLATION_LABEL = "Rechnungsstorno";
@@ -70,10 +75,29 @@ export type BuildReceiptDocumentFromSessionsInput = {
   bedienung?: string;
 };
 
+export type BuildPickupTicketDocumentInput = {
+  tableLabel: string;
+  pickupNumber: number;
+  createdAt?: string;
+};
+
 type BuildKitchenTicketDocumentInput = {
   batch: KitchenTicketBatch;
   session: OrderSession;
   table: TableLayout;
+  products: Product[];
+  printedAt?: string;
+};
+
+type BuildKitchenPlateLabelDocumentInput = BuildKitchenTicketDocumentInput & {
+  itemId: OrderItem["id"];
+  unitIndex: number;
+  completedAt?: string;
+};
+
+export type BuildBookingStatisticsDocumentInput = {
+  sessions: OrderSession[];
+  tables: TableLayout[];
   products: Product[];
   printedAt?: string;
 };
@@ -170,12 +194,7 @@ const centerLine = (value: string) => {
     return "";
   }
 
-  if (normalized.length >= THERMAL_LINE_WIDTH) {
-    return normalized.slice(0, THERMAL_LINE_WIDTH);
-  }
-
-  const leftPadding = Math.floor((THERMAL_LINE_WIDTH - normalized.length) / 2);
-  return `${" ".repeat(leftPadding)}${normalized}`.padEnd(THERMAL_LINE_WIDTH, " ");
+  return normalized.length > THERMAL_LINE_WIDTH ? normalized.slice(0, THERMAL_LINE_WIDTH) : normalized;
 };
 
 const formatEuroCents = (valueCents: number) => {
@@ -263,6 +282,28 @@ const resolveModifierLabels = (item: OrderItem, product: Product | undefined) =>
 
 const joinItemDetails = (parts: Array<string | undefined>) =>
   parts.map((part) => normalizeText(part ?? "")).filter(Boolean).join(" - ");
+
+const calculateBookedItemTotal = (item: OrderItem, products: Product[]) => {
+  const product = products.find((entry) => entry.id === item.productId);
+  if (!product) return 0;
+
+  const modifierTotal = item.modifiers.reduce((sum, modifierSelection) => {
+    const modifierGroup = product.modifierGroups.find(
+      (group) => group.id === modifierSelection.groupId
+    );
+    if (!modifierGroup) return sum;
+
+    return (
+      sum +
+      modifierSelection.optionIds.reduce((optionSum, optionId) => {
+        const option = modifierGroup.options.find((entry) => entry.id === optionId);
+        return optionSum + (option?.priceDeltaCents ?? 0);
+      }, 0)
+    );
+  }, 0);
+
+  return (product.priceCents + modifierTotal) * item.quantity;
+};
 
 const buildSessionPositionName = (item: OrderItem, products: Product[]) => {
   const product = products.find((entry) => entry.id === item.productId);
@@ -577,6 +618,34 @@ export function buildReceiptPrintDocument(
   );
 }
 
+export const buildPickupTicketPrintDocument = ({
+  tableLabel,
+  pickupNumber,
+  createdAt = new Date().toISOString()
+}: BuildPickupTicketDocumentInput): ThermalPrintDocument => {
+  const safePickupNumber = Math.max(
+    1,
+    Math.floor(Number.isFinite(pickupNumber) ? pickupNumber : 1)
+  );
+  const safeTableLabel = normalizeText(tableLabel) || `Zum Abholen ${safePickupNumber}`;
+
+  return {
+    title: "Abholbon",
+    width: THERMAL_LINE_WIDTH,
+    lines: [
+      { text: centerLine("ABHOLBON"), emphasis: true, align: "center" },
+      { text: centerLine("Zum Abholen"), align: "center" },
+      { text: STRONG_SEPARATOR },
+      { text: centerLine(`NUMMER ${safePickupNumber}`), emphasis: true, align: "center" },
+      { text: STRONG_SEPARATOR },
+      { text: `BON   : ${safeTableLabel}` },
+      { text: `ZEIT  : ${formatDateTime(createdAt)}` },
+      { text: SEPARATOR },
+      { text: centerLine("Für Abholung bereitlegen"), align: "center" }
+    ]
+  };
+};
+
 const groupKitchenItems = (items: OrderItem[], products: Product[]) => {
   const groupedItems = new Map<string, GroupedItem>();
 
@@ -661,6 +730,264 @@ export const buildKitchenTicketPrintDocument = ({
         : [{ text: "Keine Positionen vorhanden." }]),
       { text: SEPARATOR },
       { text: centerLine("Guten Service!"), align: "center" }
+    ]
+  };
+};
+
+export const buildKitchenPlateLabelPrintDocument = ({
+  batch,
+  session,
+  table,
+  products,
+  itemId,
+  unitIndex,
+  completedAt = new Date().toISOString()
+}: BuildKitchenPlateLabelDocumentInput): ThermalPrintDocument => {
+  const item = session.items.find((entry) => entry.id === itemId);
+  const product = item ? products.find((entry) => entry.id === item.productId) : undefined;
+  const productName = product?.name ?? "Unbekannter Artikel";
+  const safeUnitIndex = Math.max(0, unitIndex);
+  const portionLabel =
+    item && item.quantity > 1 ? `Portion ${safeUnitIndex + 1} von ${item.quantity}` : "Einzelportion";
+  const modifierLines =
+    item?.modifiers && item.modifiers.length > 0
+      ? resolveModifierLabels(item, product).flatMap((line) =>
+          wrapText(`Extra: ${line}`, THERMAL_LINE_WIDTH).map((text) => ({ text }))
+        )
+      : [];
+  const noteLines = item?.note?.trim()
+    ? wrapText(`Hinweis: ${item.note.trim()}`, THERMAL_LINE_WIDTH).map((text) => ({ text }))
+    : [];
+  const courseLabel = courseLabels[batch.course];
+
+  return {
+    title: "Tellerbon",
+    width: THERMAL_LINE_WIDTH,
+    lines: [
+      { text: centerLine("TELLERBON"), emphasis: true, align: "center" },
+      { text: centerLine(courseLabel), align: "center" },
+      { text: SEPARATOR },
+      { text: `TISCH : ${table.name}`, emphasis: true },
+      { text: `PLATZ : ${item ? resolveSeatLabel(table, item) : "Tisch"}` },
+      { text: `ZEIT  : ${formatDateTime(completedAt)}` },
+      { text: `BON   : ${batch.sequence === 1 ? "Erstsendung" : `Nachbestellung ${batch.sequence}`}` },
+      { text: `PORT. : ${portionLabel}` },
+      { text: SEPARATOR },
+      { text: "GERICHT:", emphasis: true },
+      ...wrapText(`1x ${productName}`, THERMAL_LINE_WIDTH).map((text, index) => ({
+        text,
+        emphasis: index === 0
+      })),
+      ...modifierLines,
+      ...noteLines,
+      { text: SEPARATOR },
+      { text: centerLine("Zum Teller kleben"), align: "center" }
+    ]
+  };
+};
+
+const sessionStatusReportLabels: Record<OrderSession["status"], string> = {
+  planned: "Geplant",
+  idle: "Frei",
+  serving: "Läuft",
+  waiting: "Wartet",
+  "ready-to-bill": "Abrechnungsbereit",
+  closed: "Geschlossen"
+};
+
+const buildReportInfoLine = (label: string, value: string): ThermalPrintLine => ({
+  text: `${fitLeft(label, 18)} ${fitRight(value, THERMAL_LINE_WIDTH - 19)}`
+});
+
+const buildReportSection = (title: string): ThermalPrintLine[] => [
+  { text: SEPARATOR },
+  { text: centerLine(title), emphasis: true, align: "center" },
+  { text: SEPARATOR }
+];
+
+const resolveReportTableName = (tables: TableLayout[], tableId: string) =>
+  tables.find((table) => table.id === tableId)?.name ?? tableId.replace("table-", "Tisch ");
+
+const resolveReportTable = (tables: TableLayout[], tableId: string) =>
+  tables.find((table) => table.id === tableId);
+
+const buildReportItemTargetLabel = (table: TableLayout | undefined, item: OrderItem) => {
+  const target = item.target;
+  if (target.type === "table") return "Tisch";
+
+  return table?.seats.find((seat) => seat.id === target.seatId)?.label ?? "Sitzplatz";
+};
+
+const buildWrappedReportLines = (value: string, emphasis = false): ThermalPrintLine[] =>
+  wrapText(value, THERMAL_LINE_WIDTH).map((text, index) => ({
+    text,
+    emphasis: emphasis && index === 0
+  }));
+
+export const buildBookingStatisticsPrintDocument = ({
+  sessions,
+  tables,
+  products,
+  printedAt = new Date().toISOString()
+}: BuildBookingStatisticsDocumentInput): ThermalPrintDocument => {
+  const reportSessions = sessions
+    .filter(
+      (session) =>
+        session.items.length > 0 ||
+        session.payments.length > 0 ||
+        session.cancellations.length > 0
+    )
+    .sort((left, right) =>
+      resolveReportTableName(tables, left.tableId).localeCompare(
+        resolveReportTableName(tables, right.tableId),
+        "de"
+      )
+    );
+  const orderedQuantity = reportSessions.reduce(
+    (sum, session) => sum + session.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+    0
+  );
+  const bookingTotal = reportSessions.reduce(
+    (sum, session) =>
+      sum + session.items.reduce((itemSum, item) => itemSum + calculateBookedItemTotal(item, products), 0),
+    0
+  );
+  const billableTotal = reportSessions.reduce(
+    (sum, session) => sum + calculateSessionBillableTotal(session, products),
+    0
+  );
+  const paidTotal = reportSessions.reduce((sum, session) => sum + calculateSessionPaidTotal(session), 0);
+  const canceledTotal = reportSessions.reduce(
+    (sum, session) => sum + calculateSessionCanceledTotal(session, products),
+    0
+  );
+  const openTotal = reportSessions.reduce(
+    (sum, session) => sum + calculateSessionOpenTotal(session, products),
+    0
+  );
+  const paymentTotals = new Map<keyof typeof paymentLabels, number>();
+  const productTotals = new Map<string, { name: string; quantity: number; total: number }>();
+
+  for (const session of reportSessions) {
+    for (const payment of session.payments) {
+      paymentTotals.set(payment.method, (paymentTotals.get(payment.method) ?? 0) + payment.amountCents);
+    }
+
+    for (const item of session.items) {
+      const productName = resolveProductLabel(products, item.productId);
+      const current = productTotals.get(item.productId) ?? {
+        name: productName,
+        quantity: 0,
+        total: 0
+      };
+      current.quantity += item.quantity;
+      current.total += calculateBookedItemTotal(item, products);
+      productTotals.set(item.productId, current);
+    }
+  }
+
+  const paymentLines =
+    paymentTotals.size > 0
+      ? [...paymentTotals.entries()]
+          .sort(([left], [right]) => paymentLabels[left].localeCompare(paymentLabels[right], "de"))
+          .map(([method, amount]) => buildReportInfoLine(paymentLabels[method], formatEuroCents(amount)))
+      : [{ text: "Keine Abrechnungen vorhanden." }];
+  const productLines =
+    productTotals.size > 0
+      ? [...productTotals.values()]
+          .sort((left, right) => right.quantity - left.quantity || left.name.localeCompare(right.name, "de"))
+          .flatMap((entry) =>
+            buildWrappedReportLines(
+              `${entry.quantity}x ${entry.name} · ${formatEuroCents(entry.total)}`,
+              true
+            )
+          )
+      : [{ text: "Keine Buchungen vorhanden." }];
+  const sessionLines =
+    reportSessions.length > 0
+      ? reportSessions.flatMap((session) => {
+          const tableName = resolveReportTableName(tables, session.tableId);
+          const table = resolveReportTable(tables, session.tableId);
+          const paymentCount = session.payments.length;
+          const cancellationCount = session.cancellations.length;
+
+          return [
+            { text: tableName, emphasis: true },
+            {
+              text: `${sessionStatusReportLabels[session.status]} · ${session.items.length} Positionen · ${paymentCount} Zahlungen`
+            },
+            buildReportInfoLine("Gebucht", formatEuroCents(calculateSessionTotal(session, products))),
+            buildReportInfoLine("Bezahlt", formatEuroCents(calculateSessionPaidTotal(session))),
+            buildReportInfoLine("Offen", formatEuroCents(calculateSessionOpenTotal(session, products))),
+            ...(cancellationCount > 0
+              ? [buildReportInfoLine("Stornos", String(cancellationCount))]
+              : []),
+            ...session.items.flatMap((item) => {
+              const productName = buildSessionPositionName(item, products);
+              const targetLabel = buildReportItemTargetLabel(table, item);
+              const statusLabel = item.canceledAt ? " · storniert" : "";
+              return buildWrappedReportLines(
+                `- ${item.quantity}x ${productName} · ${targetLabel} · ${formatEuroCents(
+                  calculateBookedItemTotal(item, products)
+                )}${statusLabel}`
+              );
+            }),
+            { text: "" }
+          ];
+        })
+      : [{ text: "Keine Tische mit Buchungen vorhanden." }];
+  const settlementLines =
+    reportSessions.some((session) => session.payments.length > 0)
+      ? reportSessions.flatMap((session) =>
+          session.payments.flatMap((payment) =>
+            buildWrappedReportLines(
+              `${resolveReportTableName(tables, session.tableId)} · ${payment.label} · ${
+                paymentLabels[payment.method]
+              } · ${formatEuroCents(payment.amountCents)}`
+            )
+          )
+        )
+      : [{ text: "Keine Zahlungen vorhanden." }];
+  const cancellationLines =
+    reportSessions.some((session) => session.cancellations.length > 0)
+      ? reportSessions.flatMap((session) =>
+          session.cancellations.flatMap((cancellation) =>
+            buildWrappedReportLines(
+              `${resolveReportTableName(tables, session.tableId)} · ${cancellation.label} · ${
+                cancellation.lineItems.reduce((sum, lineItem) => sum + lineItem.quantity, 0)
+              } Positionen · ${formatDateTime(cancellation.createdAt)}`
+            )
+          )
+        )
+      : [{ text: "Keine Stornos vorhanden." }];
+
+  return {
+    title: "Statistik",
+    width: THERMAL_LINE_WIDTH,
+    lines: [
+      { text: centerLine("STATISTIK"), emphasis: true, align: "center" },
+      { text: centerLine("Abrechnungen & Buchungen"), align: "center" },
+      { text: SEPARATOR },
+      { text: `ZEIT  : ${formatDateTime(printedAt)}` },
+      buildReportInfoLine("Tische", String(reportSessions.length)),
+      buildReportInfoLine("Positionen", String(orderedQuantity)),
+      buildReportInfoLine("Gebucht", formatEuroCents(bookingTotal)),
+      buildReportInfoLine("Abrechenbar", formatEuroCents(billableTotal)),
+      buildReportInfoLine("Bezahlt", formatEuroCents(paidTotal)),
+      buildReportInfoLine("Storniert", formatEuroCents(canceledTotal)),
+      buildReportInfoLine("Offen", formatEuroCents(openTotal)),
+      ...buildReportSection("Zahlarten"),
+      ...paymentLines,
+      ...buildReportSection("Artikel"),
+      ...productLines,
+      ...buildReportSection("Buchungen je Tisch"),
+      ...sessionLines,
+      ...buildReportSection("Abrechnungen"),
+      ...settlementLines,
+      ...buildReportSection("Stornos"),
+      ...cancellationLines,
+      { text: SEPARATOR },
+      { text: centerLine("Ende der Statistik"), align: "center" }
     ]
   };
 };

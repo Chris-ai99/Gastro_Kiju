@@ -71,6 +71,188 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.01-beta",
+    date: "2026-05-10",
+    time: "22:32:47 +02:00",
+    type: "Feature",
+    title: "Service-Abschluss mit Unterkategorien",
+    summary:
+      "Der Service-Bestellfluss führt nach jeder Hauptkategorie über Unterkategorien in eine reine Artikelauswahl und danach in eine Abschlussansicht.",
+    categories: ["Service", "Bestellung", "Mobile", "Oberfläche"],
+    changes: [
+      "Getränke, Vorspeise, Hauptspeise und Nachtisch öffnen zuerst passende Untergruppen wie Alkoholfrei, Bier/Radler, Pizza, Pasta, Dessert oder Sonstiges.",
+      "In der Artikelauswahl werden keine erfassten Positionen und keine Senden-, Warten- oder Überspringen-Aktionen mehr angezeigt.",
+      "Die Abschlussansicht trennt neu ausgewählte, noch nicht gesendete und bereits gesendete Positionen; nur ungesendete Positionen bleiben bearbeitbar.",
+      "Die neuen Service-Flächen sind für Handy und Tablet auf vertikales Touch-Scrollen ausgelegt."
+    ]
+  },
+  {
+    version: "0.9.00-beta",
+    date: "2026-05-10",
+    time: "22:08:35 +02:00",
+    type: "Feature",
+    title: "Service-Bestellung über Kategorien",
+    summary:
+      "Der Service-Bestellfluss startet nach „Bestellen“ mit vier Kategorien und öffnet die Artikelauswahl je Gang in einem eigenen Popup.",
+    categories: ["Service", "Bestellung", "Mobile", "Oberfläche"],
+    changes: [
+      "Die obere Statistikleiste im Service-Wizard wurde entfernt und sichtbare Tischwechsel-Texte wurden durch neutrale Navigation ersetzt.",
+      "Getränke, Vorspeise, Hauptspeise und Nachtisch öffnen jeweils ein eigenes Popup mit Mehrfachauswahl und den vorhandenen Positionsaktionen.",
+      "Scrollbare Service-Popups und Listen sind für Handy und Tablet auf vertikales Touch-Scrollen ausgelegt."
+    ]
+  },
+  {
+    version: "0.8.21-beta",
+    date: "2026-05-07",
+    time: "22:35:40 +02:00",
+    type: "Feature",
+    title: "Abholbon als normaler Tisch",
+    summary:
+      "In der Service-Tischübersicht kann jetzt ein Abholbon als normaler Tisch erstellt und gedruckt werden.",
+    categories: ["Service", "Tische", "Drucker", "Abholung"],
+    changes: [
+      "Der neue Button Abholbon erstellen legt fortlaufende Abholtische wie Zum Abholen 1 an.",
+      "Der Abholtisch wird direkt geöffnet und kann wie jeder andere Tisch bestellt und abgerechnet werden.",
+      "Ein kurzer Abholbon mit Nummer, Tisch-/Bon-Name und Uhrzeit wird als eigener Druckjob gesendet."
+    ]
+  },
+  {
+    version: "0.8.20-beta",
+    date: "2026-05-07",
+    time: "21:44:20 +02:00",
+    type: "Fix",
+    title: "Pizza-Namen auf Handybreite vollständig",
+    summary: "Pizza- und Produktnamen werden auf Handybreite vollständig angezeigt.",
+    categories: ["Service", "Admin", "Mobile", "Oberfläche"],
+    changes: [
+      "Produktkarten im Service dürfen Namen auf kleinen Bildschirmen mehrzeilig umbrechen.",
+      "Gebuchte Positionen und Gruppenzuordnungen schneiden lange Produktnamen mobil nicht mehr ab.",
+      "Admin-Buchungszeilen zeigen lange Pizza-Namen auf Handybreite vollständig statt gekürzt."
+    ]
+  },
+  {
+    version: "0.8.19-beta",
+    date: "2026-05-07",
+    time: "21:02:41 +02:00",
+    type: "Feature",
+    title: "Statistikdruck für Buchungen und Abrechnungen",
+    summary:
+      "Im Admin-Cockpit kann jetzt eine Statistik zu Buchungen und Abrechnungen gedruckt werden.",
+    categories: ["Admin", "Druck", "Statistik", "Abrechnung"],
+    changes: [
+      "Der neue Statistikdruck läuft über die bestehende Druckwarteschlange.",
+      "Der Ausdruck zeigt Zahlarten, Produktsummen, Buchungen je Tisch, Abrechnungen, Stornos und offene Beträge.",
+      "Die Druckerübersicht kennzeichnet diese Jobs als Statistik."
+    ]
+  },
+  {
+    version: "0.8.18-beta",
+    date: "2026-05-07",
+    time: "20:46:51 +02:00",
+    type: "Verbesserung",
+    title: "Teller-Bon nennt das Gericht klarer",
+    summary:
+      "Teller-Bons aus der Küche nennen das Gericht jetzt noch eindeutiger direkt auf dem Klebebon.",
+    categories: ["Küche", "Druck", "Teller-Bon"],
+    changes: [
+      "Der Teller-Bon wird weiterhin beim Fertig-Abhaken einer einzelnen Küchenportion erzeugt.",
+      "Die Druckvorlage hebt das Gericht mit einer eigenen GERICHT:-Zeile hervor.",
+      "Tisch, Platz, Uhrzeit, Portion und Nachbestellung bleiben auf dem Teller-Bon sichtbar."
+    ]
+  },
+  {
+    version: "0.8.17-beta",
+    date: "2026-05-07",
+    time: "20:36:24 +02:00",
+    type: "Fix",
+    title: "Bon-Übersicht bleibt beim Splitten sichtbar",
+    summary:
+      "Die Bon-Übersicht bleibt in der Service-Abrechnung dauerhaft sichtbar, auch wenn ein Teil-Bon geprüft wird.",
+    categories: ["Service", "Abrechnung", "Bons"],
+    changes: [
+      "Die feste Bon-Übersicht wird getrennt von der optionalen Bon-Vorschau gerendert.",
+      "Teil-Bons erscheinen zusätzlich zur Übersicht, statt die Gesamt- oder Tischübersicht zu ersetzen.",
+      "Die Checkout-Bonflächen behalten auf kleinen Bildschirmen eine klare Stapelung."
+    ]
+  },
+  {
+    version: "0.8.16-beta",
+    date: "2026-05-07",
+    time: "20:27:49 +02:00",
+    type: "Fix",
+    title: "Küchenansicht und Tischtexte stabilisiert",
+    summary:
+      "Die Küchenansicht lädt lokal wieder stabil und zeigt Tisch- sowie Platztexte klarer an.",
+    categories: ["Küche", "Tische", "Oberfläche"],
+    changes: [
+      "Das Theme-Initialisierungsskript wird Next-kompatibel über next/script eingebunden.",
+      "Küchenbons zeigen Ziele jetzt als Ganzer Tisch oder Platz P1, statt unklarer Kurztexte.",
+      "Tisch-, Status- und Produkttexte in der Küchenwand sind robuster gegen lange Beschriftungen und Umbrüche."
+    ]
+  },
+  {
+    version: "0.8.15-beta",
+    date: "2026-05-04",
+    time: "laufend",
+    type: "Fix",
+    title: "Tellerbons erst beim Abhaken drucken",
+    summary:
+      "Gericht-Bons werden nicht mehr beim Senden an die Küche gedruckt, sondern erst beim Fertig-Abhaken der einzelnen Portion.",
+    categories: ["Küche", "Druck", "Tellerbon"],
+    changes: [
+      "Automatische Küchenbon-Druckjobs beim Senden an die Küche wurden entfernt.",
+      "Tellerbons bleiben an das einzelne Abhaken einer Portion gebunden.",
+      "Die Druckbreite wurde kompakter eingestellt und zentrierte Bon-Zeilen werden nicht mehr mit zusätzlichen Leerzeichen verschoben."
+    ]
+  },
+  {
+    version: "0.8.14-beta",
+    date: "2026-05-04",
+    time: "laufend",
+    type: "Feature",
+    title: "Bon-Übersicht und Tellerbons erweitert",
+    summary:
+      "Die Abrechnung zeigt die Bon-Übersicht dauerhaft und fertige Einzelportionen erzeugen Tellerbons für die Küche.",
+    categories: ["Service", "Abrechnung", "Küche", "Druck"],
+    changes: [
+      "Die Bon-Übersicht bleibt im Abrechnungsbereich sichtbar, auch wenn Positionen gesplittet oder bereits bezahlt wurden.",
+      "Einzelne fertig abgehakte Küchenportionen legen automatisch einen Tellerbon-Druckjob an.",
+      "Der neue Tellerbon enthält Gericht, Tisch, Platz, Portion, Nachbestellung und Uhrzeit."
+    ]
+  },
+  {
+    version: "0.8.13-beta",
+    date: "2026-05-04",
+    time: "15:59:32 +02:00",
+    type: "Änderung",
+    title: "LAN-Drucker aktiviert",
+    summary:
+      "Der Epson TM-T70II ist als aktiver LAN-Bondrucker unter 192.168.178.102 eingerichtet.",
+    categories: ["Druck", "Admin", "Netzwerk"],
+    changes: [
+      "Die lokale Druckerkonfiguration nutzt jetzt die erreichbare Drucker-IP 192.168.178.102.",
+      "Der Netzwerkdruck bleibt auf dem ESC/POS-Port 9100 aktiviert.",
+      "Die Druckwarteschlange zeigt Tellerbon-Jobs jetzt mit eigenem deutschen Label an.",
+      "Vorhandene fehlgeschlagene Druckjobs bleiben unverändert, damit keine alten Bons automatisch nachgedruckt werden."
+    ]
+  },
+  {
+    version: "0.8.12-beta",
+    date: "2026-05-04",
+    time: "laufend",
+    type: "Fix",
+    title: "Abholmeldungen nur für zuständigen Service",
+    summary:
+      "Fertige Getränke und Speisen werden nur noch dem Kellner angezeigt, der die Bestellung aufgenommen hat.",
+    categories: ["Service", "Hinweise", "Küche", "Bar"],
+    changes: [
+      "Neue Positionen speichern den aufnehmenden Service-Mitarbeiter für spätere Abholmeldungen.",
+      "Fertigmeldungen aus Küche und Bar erhalten die zuständigen Service-Mitarbeiter als Zielkonto.",
+      "Die Hinweisfilter berücksichtigen gezielte Nutzerzustellung zusätzlich zur Rollenfreigabe.",
+      "Andere Kellner bekommen keine fremden Abholmeldungen mehr in ihrem Menü."
+    ]
+  },
+  {
     version: "0.8.11-beta",
     date: "2026-05-01",
     time: "laufend",
@@ -1103,6 +1285,16 @@ export const AdminPanel = () => {
       }),
     [state.sessions]
   );
+  const printableBookingSessionCount = useMemo(
+    () =>
+      state.sessions.filter(
+        (session) =>
+          session.items.length > 0 ||
+          session.payments.length > 0 ||
+          session.cancellations.length > 0
+      ).length,
+    [state.sessions]
+  );
   const tablesNeedingAttention = useMemo(
     () =>
       state.sessions.filter(
@@ -1289,6 +1481,38 @@ export const AdminPanel = () => {
       message: result.ok
         ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
         : result.message ?? "Bon konnte nicht an den Netzwerkdrucker gesendet werden."
+    });
+  };
+
+  const handlePrintBookingStatistics = async () => {
+    const sessions = state.sessions.filter(
+      (session) =>
+        session.items.length > 0 ||
+        session.payments.length > 0 ||
+        session.cancellations.length > 0
+    );
+
+    if (sessions.length === 0) {
+      setFeedback({
+        tone: "alert",
+        message: "Für die Statistik sind noch keine Buchungen oder Abrechnungen vorhanden."
+      });
+      return;
+    }
+
+    const result = await createPrintJob({
+      type: "daily-close",
+      sessions,
+      tables: state.tables,
+      products: state.products,
+      printedAt: new Date().toISOString()
+    });
+
+    setFeedback({
+      tone: result.ok ? "success" : "alert",
+      message: result.ok
+        ? "Statistik für Buchungen und Abrechnungen wurde an den Netzwerkdrucker gesendet."
+        : result.message ?? "Statistik konnte nicht an den Netzwerkdrucker gesendet werden."
     });
   };
 
@@ -1642,6 +1866,15 @@ export const AdminPanel = () => {
             >
               <MonitorUp size={18} />
               Live-Dashboard
+            </button>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={() => void handlePrintBookingStatistics()}
+              disabled={printableBookingSessionCount === 0}
+            >
+              <Printer size={18} />
+              Statistik drucken
             </button>
             <button
               type="button"

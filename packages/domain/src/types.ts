@@ -8,7 +8,9 @@ export type PrintJobType =
   | "receipt"
   | "reprint"
   | "daily-close"
+  | "pickup-ticket"
   | "kitchen-ticket"
+  | "kitchen-label"
   | "test-print";
 export type PrintJobStatus = "pending" | "processing" | "printed" | "failed";
 export type ThermalPrintAlign = "left" | "center";
@@ -128,6 +130,7 @@ export interface OrderItem {
   modifiers: OrderModifierSelection[];
   kitchenUnitStates?: KitchenUnitState[];
   createdAt?: string;
+  createdByUserId?: string;
   sentAt?: string;
   canceledAt?: string;
   canceledByUserId?: string;
@@ -233,6 +236,7 @@ export interface AppNotification {
   tone: NotificationTone;
   tableId?: string;
   targetRoles?: Role[];
+  targetUserIds?: string[];
   createdByUserId?: string;
   createdByName?: string;
   acceptedByUserId?: string;
@@ -282,6 +286,8 @@ export interface PersistedPrintJob {
   tableLabel?: string;
   sessionId?: string;
   batchId?: string;
+  itemId?: string;
+  unitIndex?: number;
   course?: CourseKey;
   sequence?: number;
   createdAt: string;

@@ -46,8 +46,10 @@ const formatDateTime = (value?: string) => {
 const jobTypeLabels: Record<PersistedPrintJob["type"], string> = {
   receipt: "Kassenbon",
   reprint: "Reprint",
-  "daily-close": "Tagesabschluss",
+  "daily-close": "Statistik",
+  "pickup-ticket": "Abholbon",
   "kitchen-ticket": "Küchenbon",
+  "kitchen-label": "Tellerbon",
   "test-print": "Testdruck"
 };
 
