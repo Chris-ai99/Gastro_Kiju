@@ -282,6 +282,78 @@ describe("domain workflow", () => {
     );
   });
 
+  it("preserves spaces inside and at the end of order item notes", () => {
+    const state = structuredClone(demoAppState) as any;
+    const noteSession = structuredClone(demoAppState.sessions[0]) as any;
+    noteSession.id = "session-note-spaces";
+    noteSession.tableId = "table-note-spaces";
+    noteSession.items = [
+      {
+        id: "item-note-extra-onions",
+        target: { type: "table" },
+        productId: "main-pizza-margherita",
+        category: "main",
+        quantity: 1,
+        note: "extra Zwiebeln",
+        modifiers: []
+      },
+      {
+        id: "item-note-draft-space",
+        target: { type: "table" },
+        productId: "main-pizza-salami",
+        category: "main",
+        quantity: 1,
+        note: "extra ",
+        modifiers: []
+      }
+    ];
+    noteSession.kitchenTicketBatches = [];
+    noteSession.barTicketBatches = [];
+    noteSession.payments = [];
+    noteSession.partyGroups = [];
+    noteSession.receipt = {};
+    state.sessions.push(noteSession);
+
+    const normalized = normalizeOperationalState(state);
+    const session = getSessionForTable(normalized.sessions, "table-note-spaces")!;
+
+    expect(session.items.find((item) => item.id === "item-note-extra-onions")?.note).toBe(
+      "extra Zwiebeln"
+    );
+    expect(session.items.find((item) => item.id === "item-note-draft-space")?.note).toBe(
+      "extra "
+    );
+  });
+
+  it("removes order item notes that only contain spaces", () => {
+    const state = structuredClone(demoAppState) as any;
+    const noteSession = structuredClone(demoAppState.sessions[0]) as any;
+    noteSession.id = "session-note-empty";
+    noteSession.tableId = "table-note-empty";
+    noteSession.items = [
+      {
+        id: "item-note-only-spaces",
+        target: { type: "table" },
+        productId: "main-pizza-margherita",
+        category: "main",
+        quantity: 1,
+        note: "   ",
+        modifiers: []
+      }
+    ];
+    noteSession.kitchenTicketBatches = [];
+    noteSession.barTicketBatches = [];
+    noteSession.payments = [];
+    noteSession.partyGroups = [];
+    noteSession.receipt = {};
+    state.sessions.push(noteSession);
+
+    const normalized = normalizeOperationalState(state);
+    const session = getSessionForTable(normalized.sessions, "table-note-empty")!;
+
+    expect(session.items[0]?.note).toBeUndefined();
+  });
+
   it("derives the extra ingredient modifier group for enabled products", () => {
     const state = structuredClone(demoAppState);
     state.extraIngredients = [

@@ -295,7 +295,7 @@ const normalizeLegacyExtraIngredientNote = (
     (selection) => selection.groupId === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
   );
   if (!extraSelection) {
-    return trimmedNote;
+    return note;
   }
 
   const normalizedSelectedLabel = extraSelection.optionIds
@@ -305,12 +305,12 @@ const normalizeLegacyExtraIngredientNote = (
     .toLocaleLowerCase("de-DE");
 
   if (!normalizedSelectedLabel) {
-    return trimmedNote;
+    return note;
   }
 
   return trimmedNote.toLocaleLowerCase("de-DE") === normalizedSelectedLabel
     ? undefined
-    : trimmedNote;
+    : note;
 };
 
 const createSystemUsers = (): UserAccount[] => {

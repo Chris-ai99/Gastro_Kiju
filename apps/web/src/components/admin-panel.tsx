@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.06-beta",
+    date: "2026-05-14",
+    time: "laufend",
+    type: "Fix",
+    title: "Leerzeichen in Bestellnotizen",
+    summary:
+      "Notizen an Pizza- und Bestellpositionen behalten Leerzeichen zwischen Wörtern beim Tippen und Speichern.",
+    categories: ["Service", "Bestellung", "Notizen", "Oberfläche"],
+    changes: [
+      "Mehrteilige Hinweise wie extra Zwiebeln oder ohne Zwiebeln bleiben im Notizfeld vollständig erhalten.",
+      "Ein gerade eingegebenes Leerzeichen am Ende wird nicht mehr sofort entfernt, damit das nächste Wort normal geschrieben werden kann.",
+      "Reine Leerzeichen ohne Text werden weiterhin nicht als sichtbare Notiz gespeichert."
+    ]
+  },
+  {
     version: "0.9.05-beta",
     date: "2026-05-12",
     time: "laufend",

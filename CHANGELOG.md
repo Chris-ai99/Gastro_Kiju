@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.06-beta
+- Datum: 2026-05-14
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Notizen an Pizza- und Bestellpositionen behalten Leerzeichen zwischen Wörtern beim Tippen und Speichern.
+- Änderungen:
+  Mehrteilige Hinweise wie extra Zwiebeln oder ohne Zwiebeln bleiben im Notizfeld vollständig erhalten.
+  Ein gerade eingegebenes Leerzeichen am Ende wird nicht mehr sofort entfernt, damit das nächste Wort normal geschrieben werden kann.
+  Reine Leerzeichen ohne Text werden weiterhin nicht als sichtbare Notiz gespeichert.
+
 ## 0.9.01-beta
 - Datum: 2026-05-10
 - Uhrzeit: 22:32:47 +02:00
