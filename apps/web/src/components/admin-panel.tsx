@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.07-beta",
+    date: "2026-05-14",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Schichtübergabe ins Menü verschoben",
+    summary:
+      "Die Schichtübergabe ist aus der oberen Service-Übersicht verschwunden und liegt jetzt im Menü.",
+    categories: ["Service", "Menü", "Schichtübergabe", "Oberfläche"],
+    changes: [
+      "Die Übersicht zeigt die Schichtübergabe nicht mehr als eigene Karte über dem Raumplan.",
+      "Übergabe, Freigabe und Kolleginnen/Kollegen hinzufügen sind im Service-Menü gebündelt.",
+      "Der aktuelle Übergabestatus bleibt im Menü sichtbar."
+    ]
+  },
+  {
     version: "0.9.06-beta",
     date: "2026-05-14",
     time: "laufend",

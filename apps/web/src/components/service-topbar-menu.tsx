@@ -1,10 +1,11 @@
 "use client";
 
-import { Bell, Clock3, Menu, MoonStar, Printer, SunMedium, UserCog, Users } from "lucide-react";
+import { Bell, Clock3, Menu, MoonStar, Plus, Printer, Split, SunMedium, UserCog, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { routeConfig } from "@kiju/config";
-import type { AppNotification, Role } from "@kiju/domain";
+import type { AppNotification, Role, UserAccount } from "@kiju/domain";
+import { StatusPill } from "@kiju/ui";
 
 import { useDemoApp } from "../lib/app-state";
 import { useTheme } from "./theme-provider";
@@ -38,6 +39,18 @@ type ServiceTopbarMenuProps = {
   onMarkAllNotificationsRead: () => void;
   historyEntries: ServiceHistoryEntry[];
   onHistoryPrint: (sessionId: string) => void;
+  handoverStatusLabel: string;
+  handoverStatusTone: "navy" | "slate";
+  handoverTargetUserId: string;
+  handoverTargetUsers: UserAccount[];
+  onHandoverTargetUserChange: (userId: string) => void;
+  onHandoverService: () => void;
+  onReleaseService: () => void;
+  canAddServiceUser: boolean;
+  supportUserId: string;
+  supportTargetUsers: UserAccount[];
+  onSupportUserChange: (userId: string) => void;
+  onAddServiceUser: () => void;
 };
 
 export const ServiceTopbarMenu = ({
@@ -45,7 +58,19 @@ export const ServiceTopbarMenu = ({
   onNotificationAction,
   onMarkAllNotificationsRead,
   historyEntries,
-  onHistoryPrint
+  onHistoryPrint,
+  handoverStatusLabel,
+  handoverStatusTone,
+  handoverTargetUserId,
+  handoverTargetUsers,
+  onHandoverTargetUserChange,
+  onHandoverService,
+  onReleaseService,
+  canAddServiceUser,
+  supportUserId,
+  supportTargetUsers,
+  onSupportUserChange,
+  onAddServiceUser
 }: ServiceTopbarMenuProps) => {
   const router = useRouter();
   const { currentUser, actions } = useDemoApp();
@@ -104,6 +129,78 @@ export const ServiceTopbarMenu = ({
               </article>
             ))
           )}
+        </section>
+
+        <section className="kiju-service-menu-section">
+          <header>
+            <div>
+              <strong>Schichtübergabe</strong>
+              <span>Aufgaben im Service weitergeben</span>
+            </div>
+            <StatusPill label={handoverStatusLabel} tone={handoverStatusTone} />
+          </header>
+
+          <div className="kiju-service-menu-action-grid">
+            <label className="kiju-inline-field">
+              <span>An Bedienung übergeben</span>
+              <select
+                value={handoverTargetUserId}
+                onChange={(event) => onHandoverTargetUserChange(event.target.value)}
+              >
+                <option value="">Bedienung auswählen</option>
+                {handoverTargetUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={onHandoverService}
+              disabled={!handoverTargetUserId}
+            >
+              <Split size={18} />
+              Übergeben
+            </button>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={onReleaseService}
+            >
+              <Users size={18} />
+              Für Service freigeben
+            </button>
+          </div>
+
+          {canAddServiceUser ? (
+            <div className="kiju-service-menu-action-grid">
+              <label className="kiju-inline-field">
+                <span>Kollegin/Kollegen hinzufügen</span>
+                <select
+                  value={supportUserId}
+                  onChange={(event) => onSupportUserChange(event.target.value)}
+                >
+                  <option value="">Bedienung auswählen</option>
+                  {supportTargetUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={onAddServiceUser}
+                disabled={!supportUserId}
+              >
+                <Plus size={18} />
+                Hinzufügen
+              </button>
+            </div>
+          ) : null}
         </section>
 
         <section className="kiju-service-menu-section">

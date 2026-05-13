@@ -3633,6 +3633,17 @@ html[data-theme="dark"] .kiju-kitchen-refresh-indicator {
   gap: 0.75rem;
 }
 
+.kiju-service-menu-action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.kiju-service-menu-action-grid .kiju-button {
+  min-height: 42px;
+}
+
 .kiju-service-menu-section + .kiju-service-menu-section {
   padding-top: 0.85rem;
   border-top: 1px solid rgba(203, 213, 225, 0.75);

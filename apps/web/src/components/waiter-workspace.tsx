@@ -2802,6 +2802,24 @@ export const WaiterWorkspace = () => {
               onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
               historyEntries={closedSessionHistory}
               onHistoryPrint={handleHistoryReceiptPrint}
+              handoverStatusLabel={
+                selectedSession
+                  ? selectedServiceNames.length > 0
+                    ? selectedServiceNames.join(", ")
+                    : "freigegeben"
+                  : "kein Tisch"
+              }
+              handoverStatusTone={selectedSession ? "navy" : "slate"}
+              handoverTargetUserId={handoverTargetUserId}
+              handoverTargetUsers={handoverTargetUsers}
+              onHandoverTargetUserChange={setHandoverTargetUserId}
+              onHandoverService={handleHandoverService}
+              onReleaseService={handleReleaseService}
+              canAddServiceUser={Boolean(selectedSession)}
+              supportUserId={supportUserId}
+              supportTargetUsers={supportTargetUsers}
+              onSupportUserChange={setSupportUserId}
+              onAddServiceUser={handleAddServiceUser}
             />
           </div>
         </header>
@@ -2917,89 +2935,6 @@ export const WaiterWorkspace = () => {
                 ))}
               </div>
             )}
-          </section>
-        ) : null}
-
-        {isWaiterView && currentStep === "table" ? (
-          <section className="kiju-service-drink-delivery">
-            <div className="kiju-service-drink-delivery__header">
-              <div>
-                <span>Service</span>
-                <strong>Schichtübergabe</strong>
-              </div>
-              <StatusPill
-                label={
-                  selectedSession
-                    ? selectedServiceNames.length > 0
-                      ? selectedServiceNames.join(", ")
-                      : "freigegeben"
-                    : "kein Tisch"
-                }
-                tone={selectedSession ? "navy" : "slate"}
-              />
-            </div>
-
-            <div className="kiju-wizard-action-grid">
-              <label className="kiju-inline-field">
-                <span>An Bedienung übergeben</span>
-                <select
-                  value={handoverTargetUserId}
-                  onChange={(event) => setHandoverTargetUserId(event.target.value)}
-                >
-                  <option value="">Bedienung auswählen</option>
-                  {handoverTargetUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="kiju-button kiju-button--secondary"
-                onClick={handleHandoverService}
-                disabled={!handoverTargetUserId}
-              >
-                <Split size={18} />
-                Übergeben
-              </button>
-              <button
-                type="button"
-                className="kiju-button kiju-button--secondary"
-                onClick={handleReleaseService}
-              >
-                <Users size={18} />
-                Für Service freigeben
-              </button>
-            </div>
-
-            {selectedSession ? (
-              <div className="kiju-wizard-action-grid">
-                <label className="kiju-inline-field">
-                  <span>Kollegin/Kollegen hinzufügen</span>
-                  <select
-                    value={supportUserId}
-                    onChange={(event) => setSupportUserId(event.target.value)}
-                  >
-                    <option value="">Bedienung auswählen</option>
-                    {supportTargetUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="kiju-button kiju-button--secondary"
-                  onClick={handleAddServiceUser}
-                  disabled={!supportUserId}
-                >
-                  <Plus size={18} />
-                  Hinzufügen
-                </button>
-              </div>
-            ) : null}
           </section>
         ) : null}
 

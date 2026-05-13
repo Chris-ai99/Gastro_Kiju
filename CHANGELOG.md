@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.07-beta
+- Datum: 2026-05-14
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die Schichtübergabe ist aus der oberen Service-Übersicht verschwunden und liegt jetzt im Menü.
+- Änderungen:
+  Die Übersicht zeigt die Schichtübergabe nicht mehr als eigene Karte über dem Raumplan.
+  Übergabe, Freigabe und Kolleginnen/Kollegen hinzufügen sind im Service-Menü gebündelt.
+  Der aktuelle Übergabestatus bleibt im Menü sichtbar.
+
 ## 0.9.06-beta
 - Datum: 2026-05-14
 - Uhrzeit: laufend
