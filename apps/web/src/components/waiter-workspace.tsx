@@ -4105,7 +4105,7 @@ export const WaiterWorkspace = () => {
 
         {extraIngredientsItem && selectedTable ? (
           <section
-            className="kiju-service-section kiju-order-wizard-overlay"
+            className="kiju-service-section kiju-order-wizard-overlay kiju-extra-ingredients-overlay"
             role="dialog"
             aria-modal="true"
             aria-labelledby="kiju-extra-ingredients-title"

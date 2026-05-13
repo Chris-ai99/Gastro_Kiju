@@ -71,6 +71,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.11-beta",
+    date: "2026-05-14",
+    time: "laufend",
+    type: "Fix",
+    title: "Extra-Zutaten-Popup liegt über der Bestellansicht",
+    summary:
+      "Das Extra-Zutaten-Popup wird jetzt vor der geöffneten Bestellansicht angezeigt.",
+    categories: ["Service", "Bestellung", "Pizza", "Oberfläche"],
+    changes: [
+      "Das Extra-Zutaten-Popup nutzt eine eigene obere Ebene und wird nicht mehr von der Bestellansicht überlagert.",
+      "Pizza-Extras können dadurch direkt im geöffneten Bestellfenster ausgewählt oder gespeichert werden."
+    ]
+  },
+  {
     version: "0.9.10-beta",
     date: "2026-05-14",
     time: "laufend",

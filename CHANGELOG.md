@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.11-beta
+- Datum: 2026-05-14
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Das Extra-Zutaten-Popup wird jetzt vor der geöffneten Bestellansicht angezeigt.
+- Änderungen:
+  Das Extra-Zutaten-Popup nutzt eine eigene obere Ebene und wird nicht mehr von der Bestellansicht überlagert.
+  Pizza-Extras können dadurch direkt im geöffneten Bestellfenster ausgewählt oder gespeichert werden.
+
 ## 0.9.10-beta
 - Datum: 2026-05-14
 - Uhrzeit: laufend

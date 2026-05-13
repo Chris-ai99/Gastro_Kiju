@@ -2535,6 +2535,10 @@ button {
   max-width: min(720px, calc(100vw - 2rem));
 }
 
+.kiju-extra-ingredients-overlay {
+  z-index: 120;
+}
+
 .kiju-extra-ingredients-modal__header,
 .kiju-extra-ingredients-modal__actions {
   display: flex;
