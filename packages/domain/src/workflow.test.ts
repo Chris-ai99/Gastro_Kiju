@@ -387,6 +387,39 @@ describe("domain workflow", () => {
     ]);
   });
 
+  it("enables the extra ingredient popup for pizza products automatically", () => {
+    const state = structuredClone(demoAppState);
+    state.extraIngredients = [];
+    state.sessions = [];
+    state.products.push({
+      id: "test-risotto",
+      name: "Risotto",
+      category: "main",
+      description: "Cremiges Reisgericht.",
+      priceCents: 900,
+      taxRate: 7,
+      allergens: [],
+      showInKitchen: true,
+      productionTarget: "kitchen",
+      modifierGroups: []
+    });
+
+    const normalized = normalizeOperationalState(state);
+    const pizza = normalized.products.find((entry) => entry.id === "main-pizza-margherita")!;
+    const nonPizza = normalized.products.find((entry) => entry.id === "test-risotto")!;
+    const extraGroup = pizza.modifierGroups.find(
+      (group) => group.id === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
+    );
+
+    expect(pizza.supportsExtraIngredients).toBe(true);
+    expect(extraGroup?.name).toBe("Extra Zutaten");
+    expect(extraGroup?.options).toEqual([]);
+    expect(nonPizza.supportsExtraIngredients).not.toBe(true);
+    expect(
+      nonPizza.modifierGroups.some((group) => group.id === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID)
+    ).toBe(false);
+  });
+
   it("keeps inactive extra ingredients readable and priced on existing items", () => {
     const state = structuredClone(demoAppState);
     state.extraIngredients = [

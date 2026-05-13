@@ -1,5 +1,3 @@
-import { EXTRA_INGREDIENTS_MODIFIER_GROUP_ID } from "./types";
-
 import type {
   AppState,
   CourseKey,
@@ -18,6 +16,7 @@ import { demoProducts, demoTables } from "./demo-data";
 
 const SYSTEM_CATALOG_VERSION = 1;
 const drinkSubcategoryFallback = "Sonstiges";
+const EXTRA_INGREDIENTS_MODIFIER_GROUP_ID = "extra-ingredients";
 const LEGACY_EXTRA_INGREDIENTS_GROUP_ID = "extra-cheese";
 const legacyExtraIngredientCatalog: ExtraIngredient[] = [
   { id: "extra-cheese", name: "Extra Käse", priceDeltaCents: 120, active: true },
@@ -143,11 +142,13 @@ const normalizeExtraIngredients = (
     normalizedIngredients.set(normalizedIngredient.id, normalizedIngredient);
   });
 
-  collectLegacyExtraIngredientsFromProducts(products).forEach((ingredient) => {
-    if (!normalizedIngredients.has(ingredient.id)) {
-      normalizedIngredients.set(ingredient.id, ingredient);
-    }
-  });
+  if (extraIngredients == null) {
+    collectLegacyExtraIngredientsFromProducts(products).forEach((ingredient) => {
+      if (!normalizedIngredients.has(ingredient.id)) {
+        normalizedIngredients.set(ingredient.id, ingredient);
+      }
+    });
+  }
 
   collectSelectedExtraIngredientIds(sessions).forEach((ingredientId) => {
     if (normalizedIngredients.has(ingredientId)) {
@@ -201,6 +202,15 @@ const collectProductIdsWithSelectedExtraIngredients = (sessions: OrderSession[])
   return productIds;
 };
 
+const supportsPizzaExtraIngredients = (product: Product) => {
+  if (product.category === "drinks") {
+    return false;
+  }
+
+  const normalizedName = product.name.toLocaleLowerCase("de-DE");
+  return normalizedName.includes("pizza") || normalizedName.includes("pizzabrot");
+};
+
 const normalizeProduct = (
   product: Product,
   extraIngredients: ExtraIngredient[],
@@ -208,6 +218,7 @@ const normalizeProduct = (
 ): Product => {
   const supportsExtraIngredients =
     product.supportsExtraIngredients === true ||
+    supportsPizzaExtraIngredients(product) ||
     product.modifierGroups.some((group) => group.id === LEGACY_EXTRA_INGREDIENTS_GROUP_ID);
   const shouldAttachExtraIngredientsGroup =
     supportsExtraIngredients || productIdsWithSelectedExtraIngredients.has(product.id);

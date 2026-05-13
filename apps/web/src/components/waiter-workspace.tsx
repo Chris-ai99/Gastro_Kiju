@@ -392,7 +392,7 @@ const ticketStatusDisplayLabels: Record<string, string> = {
 };
 
 const ticketStatusDisplayTones: Record<string, "navy" | "amber" | "red" | "green" | "slate"> = {
-  "not-recorded": "red",
+  "not-recorded": "slate",
   blocked: "red",
   countdown: "amber",
   ready: "navy",
@@ -400,6 +400,11 @@ const ticketStatusDisplayTones: Record<string, "navy" | "amber" | "red" | "green
   delivered: "green",
   skipped: "slate"
 };
+
+const getTicketStatusTone = (status: string, itemCount = 0): "navy" | "amber" | "red" | "green" | "slate" =>
+  status === "not-recorded" && itemCount > 0
+    ? "red"
+    : ticketStatusDisplayTones[status] ?? "slate";
 
 const deliveredCourseStatusLabels: Record<CourseKey, string> = {
   drinks: "Getränke geliefert",
@@ -834,6 +839,10 @@ export const WaiterWorkspace = () => {
         "Sitzplatz";
   const activeCourseTicketState =
     !selectedSession ? null : resolveServiceCourseStatus(selectedSession, activeCourse);
+  const activeCourseItemCount =
+    selectedSession?.items
+      .filter((item) => item.category === activeCourse && !isOrderItemCanceled(item))
+      .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
   const waitableCourses = useMemo(() => {
     if (!selectedSession) return [];
 
@@ -2425,7 +2434,7 @@ export const WaiterWorkspace = () => {
                 label={ticketState ? formatCourseStatusLabel(ticketState, course) : "Bereit"}
                 tone={
                   ticketState
-                    ? ticketStatusDisplayTones[ticketState.status] ?? "slate"
+                    ? getTicketStatusTone(ticketState.status, itemCount)
                     : "slate"
                 }
               />
@@ -2447,7 +2456,7 @@ export const WaiterWorkspace = () => {
           label={formatCourseStatusLabel(activeCourseTicketState, activeCourse)}
           tone={
             activeCourseTicketState
-              ? ticketStatusDisplayTones[activeCourseTicketState.status] ?? "slate"
+              ? getTicketStatusTone(activeCourseTicketState.status, activeCourseItemCount)
               : "slate"
           }
         />
@@ -3854,7 +3863,7 @@ export const WaiterWorkspace = () => {
                           label={formatCourseStatusLabel(activeCourseTicketState, activeCourse)}
                           tone={
                             activeCourseTicketState
-                              ? ticketStatusDisplayTones[activeCourseTicketState.status] ?? "slate"
+                              ? getTicketStatusTone(activeCourseTicketState.status, activeCourseItemCount)
                               : "slate"
                           }
                         />
@@ -4050,7 +4059,7 @@ export const WaiterWorkspace = () => {
                         <div className="kiju-service-sync-row">
                           <StatusPill
                             label={formatTicketStatusDisplayLabel(entry.course, entry.status)}
-                            tone={ticketStatusDisplayTones[entry.status] ?? "slate"}
+                            tone={getTicketStatusTone(entry.status, entry.itemCount)}
                           />
                           <StatusPill
                             label={`${entry.itemCount} ${entry.itemCount === 1 ? "Position" : "Positionen"}`}

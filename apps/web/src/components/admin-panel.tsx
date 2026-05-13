@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.10-beta",
+    date: "2026-05-14",
+    time: "laufend",
+    type: "Fix",
+    title: "Pizza-Extras und Statuswarnung korrigiert",
+    summary:
+      "Pizza-Positionen zeigen das Extra-Zutaten-Popup automatisch und leere Kategorien bleiben neutral.",
+    categories: ["Service", "Bestellung", "Pizza", "Küche"],
+    changes: [
+      "Pizza-Produkte aktivieren den Button Extra Zutat jetzt automatisch, auch wenn noch keine Extra-Zutaten angelegt sind.",
+      "Nicht gesendete Gänge werden nur rot markiert, wenn dort bereits Positionen erfasst wurden.",
+      "Leere Kategorien ohne ausgewählte Artikel bleiben in der Bestellübersicht neutral."
+    ]
+  },
+  {
     version: "0.9.09-beta",
     date: "2026-05-14",
     time: "laufend",
