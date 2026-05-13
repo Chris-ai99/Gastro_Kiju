@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.08-beta",
+    date: "2026-05-14",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Schichtübergaben rückgängig und tagesklar",
+    summary:
+      "Schichtübergaben können im Service-Menü zurückgenommen werden und der Tagesreset räumt Mitarbeiterkonten auf.",
+    categories: ["Service", "Schichtübergabe", "Tagesreset", "Mitarbeiter"],
+    changes: [
+      "Das Service-Menü bietet jetzt eine Aktion, um die letzte Schichtübergabe rückgängig zu machen.",
+      "Übergabe, Freigabe und Kolleginnen/Kollegen hinzufügen legen jeweils einen Rückgängig-Punkt an.",
+      "Der Tagesreset entfernt Mitarbeiterkonten außer Admins und bereinigt offene Service-Zuordnungen."
+    ]
+  },
+  {
     version: "0.9.07-beta",
     date: "2026-05-14",
     time: "laufend",

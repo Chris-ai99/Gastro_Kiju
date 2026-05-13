@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Clock3, Menu, MoonStar, Plus, Printer, Split, SunMedium, UserCog, Users } from "lucide-react";
+import { Bell, Clock3, Menu, MoonStar, Plus, Printer, RotateCcw, Split, SunMedium, UserCog, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { routeConfig } from "@kiju/config";
@@ -46,6 +46,8 @@ type ServiceTopbarMenuProps = {
   onHandoverTargetUserChange: (userId: string) => void;
   onHandoverService: () => void;
   onReleaseService: () => void;
+  canUndoLastServiceHandover: boolean;
+  onUndoLastServiceHandover: () => void;
   canAddServiceUser: boolean;
   supportUserId: string;
   supportTargetUsers: UserAccount[];
@@ -66,6 +68,8 @@ export const ServiceTopbarMenu = ({
   onHandoverTargetUserChange,
   onHandoverService,
   onReleaseService,
+  canUndoLastServiceHandover,
+  onUndoLastServiceHandover,
   canAddServiceUser,
   supportUserId,
   supportTargetUsers,
@@ -171,6 +175,15 @@ export const ServiceTopbarMenu = ({
             >
               <Users size={18} />
               Für Service freigeben
+            </button>
+            <button
+              type="button"
+              className="kiju-button kiju-button--secondary"
+              onClick={onUndoLastServiceHandover}
+              disabled={!canUndoLastServiceHandover}
+            >
+              <RotateCcw size={18} />
+              Letzte Übergabe rückgängig
             </button>
           </div>
 

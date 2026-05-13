@@ -200,6 +200,7 @@ type DemoActions = {
   addServiceUserToTable: (tableId: string, userId: string) => { ok: boolean; message?: string };
   handoverServiceTasks: (targetUserId: string) => { ok: boolean; message?: string };
   releaseServiceTasks: () => { ok: boolean; message?: string };
+  undoLastServiceHandover: () => { ok: boolean; message?: string };
   resetDemoState: () => void;
   removeTableAndServices: (tableId: string) => { ok: boolean; message?: string };
   markNotificationRead: (
@@ -215,6 +216,7 @@ type DemoContextValue = {
   currentUser?: UserAccount;
   unreadNotifications: AppNotification[];
   sharedSync: SharedSyncState;
+  canUndoServiceHandover: boolean;
   actions: DemoActions;
 };
 
@@ -797,6 +799,9 @@ const setSessionServiceUserIds = (session: OrderSession, userIds: string[]) => {
   const nextUserIds = [...new Set(userIds.filter(Boolean))];
   session.serviceUserIds = nextUserIds;
 };
+
+const employeeRoles: Role[] = ["waiter", "kitchen", "bar"];
+const isEmployeeAccount = (user: UserAccount) => employeeRoles.includes(user.role);
 
 const serviceNotificationKinds: AppNotification["kind"][] = [
   "service-drinks",
@@ -1620,6 +1625,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const currentUserIdRef = useRef(currentUserId);
   const localWriteRevisionRef = useRef(0);
   const dailyResetUndoRef = useRef<AppState | null>(null);
+  const serviceHandoverUndoRef = useRef<{ state: AppState; currentUserId: string | null } | null>(null);
+  const [canUndoServiceHandover, setCanUndoServiceHandover] = useState(false);
   const hasActiveExpiringNotification = state.notifications.some(
     (notification) =>
       !notification.read &&
@@ -1667,6 +1674,19 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     },
     [broadcast, currentUserId]
   );
+
+  const rememberServiceHandoverUndo = useCallback(() => {
+    serviceHandoverUndoRef.current = {
+      state: structuredClone(stateRef.current),
+      currentUserId: currentUserIdRef.current
+    };
+    setCanUndoServiceHandover(true);
+  }, []);
+
+  const clearServiceHandoverUndo = useCallback(() => {
+    serviceHandoverUndoRef.current = null;
+    setCanUndoServiceHandover(false);
+  }, []);
 
   useEffect(() => {
     if (!hydrated || sharedSync.status === "connecting") return;
@@ -3599,6 +3619,43 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       });
     });
 
+    const removedEmployeeIds = new Set(next.users.filter(isEmployeeAccount).map((user) => user.id));
+    next.users = next.users.filter((user) => !removedEmployeeIds.has(user.id));
+    next.deletedUserIds = [
+      ...new Set([...(next.deletedUserIds ?? []), ...removedEmployeeIds])
+    ];
+
+    next.sessions.forEach((session) => {
+      const remainingServiceUserIds = getSessionServiceUserIds(session).filter(
+        (userId) => !removedEmployeeIds.has(userId)
+      );
+      setSessionServiceUserIds(session, remainingServiceUserIds);
+    });
+
+    next.notifications.forEach((notification) => {
+      if (!isServiceNotification(notification)) return;
+
+      if (notification.acceptedByUserId && removedEmployeeIds.has(notification.acceptedByUserId)) {
+        if (notification.kind === "service-drinks-accepted") {
+          notification.kind = "service-drinks";
+        }
+        if (notification.kind === "service-course-ready-accepted") {
+          notification.kind = "service-course-ready";
+        }
+        notification.acceptedByUserId = undefined;
+        notification.acceptedByName = undefined;
+        notification.sourceNotificationId = undefined;
+      }
+
+      if (notification.targetUserIds?.length) {
+        const remainingTargetUserIds = notification.targetUserIds.filter(
+          (userId) => !removedEmployeeIds.has(userId)
+        );
+        notification.targetUserIds =
+          remainingTargetUserIds.length > 0 ? remainingTargetUserIds : undefined;
+      }
+    });
+
     next.dailyStats = {
       date: resetAt.slice(0, 10),
       revenueCents: 0,
@@ -3607,13 +3664,17 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       closedOrderIds: []
     };
 
-    commit(next);
+    clearServiceHandoverUndo();
+    const nextUserId = next.users.some((user) => user.id === currentUserId)
+      ? currentUserId
+      : next.users.find((user) => user.role === "admin" && user.active)?.id ?? null;
+    commit(next, nextUserId);
 
     return {
       ok: true,
       closedSessions: sessionsToClose.length
     };
-  }, [commit, state]);
+  }, [clearServiceHandoverUndo, commit, currentUserId, state]);
 
   const undoDailyStateReset = useCallback(() => {
     const snapshot = dailyResetUndoRef.current;
@@ -3657,10 +3718,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableId,
         targetUserIds: serviceUserIds
       });
+      rememberServiceHandoverUndo();
       commit(next);
       return { ok: true, message: `${user.name} wurde zur Schichtübergabe hinzugefügt.` };
     },
-    [commit, state]
+    [commit, rememberServiceHandoverUndo, state]
   );
 
   const handoverServiceTasks = useCallback(
@@ -3728,10 +3790,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "info",
         targetUserIds: [targetUser.id]
       });
+      rememberServiceHandoverUndo();
       commit(next);
       return { ok: true, message: `Offene Service-Aufgaben wurden an ${targetUser.name} übergeben.` };
     },
-    [commit, currentUserId, state]
+    [commit, currentUserId, rememberServiceHandoverUndo, state]
   );
 
   const releaseServiceTasks = useCallback(() => {
@@ -3786,15 +3849,32 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       tone: "info",
       targetRoles: ["waiter"]
     });
+    rememberServiceHandoverUndo();
     commit(next);
     return { ok: true, message: "Offene Service-Aufgaben wurden für das Team freigegeben." };
-  }, [commit, currentUserId, state]);
+  }, [commit, currentUserId, rememberServiceHandoverUndo, state]);
+
+  const undoLastServiceHandover = useCallback(() => {
+    const snapshot = serviceHandoverUndoRef.current;
+    if (!snapshot) {
+      return { ok: false, message: "Es gibt keine Schichtübergabe, die rückgängig gemacht werden kann." };
+    }
+
+    serviceHandoverUndoRef.current = null;
+    setCanUndoServiceHandover(false);
+    const nextUserId = snapshot.state.users.some((user) => user.id === snapshot.currentUserId)
+      ? snapshot.currentUserId
+      : snapshot.state.users.find((user) => user.role === "admin" && user.active)?.id ?? null;
+    commit(structuredClone(snapshot.state), nextUserId);
+    return { ok: true, message: "Die letzte Schichtübergabe wurde rückgängig gemacht." };
+  }, [commit]);
 
   const resetDemoState = useCallback(() => {
     const next = createDefaultOperationalState();
     const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
+    clearServiceHandoverUndo();
     commit(next, nextUserId);
-  }, [commit, currentUserId]);
+  }, [clearServiceHandoverUndo, commit, currentUserId]);
 
   const removeTableAndServices = useCallback(
     (tableId: string) => {
@@ -3959,6 +4039,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       currentUser,
       unreadNotifications,
       sharedSync,
+      canUndoServiceHandover,
       actions: {
         login,
         startWorkspaceSession,
@@ -4007,6 +4088,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         addServiceUserToTable,
         handoverServiceTasks,
         releaseServiceTasks,
+        undoLastServiceHandover,
         resetDemoState,
         removeTableAndServices,
         markNotificationRead,
@@ -4026,6 +4108,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       createPickupTable,
       createUser,
       cycleKitchenItemUnitStatus,
+      canUndoServiceHandover,
       reopenKitchenBatch,
       deletePartyGroup,
       currentUser,
@@ -4062,6 +4145,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       state,
       toggleTableActive,
       undoDailyStateReset,
+      undoLastServiceHandover,
       unlinkTables,
       unreadNotifications,
       updateExtraIngredient,

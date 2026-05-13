@@ -582,7 +582,7 @@ const resolveHistoryPaymentTargets = (
 };
 
 export const WaiterWorkspace = () => {
-  const { state, currentUser, unreadNotifications, sharedSync, actions } = useDemoApp();
+  const { state, currentUser, unreadNotifications, sharedSync, canUndoServiceHandover, actions } = useDemoApp();
   const serviceSectionRef = useRef<HTMLElement | null>(null);
   const floorplanSectionRef = useRef<HTMLElement | null>(null);
   const orderWizardModalRef = useRef<HTMLDivElement | null>(null);
@@ -1871,6 +1871,15 @@ export const WaiterWorkspace = () => {
     });
   };
 
+  const handleUndoServiceHandover = () => {
+    const result = actions.undoLastServiceHandover();
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Schichtübergabe rückgängig" : "Rückgängig nicht möglich",
+      detail: result.message ?? "Die letzte Schichtübergabe konnte nicht rückgängig gemacht werden."
+    });
+  };
+
   const handleAddServiceUser = () => {
     if (!selectedTable || !supportUserId) {
       setServiceFeedback({
@@ -2815,6 +2824,8 @@ export const WaiterWorkspace = () => {
               onHandoverTargetUserChange={setHandoverTargetUserId}
               onHandoverService={handleHandoverService}
               onReleaseService={handleReleaseService}
+              canUndoLastServiceHandover={canUndoServiceHandover}
+              onUndoLastServiceHandover={handleUndoServiceHandover}
               canAddServiceUser={Boolean(selectedSession)}
               supportUserId={supportUserId}
               supportTargetUsers={supportTargetUsers}

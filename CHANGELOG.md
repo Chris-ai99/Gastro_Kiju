@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.08-beta
+- Datum: 2026-05-14
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Schichtübergaben können im Service-Menü zurückgenommen werden und der Tagesreset räumt Mitarbeiterkonten auf.
+- Änderungen:
+  Das Service-Menü bietet jetzt eine Aktion, um die letzte Schichtübergabe rückgängig zu machen.
+  Übergabe, Freigabe und Kolleginnen/Kollegen hinzufügen legen jeweils einen Rückgängig-Punkt an.
+  Der Tagesreset entfernt Mitarbeiterkonten außer Admins und bereinigt offene Service-Zuordnungen.
+
 ## 0.9.07-beta
 - Datum: 2026-05-14
 - Uhrzeit: laufend
