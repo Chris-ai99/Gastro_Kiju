@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.09-beta
+- Datum: 2026-05-14
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Nicht gesendete Küchenartikel werden im Service rot und mit eindeutigem Hinweis angezeigt.
+- Änderungen:
+  Nicht gesendete Küchengänge heißen jetzt Noch nicht an Küche gesendet und erscheinen rot.
+  Der missverständliche Status Frei in der Küche wurde durch An Küche gesendet ersetzt.
+  Die erklärenden Status-Texte unterscheiden klar zwischen fehlendem Küchenversand und gesendeten, noch offenen Küchenartikeln.
+
 ## 0.9.08-beta
 - Datum: 2026-05-14
 - Uhrzeit: laufend

@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.09-beta",
+    date: "2026-05-14",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Küchenstatus klarer hervorgehoben",
+    summary:
+      "Nicht gesendete Küchenartikel werden im Service rot und mit eindeutigem Hinweis angezeigt.",
+    categories: ["Service", "Küche", "Bestellung", "Oberfläche"],
+    changes: [
+      "Nicht gesendete Küchengänge heißen jetzt Noch nicht an Küche gesendet und erscheinen rot.",
+      "Der missverständliche Status Frei in der Küche wurde durch An Küche gesendet ersetzt.",
+      "Die erklärenden Status-Texte unterscheiden klar zwischen fehlendem Küchenversand und gesendeten, noch offenen Küchenartikeln."
+    ]
+  },
+  {
     version: "0.9.08-beta",
     date: "2026-05-14",
     time: "laufend",

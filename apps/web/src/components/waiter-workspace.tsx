@@ -382,17 +382,17 @@ const sortDrinkSubcategories = (groups: string[]) =>
   });
 
 const ticketStatusDisplayLabels: Record<string, string> = {
-  "not-recorded": "Noch nicht gesendet",
+  "not-recorded": "Noch nicht an Küche gesendet",
   blocked: "Gesperrt",
   countdown: "Wartezeit",
-  ready: "Frei in der Küche",
+  ready: "An Küche gesendet",
   completed: "Fertig in der Küche",
   delivered: "Geliefert",
   skipped: "Übersprungen"
 };
 
 const ticketStatusDisplayTones: Record<string, "navy" | "amber" | "red" | "green" | "slate"> = {
-  "not-recorded": "slate",
+  "not-recorded": "red",
   blocked: "red",
   countdown: "amber",
   ready: "navy",
@@ -418,6 +418,10 @@ const deliveredCourseStatusDescriptions: Record<CourseKey, string> = {
 const formatTicketStatusDisplayLabel = (course: CourseKey, status: string) =>
   status === "delivered"
     ? deliveredCourseStatusLabels[course]
+    : status === "not-recorded" && course === "drinks"
+      ? "Noch nicht an Bar gesendet"
+      : status === "ready" && course === "drinks"
+        ? "An Bar gesendet"
     : ticketStatusDisplayLabels[status] ?? status;
 
 const describeCourseTicketStatus = (status: string, course?: CourseKey) => {
@@ -442,13 +446,13 @@ const describeCourseTicketStatus = (status: string, course?: CourseKey) => {
 
   switch (status) {
     case "not-recorded":
-      return "Der Gang ist erfasst, aber noch nicht an die Küche gesendet.";
+      return "Es sind Positionen erfasst, aber noch nicht an die Küche gesendet.";
     case "countdown":
       return "Dieser Gang ist an die Küche gesendet, startet aber erst nach der Wartezeit.";
     case "blocked":
       return "Dieser Gang ist aktuell noch gesperrt.";
     case "ready":
-      return "Jetzt in der Küche. Noch nicht als fertig gemeldet.";
+      return "Der Gang ist an die Küche gesendet und wartet dort auf Fertigmeldung.";
     case "completed":
       return "In der Küche als fertig markiert. Der Service kann servieren.";
     case "skipped":
@@ -534,7 +538,9 @@ const formatCourseStatusLabel = (
   }
 
   if (entry.status !== "countdown") {
-    return ticketStatusDisplayLabels[entry.status] ?? entry.status;
+    return course
+      ? formatTicketStatusDisplayLabel(course, entry.status)
+      : ticketStatusDisplayLabels[entry.status] ?? entry.status;
   }
 
   return entry.minutesLeft > 0
