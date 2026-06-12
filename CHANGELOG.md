@@ -1,5 +1,135 @@
 # Changelog
 
+## 0.10.09-beta
+- Datum: 2026-06-12
+- Uhrzeit: 22:09 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Tellerbons und Küchenansicht zeigen Bedienung und Wartezeit jetzt deutlich und eskalieren lange Wartezeiten farblich.
+- Änderungen:
+  Der Abholbon enthält jetzt ebenfalls den Namen der Bedienung.
+  Der Tellerbon druckt Tisch, Bedienung und Speise in großer Schrift sowie die verstrichene Wartezeit seit dem Absenden.
+  Der Hinweis „Zum Teller kleben“ wurde vom Tellerbon entfernt.
+  Die Küchenansicht zeigt auf jedem aktiven Bon eine sekundengenaue Wartezeit.
+  Ab 15 Minuten wird der Bon gelb, ab 20 Minuten rot und ab 25 Minuten rot blinkend dargestellt.
+  Beide Netzwerkdruckpfade unterstützen echte ESC/POS-Schriftgrößen; die Bonvorschau bildet diese Größen ebenfalls ab.
+  Automatisierte Tests prüfen Bedienung, Wartezeit, entfernten Klebehinweis und die ESC/POS-Größenbefehle.
+
+## 0.10.08-beta
+- Datum: 2026-06-12
+- Uhrzeit: 22:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Speisen erzeugen beim Absenden an die Küche keinen Druckauftrag mehr.
+- Änderungen:
+  Der versehentlich wieder aktive Küchenbon-Druck beim Versand einer Bestellung wurde entfernt.
+  Das Absenden überträgt Speisen weiterhin vollständig an die Küchenansicht, ohne Papier auszugeben.
+  Ein Tellerbon wird ausschließlich gedruckt, wenn eine einzelne Portion in der Küche als fertig abgehakt wird.
+  Der bestehende Druckpfad `kitchen-label` beim Statuswechsel auf „Fertig“ bleibt unverändert erhalten.
+
+## 0.10.07-beta
+- Datum: 2026-06-12
+- Uhrzeit: 22:01 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Extras fallen auf Küchentickets jetzt durch eine eigene orange-rote Darstellung sofort auf.
+- Änderungen:
+  Extra-Zutaten werden als deutliches Badge mit der Kennzeichnung „Extra“ angezeigt.
+  Orangefarbener Hintergrund, roter Text und kräftige Umrandung trennen Extras klar von Produkt und Sitzplatz.
+  Der Dunkelmodus verwendet eine entsprechend kontrastreiche orange-rote Variante.
+  Normale Bestellhinweise behalten ihre separate grüne Darstellung.
+
+## 0.10.06-beta
+- Datum: 2026-06-12
+- Uhrzeit: 21:57 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Küchenansicht und Küchenbon zeigen den Namen der bestellenden Person jetzt eindeutig an.
+- Änderungen:
+  Jede Ticketkarte hebt die sendende Person gut sichtbar mit „Bestellt von“ hervor.
+  Erstbestellungen und Nachbestellungen verwenden weiterhin den jeweils beim Senden gespeicherten Namen.
+  Der Küchenbon druckt den Namen eindeutig in der Zeile `BESTELLT: Name`.
+  Ein automatisierter Test bestätigt, dass der Bestellername auf dem Küchenbon enthalten ist.
+
+## 0.10.05-beta
+- Datum: 2026-06-12
+- Uhrzeit: 21:49 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Netzwerkdrucker geben Bons jetzt um 180° gedreht aus.
+- Änderungen:
+  Der ESC/POS-Druck aktiviert vor jedem Dokument den vom Epson TM-T70II unterstützten Kopfübermodus.
+  Nach dem Dokument wird die Drehung vor Papiervorschub und Schnitt wieder deaktiviert.
+  Der bisherige Web-Druckpfad und die neue API verwenden dieselbe gedrehte Ausgabe.
+  Ein automatisierter Drucktest prüft die Befehle zum Aktivieren und Zurücksetzen der Drehung.
+
+## 0.10.04-beta
+- Datum: 2026-06-10
+- Uhrzeit: 22:20 +02:00
+- Typ: Sicherheit
+- Zusammenfassung:
+  Kritische Vorgänge werden Ende zu Ende bestätigt und dauerhaft in PostgreSQL gespeichert.
+- Änderungen:
+  Die NestJS-API verarbeitet typisierte Operationen idempotent in serialisierbaren Datenbanktransaktionen.
+  Zustand, Transaktionsprotokoll, Rückgängig-Punkte und Druckaufträge werden atomar gespeichert.
+  Eine IndexedDB-Warteschlange hält offene Vorgänge über Neustarts hinweg und wiederholt temporäre Fehler automatisch.
+  Versand, Zahlung, Storno, Abschluss und Druckdialoge melden Erfolg erst nach der passenden Serverbestätigung.
+  Eine zentrale grün-gelb-rote Anzeige zeigt bestätigte, wartende und fehlgeschlagene Übertragungen mit erneuter Sendemöglichkeit.
+  Das Legacy-Importskript sichert vorhandene JSON-Dateien und übernimmt sie ausschließlich in eine leere Datenbank.
+  PostgreSQL-Migrationen, separater API-Dienst und Produktivkonfiguration sind vorbereitet; ein Deployment wurde nicht ausgeführt.
+
+## 0.10.03-beta
+- Datum: 2026-06-10
+- Uhrzeit: 21:13 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Brot und Dessert werden direkt im Service gebucht und benötigen keine Bestätigung durch Küche oder Bar.
+- Änderungen:
+  Pizza Brot mit Aioli sowie alle vorhandenen Dessertartikel sind als Selbstentnahme durch den Service hinterlegt.
+  Artikel mit dem Produktionsziel Service werden von „Alles senden“, Küchenbons, Bar-Bons und Wartezeiten ausgeschlossen.
+  Die Bestellübersicht kennzeichnet diese Positionen eindeutig als „Im Service gebucht“.
+
+## 0.10.02-beta
+- Datum: 2026-06-10
+- Uhrzeit: 21:11 +02:00
+- Typ: Inhalt
+- Zusammenfassung:
+  Die Pasta-Auswahl umfasst jetzt vier direkt bestellbare Varianten mit Penne oder Tagliatelle.
+- Änderungen:
+  Penne mit grüner Pesto und Penne mit Tomatensauce ersetzen die beiden bisherigen allgemeinen Nudelgerichte.
+  Tagliatelle mit grüner Pesto und Tagliatelle mit Tomatensauce wurden neu ergänzt.
+  Alle vier Varianten werden im Service weiterhin in der Gruppe Pasta angezeigt.
+  Bereits gespeicherte Stammdaten werden einmalig aktualisiert, ohne bestehende Produkt-IDs oder Bestellungen zu verändern.
+
+## 0.10.01-beta
+- Datum: 2026-06-10
+- Uhrzeit: 20:29 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Service erhält eine zentrale Bestellübersicht mit gemeinsamer Versandfunktion für alle offenen Positionen eines Tisches.
+- Änderungen:
+  Getränke, Vorspeisen, Hauptspeisen und Nachtische werden mit Anzahl, Zwischensumme und Versandstatus fest gruppiert angezeigt.
+  Einzelne Positionen zeigen Menge, Produkt, Tisch oder Sitzplatz, Preis, Extras und Notizen.
+  Die Bearbeitung öffnet den vorhandenen Kategorieabschluss und führt anschließend zurück zur Bestellübersicht.
+  „Alles senden“ bestätigt die offenen Mengen je Gang und sendet Getränke an die Bar sowie Speisen in getrennten Gang-Batches an die Küche.
+  Wartezeiten bleiben wirksam; bereits gesendete und stornierte Positionen werden nicht erneut versendet.
+  Gesamtbetrag, Gesamtanzahl und offene Positionen sind auf Desktop und Mobilgeräten kompakt sichtbar.
+
+## 0.10.00-beta
+- Datum: 2026-06-10
+- Uhrzeit: 19:10:31 +02:00
+- Typ: Sicherheit
+- Zusammenfassung:
+  Betriebsdaten werden atomar gespeichert, automatisch gesichert und im Produktivbetrieb außerhalb des Programmordners abgelegt.
+- Änderungen:
+  Bestellungen und Einstellungen erhalten bis zu 50 rotierende serverseitige Sicherungen.
+  Beschädigte oder gelöschte Zustandsdateien werden automatisch aus der jüngsten gültigen Sicherung wiederhergestellt.
+  Sind Hauptdatei und Sicherungen ungültig, wird kein leerer Stand mehr über die vorhandenen Daten geschrieben.
+  Bei fehlenden Schreibrechten oder vollem Datenträger meldet der Server einen Speicherfehler und übernimmt keinen ungesicherten Stand.
+  Das Deployment migriert Live-Daten nach `/var/lib/gastroweb`, damit sie eine Neuinstallation des Programmordners überstehen.
+  Druckkonfiguration und Druckwarteschlange verwenden ebenfalls absturzsichere Schreibvorgänge.
+  Die Betriebs- und Wiederherstellungsanleitung steht in `docs/product/datensicherung.md`.
+
 ## 0.9.11-beta
 - Datum: 2026-05-14
 - Uhrzeit: laufend

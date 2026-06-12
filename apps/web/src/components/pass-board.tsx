@@ -9,7 +9,8 @@ import {
   Clock3,
   ListOrdered,
   RefreshCw,
-  RotateCcw
+  RotateCcw,
+  UserRound
 } from "lucide-react";
 
 import { routeConfig } from "@kiju/config";
@@ -28,7 +29,6 @@ import {
 } from "@kiju/domain";
 
 import { useDemoApp } from "../lib/app-state";
-import { createPrintJob } from "../lib/print-client";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
 
@@ -69,6 +69,7 @@ const nextKitchenUnitStatusLabels: Record<KitchenUnitStatus, string> = {
 
 type TicketStatus = keyof typeof ticketStatusLabels;
 type PassStation = "kitchen" | "bar";
+type WaitAttention = "normal" | "warning" | "critical" | "urgent";
 
 type PassTicketUnit = {
   id: string;
@@ -102,6 +103,8 @@ type PassTicket = {
   status: TicketStatus;
   itemCount: number;
   targetSummary: string;
+  elapsedWaitLabel: string;
+  waitAttention: WaitAttention;
   waitLabel?: string;
   waitExpired?: boolean;
   canUndoCompletion: boolean;
@@ -151,6 +154,27 @@ const formatWaitDuration = (secondsLeft: number) => {
   const seconds = safeSeconds % 60;
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+};
+
+const resolveElapsedWaitDisplay = (sentAt: string | undefined, now: number) => {
+  const sentAtTime = sentAt ? new Date(sentAt).getTime() : Number.NaN;
+  const elapsedSeconds = Number.isFinite(sentAtTime)
+    ? Math.max(0, Math.floor((now - sentAtTime) / 1000))
+    : 0;
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  const attention: WaitAttention =
+    elapsedSeconds >= 25 * 60
+      ? "urgent"
+      : elapsedSeconds >= 20 * 60
+        ? "critical"
+        : elapsedSeconds >= 15 * 60
+          ? "warning"
+          : "normal";
+
+  return {
+    label: formatWaitDuration(elapsedSeconds),
+    attention
+  };
 };
 
 const resolveWaitDisplay = (
@@ -257,21 +281,28 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
   const [showArchived, setShowArchived] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [stationClock, setStationClock] = useState(() => Date.now());
-  const hasWaitingTickets =
+  const hasActiveKitchenTickets =
     config.showWaitControls &&
     state.sessions.some((session) =>
-      config.getBatches(session).some((ticket) => ticket.status === "countdown")
+      config
+        .getBatches(session)
+        .some(
+          (ticket) =>
+            ticket.status !== "completed" &&
+            ticket.status !== "not-recorded" &&
+            ticket.status !== "skipped"
+        )
     );
 
   useEffect(() => {
-    if (!hasWaitingTickets) return;
+    if (!hasActiveKitchenTickets) return;
 
     const timer = window.setInterval(() => {
       setStationClock(Date.now());
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [hasWaitingTickets]);
+  }, [hasActiveKitchenTickets]);
 
   const tickets = useMemo(() => {
     let ticketNumber = 1;
@@ -330,6 +361,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
           config.showWaitControls && ticketStatus === "countdown"
             ? resolveWaitDisplay(courseTicket, stationClock)
             : undefined;
+        const elapsedWaitDisplay = resolveElapsedWaitDisplay(courseTicket.sentAt, stationClock);
         const courseLabel =
           courseTicket.sequence > 1
             ? `${courseLabels[courseTicket.course]} · Nachbestellung ${courseTicket.sequence}`
@@ -353,6 +385,11 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
           status: ticketStatus,
           itemCount: lines.reduce((sum, line) => sum + line.openQuantity, 0),
           targetSummary: buildTargetSummary(items),
+          elapsedWaitLabel: elapsedWaitDisplay.label,
+          waitAttention:
+            station === "kitchen" && ticketStatus !== "completed"
+              ? elapsedWaitDisplay.attention
+              : "normal",
           waitLabel: waitDisplay?.label,
           waitExpired: waitDisplay?.expired,
           canUndoCompletion:
@@ -447,24 +484,13 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
       unit.unitIndex
     );
 
-    if (!result.ok || result.nextStatus !== "completed" || !result.changedAt) {
+    if (!result.ok) {
       return;
     }
 
-    const printResult = await createPrintJob({
-      type: "kitchen-label",
-      session,
-      table,
-      products: state.products,
-      batch,
-      itemId: line.id,
-      unitIndex: unit.unitIndex,
-      completedAt: result.changedAt
-    });
-
-    if (!printResult.ok) {
-      // Die Portion bleibt fertig, auch wenn der Drucker gerade nicht erreichbar ist.
-      console.warn(printResult.message ?? "Tellerbon konnte nicht gedruckt werden.");
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      console.warn(confirmation.message);
     }
   };
 
@@ -474,7 +500,10 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
       {line.canceledAt ? <span className="kiju-pass-ticket__cancel-badge">Storniert</span> : null}
       <small>{line.targetLabel}</small>
       {line.modifiers.length > 0 ? (
-        <em className="kiju-pass-ticket__modifier">{line.modifiers.join(" · ")}</em>
+        <em className="kiju-pass-ticket__modifier">
+          <strong>Extra</strong>
+          <span>{line.modifiers.join(" · ")}</span>
+        </em>
       ) : null}
       {line.note ? <em className="kiju-pass-ticket__note">{line.note}</em> : null}
     </div>
@@ -487,7 +516,10 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
     const stateBadge = ticketStatusShortLabels[ticket.status];
 
     return (
-      <article key={ticket.id} className={`kiju-pass-ticket is-${ticket.status}`}>
+      <article
+        key={ticket.id}
+        className={`kiju-pass-ticket is-${ticket.status} wait-${ticket.waitAttention}`}
+      >
         <header className="kiju-pass-ticket__header">
           <strong>Ticket {ticket.ticketNumber}</strong>
           <div className="kiju-pass-ticket__times">
@@ -504,7 +536,18 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             <span>
               {ticket.courseLabel} · {ticket.targetSummary}
             </span>
-            <small>Bedienung: {ticket.bedienung}</small>
+            <div className="kiju-pass-ticket__ordered-by">
+              <UserRound size={13} />
+              <span>Bestellt von</span>
+              <strong>{ticket.bedienung}</strong>
+            </div>
+            {station === "kitchen" && ticket.status !== "completed" ? (
+              <div className={`kiju-pass-ticket__elapsed is-${ticket.waitAttention}`}>
+                <Clock3 size={14} />
+                <span>Wartezeit</span>
+                <strong>{ticket.elapsedWaitLabel}</strong>
+              </div>
+            ) : null}
           </div>
           <div className={`kiju-pass-ticket__state is-${ticket.status}`}>
             <strong>{stateBadge}</strong>

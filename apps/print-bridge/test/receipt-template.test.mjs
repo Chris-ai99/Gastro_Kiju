@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildKitchenPlateLabelPrintDocument,
   buildKitchenTicketPrintDocument,
   buildPipaReceiptDocument,
   buildPipaReceiptText,
+  buildPickupTicketPrintDocument,
   buildReceiptPrintDocument
 } from "../dist/index.js";
-import { buildEscPosReceiptBuffer } from "../dist/server.js";
+import { buildEscPosDocumentBuffer, buildEscPosReceiptBuffer } from "../dist/server.js";
 
 test("buildPipaReceiptText erzeugt den erwarteten PiPa-Beispielbon", () => {
   const receiptText = buildPipaReceiptText({
@@ -99,13 +101,64 @@ test("buildEscPosReceiptBuffer erzeugt Epson-kompatible Initialisierung und Cut"
     gesamt: 800
   });
 
-  assert.deepEqual([...buffer.slice(0, 9)], [0x1b, 0x40, 0x1b, 0x74, 16, 0x1b, 0x32, 0x1b, 0x61]);
+  assert.deepEqual(
+    [...buffer.slice(0, 12)],
+    [0x1b, 0x40, 0x1b, 0x7b, 0x01, 0x1b, 0x74, 16, 0x1b, 0x32, 0x1b, 0x61]
+  );
   assert.ok(buffer.includes(Buffer.from([0x80])), "Euro-Zeichen sollte als CP1252-Byte 0x80 kodiert sein");
   assert.ok(
     buffer.includes(Buffer.from("                  PiPa Bistro                   \n", "latin1")),
     "zentrierte Leerzeichen im Header sollten unverändert in den Druckdaten bleiben"
   );
   assert.deepEqual([...buffer.slice(-8)], [0x00, 0x1b, 0x64, 0x04, 0x1d, 0x56, 0x42, 0x00]);
+});
+
+test("ESC/POS-Drehmodus umschließt den Boninhalt", () => {
+  const buffer = buildEscPosDocumentBuffer({
+    title: "Drehprüfung",
+    width: 42,
+    lines: [{ text: "Testbon" }]
+  });
+  const rotationOn = buffer.indexOf(Buffer.from([0x1b, 0x7b, 0x01]));
+  const content = buffer.indexOf(Buffer.from("Testbon\n", "latin1"));
+  const rotationOff = buffer.indexOf(Buffer.from([0x1b, 0x7b, 0x00]));
+  const paperFeed = buffer.indexOf(Buffer.from([0x1b, 0x64, 0x04]));
+
+  assert.equal(rotationOn, 2);
+  assert.ok(content > rotationOn);
+  assert.ok(rotationOff > content);
+  assert.ok(paperFeed > rotationOff);
+});
+
+test("ESC/POS-Druck setzt große Schrift und stellt danach Normalgröße wieder her", () => {
+  const buffer = buildEscPosDocumentBuffer({
+    title: "Größenprüfung",
+    width: 42,
+    lines: [
+      { text: "TISCH 7", size: "large", emphasis: true },
+      { text: "Normal" }
+    ]
+  });
+  const largeText = buffer.indexOf(Buffer.from("TISCH 7\n", "latin1"));
+  const largeCommand = buffer.lastIndexOf(Buffer.from([0x1d, 0x21, 0x11]), largeText);
+  const normalText = buffer.indexOf(Buffer.from("Normal\n", "latin1"));
+  const normalCommand = buffer.lastIndexOf(Buffer.from([0x1d, 0x21, 0x00]), normalText);
+
+  assert.ok(largeCommand >= 0 && largeCommand < largeText);
+  assert.ok(normalCommand > largeText && normalCommand < normalText);
+});
+
+test("Abholbon enthält die Bedienung", () => {
+  const document = buildPickupTicketPrintDocument({
+    tableLabel: "Zum Abholen 4",
+    pickupNumber: 4,
+    bedienung: "Chris",
+    createdAt: "2026-06-12T18:30:00.000Z"
+  });
+  const lines = document.lines.map((line) => line.text);
+
+  assert.ok(lines.includes("BEDIENUNG: Chris"));
+  assert.equal(document.lines.find((line) => line.text === "NUMMER 4")?.size, "large");
 });
 
 test("buildReceiptPrintDocument bleibt kompatibel und integriert Stornos in die PiPa-Vorlage", () => {
@@ -212,7 +265,7 @@ test("buildReceiptPrintDocument druckt den Bedienungsnamen", () => {
 });
 
 test("buildKitchenTicketPrintDocument druckt Vorspeisenbon mit Bedienungsnamen", () => {
-  const document = buildKitchenTicketPrintDocument({
+  const input = {
     printedAt: "2026-04-24T18:30:00.000Z",
     table: {
       id: "table-1",
@@ -284,11 +337,32 @@ test("buildKitchenTicketPrintDocument druckt Vorspeisenbon mit Bedienungsnamen",
       countdownMinutes: 0,
       sequence: 1
     }
-  });
+  };
+  const document = buildKitchenTicketPrintDocument(input);
 
   const lines = document.lines.map((line) => line.text);
 
   assert.equal(document.title, "Vorspeise");
-  assert.ok(lines.includes("BED.  : Chris"));
+  assert.ok(lines.includes("BESTELLT: Chris"));
   assert.ok(lines.some((line) => line.includes("1x Bruschetta")));
+
+  const plateLabel = buildKitchenPlateLabelPrintDocument({
+    ...input,
+    itemId: "item-starter-1",
+    unitIndex: 0,
+    completedAt: "2026-04-24T18:45:30.000Z"
+  });
+  const plateLines = plateLabel.lines.map((line) => line.text);
+
+  assert.ok(plateLines.includes("BEDIENUNG Chris"));
+  assert.ok(plateLines.includes("WARTEZEIT: 16:30 Min"));
+  assert.ok(!plateLines.includes("Zum Teller kleben"));
+  assert.equal(
+    plateLabel.lines.find((line) => line.text === "Tisch 1")?.size,
+    "large"
+  );
+  assert.equal(
+    plateLabel.lines.find((line) => line.text === "1x Bruschetta")?.size,
+    "large"
+  );
 });

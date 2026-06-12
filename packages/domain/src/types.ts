@@ -14,6 +14,7 @@ export type PrintJobType =
   | "test-print";
 export type PrintJobStatus = "pending" | "processing" | "printed" | "failed";
 export type ThermalPrintAlign = "left" | "center";
+export type ThermalPrintSize = "normal" | "large" | "xlarge";
 export type ServiceOrderMode = "table" | "seat";
 export type DesignMode = "modern" | "classic";
 export type OrderTarget = { type: "table" } | { type: "seat"; seatId: string };
@@ -262,6 +263,7 @@ export interface ThermalPrintLine {
   text: string;
   emphasis?: boolean;
   align?: ThermalPrintAlign;
+  size?: ThermalPrintSize;
 }
 
 export interface ThermalPrintDocument {

@@ -6,6 +6,11 @@ SERVICE_NAME="gastroweb"
 APP_PORT="3011"
 REQUIRED_NODE_MIN="20.9.0"
 REQUIRED_PNPM="10.22.0"
+PERSISTENT_DATA_DIR="${KIJU_DATA_DIR:-/var/lib/gastroweb}"
+PERSISTENT_STATE_FILE="${PERSISTENT_DATA_DIR}/kiju-shared-state.json"
+PERSISTENT_PRINT_FILE="${PERSISTENT_DATA_DIR}/kiju-print-state.json"
+SYSTEMD_OVERRIDE_DIR="/etc/systemd/system/${SERVICE_NAME}.service.d"
+SYSTEMD_PERSISTENCE_OVERRIDE="${SYSTEMD_OVERRIDE_DIR}/persistence.conf"
 
 on_error() {
   local line="$1"
@@ -28,11 +33,73 @@ echo "Starting ${SERVICE_NAME} deploy in ${PROJECT_DIR}"
 
 cd "${PROJECT_DIR}"
 
-if [[ "$(git diff --name-only -- apps/web/next-env.d.ts)" == "apps/web/next-env.d.ts" ]]; then
-  echo
-  echo "==> Resetting Next.js generated next-env.d.ts"
-  git restore -- apps/web/next-env.d.ts
+echo
+echo "==> Preparing persistent data outside the application directory"
+persistence_was_configured="0"
+if [[ -f "${SYSTEMD_PERSISTENCE_OVERRIDE}" ]]; then
+  persistence_was_configured="1"
 fi
+
+service_user="$(systemctl show "${SERVICE_NAME}" --property=User --value 2>/dev/null || true)"
+service_group="$(systemctl show "${SERVICE_NAME}" --property=Group --value 2>/dev/null || true)"
+service_user="${service_user:-root}"
+service_group="${service_group:-$(id -gn "${service_user}")}"
+
+run install -d -m 0750 "${PERSISTENT_DATA_DIR}"
+run chown "${service_user}:${service_group}" "${PERSISTENT_DATA_DIR}"
+run install -d -m 0755 "${SYSTEMD_OVERRIDE_DIR}"
+
+printf '%s\n' \
+  '[Service]' \
+  "Environment=\"KIJU_DATA_DIR=${PERSISTENT_DATA_DIR}\"" \
+  "Environment=\"KIJU_SHARED_STATE_FILE=${PERSISTENT_STATE_FILE}\"" \
+  "Environment=\"KIJU_PRINT_STATE_FILE=${PERSISTENT_PRINT_FILE}\"" \
+  > "${SYSTEMD_PERSISTENCE_OVERRIDE}"
+
+service_was_active="0"
+if systemctl is-active --quiet "${SERVICE_NAME}"; then
+  service_was_active="1"
+  run systemctl stop "${SERVICE_NAME}"
+fi
+
+if [[ "${persistence_was_configured}" == "0" && -f data/kiju-shared-state.json ]]; then
+  run cp -a data/kiju-shared-state.json "${PERSISTENT_STATE_FILE}"
+elif [[ ! -f "${PERSISTENT_STATE_FILE}" && -f data/kiju-shared-state.json ]]; then
+  run cp -a data/kiju-shared-state.json "${PERSISTENT_STATE_FILE}"
+fi
+
+if [[ "${persistence_was_configured}" == "0" && -f data/kiju-print-state.json ]]; then
+  run cp -a data/kiju-print-state.json "${PERSISTENT_PRINT_FILE}"
+elif [[ ! -f "${PERSISTENT_PRINT_FILE}" && -f data/kiju-print-state.json ]]; then
+  run cp -a data/kiju-print-state.json "${PERSISTENT_PRINT_FILE}"
+fi
+
+run chown -R "${service_user}:${service_group}" "${PERSISTENT_DATA_DIR}"
+if [[ -f "${PERSISTENT_STATE_FILE}" ]]; then
+  run chmod 0600 "${PERSISTENT_STATE_FILE}"
+fi
+if [[ -f "${PERSISTENT_PRINT_FILE}" ]]; then
+  run chmod 0600 "${PERSISTENT_PRINT_FILE}"
+fi
+run systemctl daemon-reload
+
+if [[ "$(git diff --name-only -- data/kiju-shared-state.json)" == "data/kiju-shared-state.json" ]]; then
+  echo
+  echo "==> Restoring the tracked seed after migrating the live state"
+  git restore -- data/kiju-shared-state.json
+fi
+
+if [[ "${service_was_active}" == "1" ]]; then
+  run systemctl start "${SERVICE_NAME}"
+fi
+
+for generated_file in apps/web/next-env.d.ts apps/web/tsconfig.tsbuildinfo; do
+  if [[ "$(git diff --name-only -- "${generated_file}")" == "${generated_file}" ]]; then
+    echo
+    echo "==> Resetting generated file ${generated_file}"
+    git restore -- "${generated_file}"
+  fi
+done
 
 if ! git diff --quiet --exit-code || ! git diff --cached --quiet --exit-code; then
   echo "Tracked local changes exist on the server. Refusing to deploy without manual review."
@@ -86,11 +153,13 @@ fi
 
 run pnpm build
 
-if [[ "$(git diff --name-only -- apps/web/next-env.d.ts)" == "apps/web/next-env.d.ts" ]]; then
-  echo
-  echo "==> Resetting Next.js generated next-env.d.ts after build"
-  git restore -- apps/web/next-env.d.ts
-fi
+for generated_file in apps/web/next-env.d.ts apps/web/tsconfig.tsbuildinfo; do
+  if [[ "$(git diff --name-only -- "${generated_file}")" == "${generated_file}" ]]; then
+    echo
+    echo "==> Resetting generated file ${generated_file} after build"
+    git restore -- "${generated_file}"
+  fi
+done
 
 echo
 echo "==> Copying Next.js static assets into standalone runtime"

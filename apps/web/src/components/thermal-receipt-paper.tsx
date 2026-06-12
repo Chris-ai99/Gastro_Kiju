@@ -13,7 +13,9 @@ export function ThermalReceiptPaper({ document, className = "" }: ThermalReceipt
       {document.lines.map((line, index) => (
         <div
           key={`${index}-${line.text}`}
-          className={`kiju-receipt-paper__line${line.emphasis ? " kiju-receipt-paper__line--emphasis" : ""}`}
+          className={`kiju-receipt-paper__line${
+            line.emphasis ? " kiju-receipt-paper__line--emphasis" : ""
+          }${line.size && line.size !== "normal" ? ` kiju-receipt-paper__line--${line.size}` : ""}`}
           style={{
             textAlign: line.align ?? "left"
           }}

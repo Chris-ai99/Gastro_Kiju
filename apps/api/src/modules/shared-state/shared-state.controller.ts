@@ -1,5 +1,11 @@
-import { Body, Controller, Get, Post, Put } from "@nestjs/common";
-import type { AppState } from "@kiju/domain";
+import {
+  Controller,
+  Get,
+  HttpCode,
+  MethodNotAllowedException,
+  Post,
+  Put
+} from "@nestjs/common";
 
 import { SharedStateService } from "./shared-state.service";
 
@@ -13,12 +19,18 @@ export class SharedStateController {
   }
 
   @Put()
-  replaceState(@Body() state: AppState) {
-    return this.sharedStateService.replaceState(state);
+  @HttpCode(405)
+  replaceState() {
+    throw new MethodNotAllowedException(
+      "Direktes Ersetzen des Zustands ist deaktiviert. Verwende /api/transactions."
+    );
   }
 
   @Post("reset")
+  @HttpCode(405)
   resetState() {
-    return this.sharedStateService.resetState();
+    throw new MethodNotAllowedException(
+      "Direkter Reset ist deaktiviert. Verwende eine bestätigte Transaktion."
+    );
   }
 }

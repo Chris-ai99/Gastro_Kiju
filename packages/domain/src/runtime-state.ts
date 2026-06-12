@@ -14,7 +14,9 @@ import type {
 } from "./types";
 import { demoProducts, demoTables } from "./demo-data";
 
-const SYSTEM_CATALOG_VERSION = 1;
+const SYSTEM_CATALOG_VERSION = 2;
+const PASTA_VARIANT_CATALOG_VERSION = 2;
+const migratedPastaProductIds = new Set(["main-pasta-pesto", "main-pasta-tomato"]);
 const drinkSubcategoryFallback = "Sonstiges";
 const EXTRA_INGREDIENTS_MODIFIER_GROUP_ID = "extra-ingredients";
 const LEGACY_EXTRA_INGREDIENTS_GROUP_ID = "extra-cheese";
@@ -420,6 +422,7 @@ const mergeSeededProducts = (
   products: AppState["products"],
   sessions: AppState["sessions"],
   forceCanonicalSeed: boolean,
+  migratePastaVariants: boolean,
   deletedProductIds: Set<string>
 ) => {
   const canonicalProductIds = new Set(demoProducts.map((product) => product.id));
@@ -432,14 +435,27 @@ const mergeSeededProducts = (
   return [
     ...demoProducts
       .filter((seededProduct) => !deletedProductIds.has(seededProduct.id))
-      .map((seededProduct) =>
-      forceCanonicalSeed
-        ? structuredClone(seededProduct)
-        : {
-            ...structuredClone(seededProduct),
-            ...structuredClone(existingById.get(seededProduct.id) ?? {})
-          }
-      ),
+      .map((seededProduct) => {
+        if (forceCanonicalSeed) {
+          return structuredClone(seededProduct);
+        }
+
+        const mergedProduct = {
+          ...structuredClone(seededProduct),
+          ...structuredClone(existingById.get(seededProduct.id) ?? {})
+        };
+
+        if (migratePastaVariants && migratedPastaProductIds.has(seededProduct.id)) {
+          return {
+            ...mergedProduct,
+            name: seededProduct.name,
+            description: seededProduct.description,
+            allergens: structuredClone(seededProduct.allergens)
+          };
+        }
+
+        return mergedProduct;
+      }),
     ...products
       .filter((product) => {
         if (deletedProductIds.has(product.id)) {
@@ -670,7 +686,9 @@ const normalizeSessions = (sessions: AppState["sessions"]) =>
   });
 
 export const normalizeOperationalState = (state: AppState): AppState => {
-  const forceCanonicalSeed = (state.catalogVersion ?? 0) < SYSTEM_CATALOG_VERSION;
+  const currentCatalogVersion = state.catalogVersion ?? 0;
+  const forceCanonicalSeed = currentCatalogVersion < 1;
+  const migratePastaVariants = currentCatalogVersion < PASTA_VARIANT_CATALOG_VERSION;
   const deletedTableIds = [
     ...new Set((state.deletedTableIds ?? []).map((tableId) => tableId.trim()).filter(Boolean))
   ];
@@ -690,6 +708,7 @@ export const normalizeOperationalState = (state: AppState): AppState => {
     state.products,
     normalizedSessions,
     forceCanonicalSeed,
+    migratePastaVariants,
     deletedProductIdSet
   );
   const extraIngredients = normalizeExtraIngredients(

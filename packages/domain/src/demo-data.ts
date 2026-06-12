@@ -138,15 +138,15 @@ export const demoProducts: Product[] = [
     priceCents: 250,
     taxRate: 7,
     allergens: ["Gluten", "Ei"],
-    showInKitchen: true,
-    productionTarget: "kitchen",
+    showInKitchen: false,
+    productionTarget: "service",
     modifierGroups: []
   },
   {
     id: "main-pasta-pesto",
-    name: "Nudeln mit grüner Pesto",
+    name: "Penne mit grüner Pesto",
     category: "main",
-    description: "Pasta mit würziger grüner Pesto.",
+    description: "Penne mit würziger grüner Pesto.",
     priceCents: 700,
     taxRate: 7,
     allergens: ["Gluten", "Nüsse"],
@@ -156,9 +156,33 @@ export const demoProducts: Product[] = [
   },
   {
     id: "main-pasta-tomato",
-    name: "Nudeln mit Tomatensauce",
+    name: "Penne mit Tomatensauce",
     category: "main",
-    description: "Pasta mit klassischer Tomatensauce.",
+    description: "Penne mit klassischer Tomatensauce.",
+    priceCents: 700,
+    taxRate: 7,
+    allergens: ["Gluten"],
+    showInKitchen: true,
+    productionTarget: "kitchen",
+    modifierGroups: []
+  },
+  {
+    id: "main-pasta-tagliatelle-pesto",
+    name: "Tagliatelle mit grüner Pesto",
+    category: "main",
+    description: "Tagliatelle mit würziger grüner Pesto.",
+    priceCents: 700,
+    taxRate: 7,
+    allergens: ["Gluten", "Nüsse"],
+    showInKitchen: true,
+    productionTarget: "kitchen",
+    modifierGroups: []
+  },
+  {
+    id: "main-pasta-tagliatelle-tomato",
+    name: "Tagliatelle mit Tomatensauce",
+    category: "main",
+    description: "Tagliatelle mit klassischer Tomatensauce.",
     priceCents: 700,
     taxRate: 7,
     allergens: ["Gluten"],
@@ -298,8 +322,8 @@ export const demoProducts: Product[] = [
     priceCents: 250,
     taxRate: 7,
     allergens: ["Gluten", "Milch", "Nüsse"],
-    showInKitchen: true,
-    productionTarget: "kitchen",
+    showInKitchen: false,
+    productionTarget: "service",
     modifierGroups: []
   }
 ];

@@ -102,9 +102,16 @@ const encodeLine = (value: string) => encodeCp1252(value);
 const resolveAlignment = (align: ThermalPrintDocument["lines"][number]["align"]) =>
   align === "center" ? 1 : 0;
 
+const resolveCharacterSize = (size: ThermalPrintDocument["lines"][number]["size"]) => {
+  if (size === "xlarge") return 0x22;
+  if (size === "large") return 0x11;
+  return 0x00;
+};
+
 export const buildEscPosDocumentBuffer = (document: ThermalPrintDocument) => {
   const chunks: Buffer[] = [
     Buffer.from([ESC, 0x40]),
+    Buffer.from([ESC, 0x7b, 0x01]),
     Buffer.from([ESC, 0x74, WPC1252_CODEPAGE]),
     Buffer.from([ESC, 0x32])
   ];
@@ -112,12 +119,15 @@ export const buildEscPosDocumentBuffer = (document: ThermalPrintDocument) => {
   for (const line of document.lines) {
     chunks.push(Buffer.from([ESC, 0x61, resolveAlignment(line.align)]));
     chunks.push(Buffer.from([ESC, 0x45, line.emphasis ? 1 : 0]));
+    chunks.push(Buffer.from([GS, 0x21, resolveCharacterSize(line.size)]));
     chunks.push(encodeLine(line.text));
     chunks.push(Buffer.from("\n", "ascii"));
   }
 
+  chunks.push(Buffer.from([ESC, 0x7b, 0x00]));
   chunks.push(Buffer.from([ESC, 0x45, 0]));
   chunks.push(Buffer.from([ESC, 0x61, 0]));
+  chunks.push(Buffer.from([GS, 0x21, 0x00]));
   chunks.push(Buffer.from([ESC, 0x64, 4]));
   chunks.push(Buffer.from([GS, 0x56, 0x42, 0x00]));
 

@@ -20,6 +20,9 @@ importers:
       '@kiju/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@kiju/print-bridge':
+        specifier: workspace:*
+        version: link:../print-bridge
       '@nestjs/common':
         specifier: ^11.1.9
         version: 11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -80,11 +83,10 @@ importers:
         version: 5.9.3
 
   apps/print-bridge:
-    dependencies:
+    devDependencies:
       '@kiju/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-    devDependencies:
       '@types/node':
         specifier: ^24.10.1
         version: 24.12.0

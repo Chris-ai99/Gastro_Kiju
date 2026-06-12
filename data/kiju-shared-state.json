@@ -1,6 +1,6 @@
 {
-  "version": 1767,
-  "updatedAt": "2026-05-10T20:57:24.339Z",
+  "version": 1809,
+  "updatedAt": "2026-06-10T19:16:40.602Z",
   "state": {
     "users": [
       {
@@ -10,7 +10,7 @@
         "role": "admin",
         "password": "Admin1234",
         "active": true,
-        "lastSeenAt": "2026-05-10T20:57:24.320Z",
+        "lastSeenAt": "2026-05-13T16:09:13.931Z",
         "pin": "123456"
       },
       {
@@ -21,7 +21,7 @@
         "password": "Kitchen1234",
         "pin": "12345",
         "active": true,
-        "lastSeenAt": "2026-05-10T20:45:41.594Z"
+        "lastSeenAt": "2026-06-10T18:44:06.830Z"
       },
       {
         "id": "user-bar",
@@ -32,6 +32,33 @@
         "pin": "3030",
         "active": true,
         "lastSeenAt": "2026-05-10T20:38:23.819Z"
+      },
+      {
+        "id": "user-ca9a23ef-dabc-4cf7-9515-b19ced30161d",
+        "name": "Codex Prüfung",
+        "username": "CodexPrufung",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-06-10T19:16:40.500Z"
+      },
+      {
+        "id": "user-db1c60f1-494d-4cd3-ba60-abcd3e62d77d",
+        "name": "Codex Test",
+        "username": "CodexTest",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-06-10T18:34:25.377Z"
+      },
+      {
+        "id": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+        "name": "ä",
+        "username": "a",
+        "role": "waiter",
+        "password": "",
+        "active": true,
+        "lastSeenAt": "2026-05-13T16:08:29.864Z"
       },
       {
         "id": "user-1778446536780-5481be2b",
@@ -76,7 +103,7 @@
         "role": "waiter",
         "password": "",
         "active": true,
-        "lastSeenAt": "2026-04-30T22:18:58.203Z"
+        "lastSeenAt": "2026-06-10T18:41:41.761Z"
       },
       {
         "id": "user-1777047264635-d80d4d91",
@@ -113,7 +140,7 @@
         "password": "1234",
         "pin": "1234",
         "active": true,
-        "lastSeenAt": "2026-04-30T21:32:17.115Z"
+        "lastSeenAt": "2026-05-13T16:06:07.547Z"
       }
     ],
     "tables": [
@@ -553,20 +580,30 @@
           "Gluten",
           "Ei"
         ],
-        "showInKitchen": true,
-        "productionTarget": "kitchen",
-        "modifierGroups": []
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "main-pasta-pesto",
-        "name": "Nudeln mit gr?ner Pesto",
+        "name": "Penne mit grüner Pesto",
         "category": "main",
-        "description": "Pasta mit w?rziger gr?ner Pesto.",
+        "description": "Penne mit würziger grüner Pesto.",
         "priceCents": 700,
         "taxRate": 7,
         "allergens": [
           "Gluten",
-          "NÃ¼sse"
+          "Nüsse"
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
@@ -574,13 +611,44 @@
       },
       {
         "id": "main-pasta-tomato",
-        "name": "Nudeln mit Tomatensauce",
+        "name": "Penne mit Tomatensauce",
         "category": "main",
-        "description": "Pasta mit klassischer Tomatensauce.",
+        "description": "Penne mit klassischer Tomatensauce.",
         "priceCents": 700,
         "taxRate": 7,
         "allergens": [
           "Gluten"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pasta-tagliatelle-pesto",
+        "name": "Tagliatelle mit grüner Pesto",
+        "category": "main",
+        "description": "Tagliatelle mit würziger grüner Pesto.",
+        "priceCents": 700,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Ei",
+          "Nüsse"
+        ],
+        "showInKitchen": true,
+        "productionTarget": "kitchen",
+        "modifierGroups": []
+      },
+      {
+        "id": "main-pasta-tagliatelle-tomato",
+        "name": "Tagliatelle mit Tomatensauce",
+        "category": "main",
+        "description": "Tagliatelle mit klassischer Tomatensauce.",
+        "priceCents": 700,
+        "taxRate": 7,
+        "allergens": [
+          "Gluten",
+          "Ei"
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
@@ -599,7 +667,17 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
-        "modifierGroups": []
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "main-pizza-ham",
@@ -614,7 +692,17 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
-        "modifierGroups": []
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "main-pizza-salami",
@@ -629,7 +717,17 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
-        "modifierGroups": []
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "main-pizza-speciale",
@@ -644,7 +742,17 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
-        "modifierGroups": []
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "main-pizza-tuna",
@@ -660,7 +768,17 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
-        "modifierGroups": []
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "main-pizza-veggi",
@@ -675,7 +793,17 @@
         ],
         "showInKitchen": true,
         "productionTarget": "kitchen",
-        "modifierGroups": []
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "drink-beer",
@@ -747,9 +875,19 @@
           "Milch",
           "NÃ¼sse"
         ],
-        "showInKitchen": true,
-        "productionTarget": "kitchen",
-        "modifierGroups": []
+        "showInKitchen": false,
+        "productionTarget": "service",
+        "modifierGroups": [
+          {
+            "id": "extra-ingredients",
+            "name": "Extra Zutaten",
+            "required": false,
+            "min": 0,
+            "max": 0,
+            "options": []
+          }
+        ],
+        "supportsExtraIngredients": true
       },
       {
         "id": "product-dc7f1394-85f3-48e6-8f9b-bc3e8840b828",
@@ -862,8 +1000,8 @@
         "priceCents": 350,
         "taxRate": 19,
         "allergens": [],
-        "showInKitchen": true,
-        "productionTarget": "kitchen",
+        "showInKitchen": false,
+        "productionTarget": "service",
         "modifierGroups": []
       },
       {
@@ -880,6 +1018,333 @@
       }
     ],
     "sessions": [
+      {
+        "id": "session-table-1-05377aa8-a53b-46b9-ac5b-7206b20b5bdf",
+        "tableId": "table-1",
+        "waiterId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "ready",
+            "sentAt": "2026-06-10T18:43:10.248Z",
+            "releasedAt": "2026-06-10T18:43:10.248Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "completed",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "releasedAt": "2026-05-13T16:08:48.501Z",
+            "completedAt": "2026-05-13T16:09:05.876Z",
+            "manualRelease": false,
+            "countdownMinutes": 15
+          }
+        },
+        "receipt": {},
+        "serviceUserIds": [
+          "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+          "user-1777047345814-234ae314"
+        ],
+        "status": "waiting",
+        "items": [
+          {
+            "id": "item-cf40c401-ab46-4f8a-90da-a20dc35bd6a6",
+            "productId": "product-c3322151-e352-49f1-9615-2c7607950b02",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-13T16:08:33.388Z",
+            "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "preparedAt": "2026-05-13T16:09:45.812Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-05-13T16:09:45.812Z"
+              }
+            ]
+          },
+          {
+            "id": "item-863c801c-4060-421d-9a81-ae21cc3ca1e1",
+            "productId": "main-pizza-margherita",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-13T16:08:35.837Z",
+            "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "preparedAt": "2026-06-10T18:44:20.088Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-06-10T18:44:20.088Z"
+              }
+            ]
+          },
+          {
+            "id": "item-36c83bfd-9d17-45ab-a88f-28a0d446c37c",
+            "productId": "main-pizza-ham",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-13T16:08:36.124Z",
+            "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-45ef0c38-6dcd-4085-b44b-57a3dd5e7ee1",
+            "productId": "main-pizza-salami",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-13T16:08:36.644Z",
+            "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-03c591bf-f677-49bd-811d-ff080c843731",
+            "productId": "product-c3322151-e352-49f1-9615-2c7607950b02",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-13T16:08:38.500Z",
+            "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-b054f13f-db7c-4d98-a89e-266a096c8328",
+            "productId": "dessert-pizza-bread-nutella",
+            "category": "dessert",
+            "quantity": 1,
+            "createdAt": "2026-05-13T16:08:45.845Z",
+            "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "preparedAt": "2026-05-13T16:09:05.876Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "completed",
+                "completedAt": "2026-05-13T16:09:05.876Z"
+              }
+            ]
+          },
+          {
+            "id": "item-afb4f8cd-b9f2-45aa-b00a-21c996bd7842",
+            "productId": "main-pizza-margherita",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-06-10T18:42:45.511Z",
+            "createdByUserId": "user-1777047345814-234ae314",
+            "sentAt": "2026-06-10T18:43:10.248Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          },
+          {
+            "id": "item-79b98bed-b91d-438e-b499-6187e5224025",
+            "productId": "main-pizza-ham",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-06-10T18:42:46.224Z",
+            "createdByUserId": "user-1777047345814-234ae314",
+            "sentAt": "2026-06-10T18:43:10.248Z",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": [],
+            "kitchenUnitStates": [
+              {
+                "status": "pending"
+              }
+            ]
+          }
+        ],
+        "payments": [],
+        "cancellations": [],
+        "kitchenTicketBatches": [
+          {
+            "id": "kitchen-ticket-table-1-main-d6f0c014-0180-4665-8c61-b5f58290c6fe",
+            "course": "main",
+            "itemIds": [
+              "item-cf40c401-ab46-4f8a-90da-a20dc35bd6a6",
+              "item-863c801c-4060-421d-9a81-ae21cc3ca1e1",
+              "item-36c83bfd-9d17-45ab-a88f-28a0d446c37c",
+              "item-45ef0c38-6dcd-4085-b44b-57a3dd5e7ee1",
+              "item-03c591bf-f677-49bd-811d-ff080c843731"
+            ],
+            "status": "ready",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "releasedAt": "2026-05-13T16:08:48.501Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1
+          },
+          {
+            "id": "kitchen-ticket-table-1-dessert-b3db8789-0b3c-40d4-813d-187577b027d2",
+            "course": "dessert",
+            "itemIds": [
+              "item-b054f13f-db7c-4d98-a89e-266a096c8328"
+            ],
+            "status": "completed",
+            "sentAt": "2026-05-13T16:08:48.501Z",
+            "releasedAt": "2026-05-13T16:08:48.501Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 1,
+            "completedAt": "2026-05-13T16:09:05.876Z"
+          },
+          {
+            "id": "kitchen-ticket-table-1-main-b7de913b-0f94-4172-8e81-85b6c1f58fef",
+            "course": "main",
+            "itemIds": [
+              "item-afb4f8cd-b9f2-45aa-b00a-21c996bd7842",
+              "item-79b98bed-b91d-438e-b499-6187e5224025"
+            ],
+            "bedienung": "test",
+            "status": "ready",
+            "sentAt": "2026-06-10T18:43:10.248Z",
+            "releasedAt": "2026-06-10T18:43:10.248Z",
+            "manualRelease": false,
+            "countdownMinutes": 15,
+            "sequence": 2
+          }
+        ],
+        "barTicketBatches": [],
+        "partyGroups": []
+      },
+      {
+        "id": "session-table-5-c180893a-41d5-4870-b4ff-0d10c6920360",
+        "tableId": "table-5",
+        "waiterId": "user-1777047345814-234ae314",
+        "skippedCourses": [],
+        "courseTickets": {
+          "drinks": {
+            "course": "drinks",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "starter": {
+            "course": "starter",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "main": {
+            "course": "main",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          },
+          "dessert": {
+            "course": "dessert",
+            "status": "not-recorded",
+            "countdownMinutes": 15,
+            "manualRelease": false
+          }
+        },
+        "receipt": {},
+        "serviceUserIds": [
+          "user-1777047345814-234ae314"
+        ],
+        "status": "serving",
+        "items": [
+          {
+            "id": "item-2163ecdc-65e5-4f33-9e3e-612764ced90c",
+            "productId": "main-pizza-margherita",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-12T16:03:19.408Z",
+            "createdByUserId": "user-1777047345814-234ae314",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-7e0d70fc-a9b5-47fc-a538-8ae9b8bbd53a",
+            "productId": "main-pizza-margherita",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-12T16:03:19.776Z",
+            "createdByUserId": "user-1777047345814-234ae314",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          },
+          {
+            "id": "item-1d6ed212-0770-4b7b-841b-fcc5fe601355",
+            "productId": "main-pizza-ham",
+            "category": "main",
+            "quantity": 1,
+            "createdAt": "2026-05-12T16:03:20.056Z",
+            "createdByUserId": "user-1777047345814-234ae314",
+            "target": {
+              "type": "table"
+            },
+            "modifiers": []
+          }
+        ],
+        "payments": [],
+        "cancellations": [],
+        "kitchenTicketBatches": [],
+        "barTicketBatches": [],
+        "partyGroups": []
+      },
       {
         "id": "session-table-6-1778446208284-cc3dfc83",
         "tableId": "table-6",
@@ -918,6 +1383,9 @@
           }
         },
         "receipt": {},
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "ready-to-bill",
         "items": [
           {
@@ -928,6 +1396,9 @@
             "createdAt": "2026-05-10T20:50:08.284Z",
             "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
             "sentAt": "2026-05-10T20:50:13.218Z",
+            "canceledAt": "2026-05-13T16:06:38.293Z",
+            "canceledByUserId": "user-admin",
+            "preparedAt": "2026-05-13T16:06:38.293Z",
             "target": {
               "type": "table"
             },
@@ -941,8 +1412,10 @@
             "createdAt": "2026-05-10T20:50:21.514Z",
             "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
             "sentAt": "2026-05-10T20:50:28.525Z",
-            "preparedAt": "2026-05-10T20:51:06.050Z",
+            "preparedAt": "2026-05-13T16:06:41.317Z",
             "servedAt": "2026-05-10T20:51:30.116Z",
+            "canceledAt": "2026-05-13T16:06:41.317Z",
+            "canceledByUserId": "user-admin",
             "target": {
               "type": "table"
             },
@@ -950,7 +1423,7 @@
             "kitchenUnitStates": [
               {
                 "status": "completed",
-                "completedAt": "2026-05-10T20:51:06.050Z"
+                "completedAt": "2026-05-13T16:06:41.317Z"
               }
             ]
           },
@@ -962,8 +1435,10 @@
             "createdAt": "2026-05-10T20:50:22.143Z",
             "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
             "sentAt": "2026-05-10T20:50:28.525Z",
-            "preparedAt": "2026-05-10T20:51:06.050Z",
+            "preparedAt": "2026-05-13T16:06:43.989Z",
             "servedAt": "2026-05-10T20:51:30.116Z",
+            "canceledAt": "2026-05-13T16:06:43.989Z",
+            "canceledByUserId": "user-admin",
             "target": {
               "type": "table"
             },
@@ -971,7 +1446,7 @@
             "kitchenUnitStates": [
               {
                 "status": "completed",
-                "completedAt": "2026-05-10T20:51:06.050Z"
+                "completedAt": "2026-05-13T16:06:43.989Z"
               }
             ]
           },
@@ -1088,8 +1563,10 @@
             "createdAt": "2026-05-10T20:50:41.563Z",
             "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
             "sentAt": "2026-05-10T20:50:46.294Z",
-            "preparedAt": "2026-05-10T20:51:23.215Z",
+            "preparedAt": "2026-05-13T16:06:47.743Z",
             "servedAt": "2026-05-10T20:51:29.189Z",
+            "canceledAt": "2026-05-13T16:06:47.743Z",
+            "canceledByUserId": "user-admin",
             "target": {
               "type": "table"
             },
@@ -1097,7 +1574,7 @@
             "kitchenUnitStates": [
               {
                 "status": "completed",
-                "completedAt": "2026-05-10T20:51:23.215Z"
+                "completedAt": "2026-05-13T16:06:47.743Z"
               }
             ]
           },
@@ -1109,8 +1586,10 @@
             "createdAt": "2026-05-10T20:50:41.862Z",
             "createdByUserId": "user-b6cff57d-0445-4a02-b695-20e836603315",
             "sentAt": "2026-05-10T20:50:46.294Z",
-            "preparedAt": "2026-05-10T20:51:23.215Z",
+            "preparedAt": "2026-05-13T16:06:47.213Z",
             "servedAt": "2026-05-10T20:51:29.189Z",
+            "canceledAt": "2026-05-13T16:06:47.213Z",
+            "canceledByUserId": "user-admin",
             "target": {
               "type": "table"
             },
@@ -1118,7 +1597,7 @@
             "kitchenUnitStates": [
               {
                 "status": "completed",
-                "completedAt": "2026-05-10T20:51:23.215Z"
+                "completedAt": "2026-05-13T16:06:47.213Z"
               }
             ]
           }
@@ -1218,6 +1697,9 @@
           "printedAt": "2026-05-10T20:48:41.560Z",
           "closedAt": "2026-05-10T20:48:42.413Z"
         },
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "closed",
         "items": [
           {
@@ -1313,6 +1795,9 @@
           }
         },
         "receipt": {},
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "ready-to-bill",
         "items": [
           {
@@ -1418,6 +1903,9 @@
           "printedAt": "2026-05-10T20:47:54.313Z",
           "closedAt": "2026-05-10T20:48:01.720Z"
         },
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "closed",
         "items": [
           {
@@ -1524,6 +2012,9 @@
           "printedAt": "2026-05-10T20:56:00.009Z",
           "closedAt": "2026-05-10T20:56:01.243Z"
         },
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "closed",
         "items": [
           {
@@ -1783,6 +2274,9 @@
           "printedAt": "2026-05-10T20:39:57.910Z",
           "closedAt": "2026-05-10T20:39:59.359Z"
         },
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "closed",
         "items": [
           {
@@ -1941,6 +2435,9 @@
           "printedAt": "2026-05-10T20:39:40.747Z",
           "closedAt": "2026-05-10T20:39:45.176Z"
         },
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "closed",
         "items": [
           {
@@ -2189,6 +2686,9 @@
           "printedAt": "2026-05-10T20:40:10.340Z",
           "closedAt": "2026-05-10T20:40:11.381Z"
         },
+        "serviceUserIds": [
+          "user-b6cff57d-0445-4a02-b695-20e836603315"
+        ],
         "status": "closed",
         "items": [
           {
@@ -2246,6 +2746,136 @@
       }
     ],
     "notifications": [
+      {
+        "id": "notification-106d038f-c603-4b9d-af02-78eef10caa25",
+        "createdAt": "2026-06-10T18:43:10.249Z",
+        "read": false,
+        "title": "Hauptspeise · Nachbestellung 2 gesendet",
+        "body": "Tisch 1 wartet auf hauptspeise · nachbestellung 2.",
+        "tone": "info",
+        "tableId": "table-1",
+        "createdByUserId": "user-1777047345814-234ae314",
+        "createdByName": "test"
+      },
+      {
+        "id": "notification-7d4d69af-0e74-4904-aa63-051fd86891ad",
+        "createdAt": "2026-05-13T16:09:05.877Z",
+        "read": false,
+        "kind": "service-course-ready",
+        "course": "dessert",
+        "itemIds": [
+          "item-b054f13f-db7c-4d98-a89e-266a096c8328"
+        ],
+        "title": "Nachtisch fertig",
+        "body": "1x Pizza Brot mit Nutella für Tisch 1 ist fertig.",
+        "tone": "success",
+        "tableId": "table-1",
+        "targetRoles": [
+          "waiter"
+        ],
+        "targetUserIds": [
+          "user-1b8f1e3a-c9ea-418e-a594-39277e929f08"
+        ],
+        "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+        "createdByName": "ä"
+      },
+      {
+        "id": "notification-0e61f1d7-d57a-4918-b557-055a89440e9b",
+        "createdAt": "2026-05-13T16:08:48.502Z",
+        "read": false,
+        "title": "Nachtisch gesendet",
+        "body": "Tisch 1 wartet auf nachtisch.",
+        "tone": "info",
+        "tableId": "table-1",
+        "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+        "createdByName": "ä"
+      },
+      {
+        "id": "notification-f88c0d18-af5f-4490-8dd2-9d4a6f742a60",
+        "createdAt": "2026-05-13T16:08:48.502Z",
+        "read": false,
+        "title": "Hauptspeise gesendet",
+        "body": "Tisch 1 wartet auf hauptspeise.",
+        "tone": "info",
+        "tableId": "table-1",
+        "createdByUserId": "user-1b8f1e3a-c9ea-418e-a594-39277e929f08",
+        "createdByName": "ä"
+      },
+      {
+        "id": "notification-97d552d0-e4b9-4b37-aa1d-f323f481fd5a",
+        "createdAt": "2026-05-13T16:06:47.743Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 6: 1x Nudeln mit Tomatensauce · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-6",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ],
+        "createdByUserId": "user-admin",
+        "createdByName": "System Admin"
+      },
+      {
+        "id": "notification-ca0354fa-feb6-4892-83a7-83b8223a53d9",
+        "createdAt": "2026-05-13T16:06:47.213Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 6: 1x Nudeln mit gr?ner Pesto · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-6",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ],
+        "createdByUserId": "user-admin",
+        "createdByName": "System Admin"
+      },
+      {
+        "id": "notification-cb9e439c-37ff-492b-b757-73f94143d4d1",
+        "createdAt": "2026-05-13T16:06:43.989Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 6: 1x Pizza Kochschinken · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-6",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ],
+        "createdByUserId": "user-admin",
+        "createdByName": "System Admin"
+      },
+      {
+        "id": "notification-01a4bf51-47f1-4a1b-ac03-9ed2e177e49c",
+        "createdAt": "2026-05-13T16:06:41.317Z",
+        "read": false,
+        "title": "Hauptspeise storniert",
+        "body": "Tisch 6: 1x Pizza Margherita · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-6",
+        "targetRoles": [
+          "kitchen",
+          "waiter"
+        ],
+        "createdByUserId": "user-admin",
+        "createdByName": "System Admin"
+      },
+      {
+        "id": "notification-51ca57df-1395-4fd4-bfe6-f75372521f79",
+        "createdAt": "2026-05-13T16:06:38.294Z",
+        "read": false,
+        "title": "Getränke storniert",
+        "body": "Tisch 6: 1x Cola · Tisch wurde storniert.",
+        "tone": "alert",
+        "tableId": "table-6",
+        "targetRoles": [
+          "bar",
+          "waiter"
+        ],
+        "createdByUserId": "user-admin",
+        "createdByName": "System Admin"
+      },
       {
         "id": "notification-1778446561243-b502f93a",
         "createdAt": "2026-05-10T20:56:01.243Z",
@@ -9793,7 +10423,7 @@
         "session-table-1-1778445626166-785ad712"
       ]
     },
-    "catalogVersion": 1,
+    "catalogVersion": 2,
     "serviceOrderMode": "table",
     "deletedTableIds": [],
     "deletedUserIds": [

@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   buildBookingStatisticsPrintDocument,
@@ -18,6 +17,7 @@ import type {
 } from "@kiju/domain";
 
 import type { CreatePrintJobRequest, UpdatePrinterConfigRequest } from "../lib/print-contract";
+import { loadDurableJsonFile, writeDurableJsonFile } from "./durable-json-file";
 
 const DEFAULT_PRINTER_CONFIG: NetworkPrinterConfig = {
   enabled: false,
@@ -55,10 +55,22 @@ const resolveStorageBaseDir = () => {
   return normalizedCwd.endsWith("/apps/web") ? resolve(process.cwd(), "..", "..") : process.cwd();
 };
 
-const PRINT_STATE_PATH = resolve(
-  resolveStorageBaseDir(),
-  process.env["KIJU_PRINT_STATE_FILE"] ?? "data/kiju-print-state.json"
-);
+const resolvePrintStatePath = () => {
+  const configuredFile = process.env["KIJU_PRINT_STATE_FILE"]?.trim();
+  if (configuredFile) {
+    return resolve(resolveStorageBaseDir(), configuredFile);
+  }
+
+  const configuredDataDir = process.env["KIJU_DATA_DIR"]?.trim();
+  if (configuredDataDir) {
+    return resolve(resolveStorageBaseDir(), configuredDataDir, "kiju-print-state.json");
+  }
+
+  return resolve(resolveStorageBaseDir(), "data", "kiju-print-state.json");
+};
+
+const PRINT_STATE_PATH = resolvePrintStatePath();
+const PRINT_STATE_BACKUP_COUNT = 20;
 
 const globalPrintRuntime = globalThis as typeof globalThis & {
   __kijuPrintRuntime?: PrintRuntimeState;
@@ -132,29 +144,27 @@ const normalizePrintState = (state: Partial<PrintQueueState>): PrintQueueState =
 });
 
 const persistPrintState = (state: PrintQueueState) => {
-  mkdirSync(dirname(PRINT_STATE_PATH), { recursive: true });
-  writeFileSync(PRINT_STATE_PATH, JSON.stringify(state, null, 2), "utf8");
+  writeDurableJsonFile(PRINT_STATE_PATH, state, {
+    backupCount: PRINT_STATE_BACKUP_COUNT
+  });
 };
 
-const loadPrintState = (): PrintQueueState => {
-  if (!existsSync(PRINT_STATE_PATH)) {
-    const initialState = createDefaultPrintState();
-    persistPrintState(initialState);
-    return initialState;
-  }
+const loadPrintState = (): PrintQueueState =>
+  loadDurableJsonFile({
+    filePath: PRINT_STATE_PATH,
+    backupCount: PRINT_STATE_BACKUP_COUNT,
+    parse: (value) => {
+      if (!value || typeof value !== "object") {
+        throw new Error("Druckzustand ist kein Objekt.");
+      }
 
-  try {
-    const raw = readFileSync(PRINT_STATE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as Partial<PrintQueueState>;
-    const normalized = normalizePrintState(parsed);
-    persistPrintState(normalized);
-    return normalized;
-  } catch {
-    const fallbackState = createDefaultPrintState();
-    persistPrintState(fallbackState);
-    return fallbackState;
-  }
-};
+      return normalizePrintState(value as Partial<PrintQueueState>);
+    },
+    createInitial: createDefaultPrintState,
+    onRecovery: (backupPath) => {
+      console.warn(`KiJu-Druckzustand automatisch aus Sicherung wiederhergestellt: ${backupPath}`);
+    }
+  }).value;
 
 const withPrintStateMutation = async <T>(task: () => Promise<T> | T): Promise<T> => {
   const nextTask = printRuntime.mutationQueue.then(task, task);
@@ -271,11 +281,12 @@ const createPickupTicketJob = (request: Extract<CreatePrintJobRequest, { type: "
     Math.floor(Number.isFinite(request.pickupNumber) ? request.pickupNumber : 1)
   );
   const tableLabel = request.tableLabel.trim() || `Zum Abholen ${pickupNumber}`;
-  const document = buildPickupTicketPrintDocument({
-    tableLabel,
-    pickupNumber,
-    createdAt: request.createdAt
-  });
+    const document = buildPickupTicketPrintDocument({
+      tableLabel,
+      pickupNumber,
+      bedienung: request.bedienung,
+      createdAt: request.createdAt
+    });
 
   return {
     id: createClientId("print-job"),

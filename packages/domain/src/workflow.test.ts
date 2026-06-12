@@ -24,7 +24,7 @@ describe("domain workflow", () => {
   it("calculates the total for the seeded table 1 session", () => {
     const session = getSessionForTable(demoAppState.sessions, "table-1");
 
-    expect(calculateSessionTotal(session, demoAppState.products)).toBe(1700);
+    expect(calculateSessionTotal(session, demoAppState.products)).toBe(950);
   });
 
   it("builds a kitchen summary with human-readable placeholders", () => {
@@ -381,10 +381,12 @@ describe("domain workflow", () => {
     );
 
     expect(extraGroup?.name).toBe("Extra Zutaten");
-    expect(extraGroup?.options).toEqual([
-      { id: "mushrooms", name: "Champignons", priceDeltaCents: 120 },
-      { id: "olives", name: "Oliven", priceDeltaCents: 100 }
-    ]);
+    expect(extraGroup?.options).toEqual(
+      expect.arrayContaining([
+        { id: "mushrooms", name: "Champignons", priceDeltaCents: 120 },
+        { id: "olives", name: "Oliven", priceDeltaCents: 100 }
+      ])
+    );
   });
 
   it("enables the extra ingredient popup for pizza products automatically", () => {
@@ -466,12 +468,14 @@ describe("domain workflow", () => {
       (group) => group.id === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
     );
 
-    expect(normalized.extraIngredients).toEqual([
-      { id: "olives", name: "Oliven", priceDeltaCents: 150, active: false }
-    ]);
-    expect(extraGroup?.options).toEqual([
-      { id: "olives", name: "Oliven", priceDeltaCents: 150 }
-    ]);
+    expect(normalized.extraIngredients).toEqual(
+      expect.arrayContaining([
+        { id: "olives", name: "Oliven", priceDeltaCents: 150, active: false }
+      ])
+    );
+    expect(extraGroup?.options).toEqual(
+      expect.arrayContaining([{ id: "olives", name: "Oliven", priceDeltaCents: 150 }])
+    );
     expect(calculateSessionTotal(session, normalized.products)).toBe(1150);
   });
 

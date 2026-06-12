@@ -1,0 +1,18 @@
+[Unit]
+Description=KiJu Gastro Web
+After=network-online.target gastroapi.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/Gastro_Kiju/Gastro_Kiju/Gastro_Kiju/apps/web/.next/standalone/apps/web
+Environment=PORT=3011
+Environment=HOSTNAME=127.0.0.1
+Environment=KIJU_API_INTERNAL_URL=http://127.0.0.1:4000/api
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

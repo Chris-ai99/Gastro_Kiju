@@ -35,11 +35,12 @@ export type CreatePrintJobRequest =
     }
   | {
       type: "pickup-ticket";
-      tableId: string;
-      tableLabel: string;
-      pickupNumber: number;
-      createdAt?: string;
-    }
+        tableId: string;
+        tableLabel: string;
+        pickupNumber: number;
+        bedienung?: string;
+        createdAt?: string;
+      }
   | {
       type: "kitchen-label";
       session: OrderSession;

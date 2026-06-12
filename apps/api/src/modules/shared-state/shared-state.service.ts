@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import {
   createDefaultOperationalState,
   normalizeOperationalState,
   type AppState
 } from "@kiju/domain";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+
+import { PrismaService } from "../prisma/prisma.service";
 
 export type SharedStateSnapshot = {
   version: number;
@@ -13,83 +14,30 @@ export type SharedStateSnapshot = {
   state: AppState;
 };
 
+const OPERATIONAL_STATE_ID = "operational-state";
+const asJson = (value: unknown) => value as Prisma.InputJsonValue;
+
 @Injectable()
 export class SharedStateService {
-  private readonly storagePath = resolve(
-    process.cwd(),
-    process.env["KIJU_SHARED_STATE_FILE"] ?? "data/kiju-shared-state.json"
-  );
+  constructor(private readonly prisma: PrismaService) {}
 
-  private snapshot: SharedStateSnapshot;
+  async getSnapshot(): Promise<SharedStateSnapshot> {
+    const stored =
+      (await this.prisma.operationalState.findUnique({
+        where: { id: OPERATIONAL_STATE_ID }
+      })) ??
+      (await this.prisma.operationalState.create({
+        data: {
+          id: OPERATIONAL_STATE_ID,
+          version: 1,
+          state: asJson(createDefaultOperationalState())
+        }
+      }));
 
-  constructor() {
-    this.snapshot = this.loadSnapshot();
-  }
-
-  getSnapshot(): SharedStateSnapshot {
-    return structuredClone(this.snapshot);
-  }
-
-  replaceState(state: AppState): SharedStateSnapshot {
-    this.snapshot = {
-      version: this.snapshot.version + 1,
-      updatedAt: new Date().toISOString(),
-      state: normalizeOperationalState(structuredClone(state))
+    return {
+      version: stored.version,
+      updatedAt: stored.updatedAt.toISOString(),
+      state: normalizeOperationalState(stored.state as unknown as AppState)
     };
-
-    this.persistSnapshot();
-    return this.getSnapshot();
-  }
-
-  resetState(): SharedStateSnapshot {
-    this.snapshot = {
-      version: this.snapshot.version + 1,
-      updatedAt: new Date().toISOString(),
-      state: createDefaultOperationalState()
-    };
-
-    this.persistSnapshot();
-    return this.getSnapshot();
-  }
-
-  private loadSnapshot(): SharedStateSnapshot {
-    const initialSnapshot: SharedStateSnapshot = {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      state: createDefaultOperationalState()
-    };
-
-    if (!existsSync(this.storagePath)) {
-      this.snapshot = initialSnapshot;
-      this.persistSnapshot();
-      return initialSnapshot;
-    }
-
-    try {
-      const rawContent = readFileSync(this.storagePath, "utf8");
-      const parsed = JSON.parse(rawContent) as SharedStateSnapshot;
-
-      if (
-        typeof parsed.version === "number" &&
-        typeof parsed.updatedAt === "string" &&
-        parsed.state
-      ) {
-        return {
-          ...parsed,
-          state: normalizeOperationalState(parsed.state)
-        };
-      }
-    } catch {
-      // Fall back to a fresh operational state if the file is missing or malformed.
-    }
-
-    this.snapshot = initialSnapshot;
-    this.persistSnapshot();
-    return initialSnapshot;
-  }
-
-  private persistSnapshot() {
-    mkdirSync(dirname(this.storagePath), { recursive: true });
-    writeFileSync(this.storagePath, JSON.stringify(this.snapshot, null, 2), "utf8");
   }
 }

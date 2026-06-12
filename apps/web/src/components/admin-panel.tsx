@@ -44,7 +44,6 @@ import { buildReceiptDocumentFromSessions } from "@kiju/print-bridge";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
 import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
-import { createPrintJob } from "../lib/print-client";
 import { PrinterAdminPanel } from "./printer-admin-panel";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
@@ -70,6 +69,172 @@ type AdminChangelogEntry = {
 };
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
+  {
+    version: "0.10.09-beta",
+    date: "2026-06-12",
+    time: "22:09 +02:00",
+    type: "Verbesserung",
+    title: "Wartezeiten und Tellerbons übersichtlicher",
+    summary:
+      "Küche und Tellerbon zeigen Bedienung und Wartezeit deutlich; lange Wartezeiten eskalieren gelb, rot und blinkend.",
+    categories: ["Küche", "Tellerbon", "Abholbon", "Wartezeit", "Druck"],
+    changes: [
+      "Der Abholbon nennt jetzt die zuständige Bedienung.",
+      "Tisch, Bedienung und Speise werden auf dem Tellerbon in großer Schrift gedruckt.",
+      "Der Tellerbon zeigt die Wartezeit seit dem Absenden; der Hinweis Zum Teller kleben entfällt.",
+      "Aktive Küchenbons zeigen ihre sekundengenaue Wartezeit direkt auf der Karte.",
+      "Ab 15 Minuten wird die Karte gelb, ab 20 Minuten rot und ab 25 Minuten rot blinkend.",
+      "Web-Druckpfad, API und Bonvorschau unterstützen die neuen Schriftgrößen."
+    ]
+  },
+  {
+    version: "0.10.08-beta",
+    date: "2026-06-12",
+    time: "22:04 +02:00",
+    type: "Fix",
+    title: "Bon-Druck beim Absenden entfernt",
+    summary:
+      "Speisen werden ohne Ausdruck an die Küche gesendet; Tellerbons entstehen erst beim Fertig-Abhaken.",
+    categories: ["Küche", "Druck", "Tellerbon", "Bestellung"],
+    changes: [
+      "Beim Absenden einer Speise wird kein Küchenbon-Druckauftrag mehr angelegt.",
+      "Die Bestellung erscheint weiterhin sofort und vollständig in der Küchenansicht.",
+      "Der Tellerbon bleibt an das Fertig-Abhaken einer einzelnen Portion gebunden.",
+      "Nur der vorhandene Druckauftrag kitchen-label wird beim Status Fertig erzeugt."
+    ]
+  },
+  {
+    version: "0.10.07-beta",
+    date: "2026-06-12",
+    time: "22:01 +02:00",
+    type: "Verbesserung",
+    title: "Extras auf Küchentickets farblich hervorgehoben",
+    summary:
+      "Extra-Zutaten sind jetzt durch ein orange-rotes Badge klar von normalen Hinweisen getrennt.",
+    categories: ["Küche", "Extras", "Oberfläche", "Dunkelmodus"],
+    changes: [
+      "Extras erhalten eine sichtbare Kennzeichnung mit dem Text Extra.",
+      "Orangefarbener Hintergrund, rote Schrift und Umrandung erhöhen die Aufmerksamkeit.",
+      "Im Dunkelmodus bleibt das Extra-Badge kontrastreich und eindeutig.",
+      "Normale Hinweise werden weiterhin separat in Grün dargestellt."
+    ]
+  },
+  {
+    version: "0.10.06-beta",
+    date: "2026-06-12",
+    time: "21:57 +02:00",
+    type: "Verbesserung",
+    title: "Bestellername in Küche und auf Bon hervorgehoben",
+    summary:
+      "Die Küche erkennt jetzt sofort, welche Person eine Erst- oder Nachbestellung gesendet hat.",
+    categories: ["Küche", "Service", "Küchenbon", "Bestellung"],
+    changes: [
+      "Ticketkarten zeigen den Namen deutlich als Bestellt von an.",
+      "Der Name wird für jede Erst- und Nachbestellung aus dem gespeicherten Küchenbatch übernommen.",
+      "Der Küchenbon enthält dieselbe Person in der Zeile BESTELLT: Name.",
+      "Ein automatisierter Test prüft die Ausgabe des Bestellernamens auf dem Küchenbon."
+    ]
+  },
+  {
+    version: "0.10.05-beta",
+    date: "2026-06-12",
+    time: "21:49 +02:00",
+    type: "Fix",
+    title: "Bonausgabe um 180° gedreht",
+    summary:
+      "Der Netzwerkdrucker gibt alle Bons jetzt in gedrehter Ausrichtung aus.",
+    categories: ["Drucker", "Bon", "ESC/POS"],
+    changes: [
+      "Vor jedem Dokument wird der Kopfübermodus des Epson TM-T70II aktiviert.",
+      "Vor Papiervorschub und Schnitt wird die Drehung wieder zurückgesetzt.",
+      "Web-Druckpfad und API erzeugen dieselbe gedrehte Bonausgabe.",
+      "Ein automatisierter Drucktest sichert die ESC/POS-Befehlsfolge ab."
+    ]
+  },
+  {
+    version: "0.10.04-beta",
+    date: "2026-06-10",
+    time: "22:20 +02:00",
+    type: "Sicherheit",
+    title: "Ende-zu-Ende-Übertragung mit Serverbestätigung",
+    summary:
+      "Kritische Vorgänge werden dauerhaft in PostgreSQL gespeichert und erst nach der passenden Serverbestätigung als erfolgreich angezeigt.",
+    categories: ["Server", "PostgreSQL", "Offlinebetrieb", "Druck", "Sicherheit"],
+    changes: [
+      "Typisierte Operationen werden idempotent in serialisierbaren Datenbanktransaktionen verarbeitet.",
+      "Zustand, Transaktionsprotokoll, Rückgängig-Punkte und Druckaufträge werden gemeinsam gespeichert.",
+      "Eine IndexedDB-Warteschlange übersteht Neustarts und wiederholt vorübergehende Übertragungsfehler automatisch.",
+      "Versand, Zahlung, Storno, Abschluss und Druck bleiben bis zur verbindlichen Bestätigung nachvollziehbar.",
+      "Die zentrale Statusanzeige unterscheidet bestätigte, wartende und fehlgeschlagene Vorgänge.",
+      "Ein gesicherter Legacy-Import und getrennte Dienstvorlagen bereiten die spätere Produktivumschaltung vor."
+    ]
+  },
+  {
+    version: "0.10.03-beta",
+    date: "2026-06-10",
+    time: "21:13 +02:00",
+    type: "Verbesserung",
+    title: "Brot und Dessert direkt im Service gebucht",
+    summary:
+      "Brot und Dessert benötigen keine Bestätigung durch Küche oder Bar und werden vom Service selbst entnommen.",
+    categories: ["Service", "Bestellung", "Brot", "Dessert"],
+    changes: [
+      "Pizza Brot mit Aioli sowie alle vorhandenen Dessertartikel sind als Selbstentnahme durch den Service hinterlegt.",
+      "Serviceartikel werden von Alles senden, Küchenbons, Bar-Bons und Wartezeiten ausgeschlossen.",
+      "Die Bestellübersicht zeigt diese Positionen eindeutig als Im Service gebucht."
+    ]
+  },
+  {
+    version: "0.10.02-beta",
+    date: "2026-06-10",
+    time: "21:11 +02:00",
+    type: "Inhalt",
+    title: "Vier Nudelvarianten ergänzt",
+    summary:
+      "Penne und Tagliatelle stehen jetzt jeweils mit grüner Pesto oder Tomatensauce zur Auswahl.",
+    categories: ["Service", "Speisekarte", "Pasta", "Stammdaten"],
+    changes: [
+      "Penne mit grüner Pesto und Penne mit Tomatensauce ersetzen die beiden bisherigen allgemeinen Nudelgerichte.",
+      "Tagliatelle mit grüner Pesto und Tagliatelle mit Tomatensauce wurden neu ergänzt.",
+      "Alle vier Gerichte erscheinen im Service in der Gruppe Pasta.",
+      "Die bestehenden Produkt-IDs bleiben erhalten und gespeicherte Stammdaten werden einmalig migriert."
+    ]
+  },
+  {
+    version: "0.10.01-beta",
+    date: "2026-06-10",
+    time: "20:29 +02:00",
+    type: "Verbesserung",
+    title: "Zentrale Bestellübersicht ergänzt",
+    summary:
+      "Der Service kann alle aktiven Positionen eines Tisches gemeinsam prüfen, bearbeiten und senden.",
+    categories: ["Service", "Bestellung", "Bar", "Küche", "Oberfläche"],
+    changes: [
+      "Getränke, Vorspeisen, Hauptspeisen und Nachtische werden mit Anzahl, Zwischensumme und Versandstatus fest gruppiert angezeigt.",
+      "Positionen zeigen Menge, Produkt, Tisch oder Sitzplatz, Preis sowie vorhandene Extras und Notizen.",
+      "Die Bearbeitung nutzt den vorhandenen Kategorieabschluss und führt danach zurück zur Bestellübersicht.",
+      "Alles senden bestätigt die offenen Mengen je Gang und verteilt Getränke an die Bar sowie Speisen gangweise an die Küche.",
+      "Wartezeiten bleiben wirksam; gesendete und stornierte Positionen werden nicht erneut versendet.",
+      "Die Übersicht bleibt nach dem Versand geöffnet und aktualisiert alle Statusanzeigen unmittelbar."
+    ]
+  },
+  {
+    version: "0.10.00-beta",
+    date: "2026-06-10",
+    time: "19:10 +02:00",
+    type: "Sicherheit",
+    title: "Serverdaten gegen Absturz und Neuinstallation abgesichert",
+    summary:
+      "Betriebsdaten werden atomar gespeichert, automatisch gesichert und außerhalb des Programmordners abgelegt.",
+    categories: ["Server", "Datensicherung", "Bestellungen", "Druck"],
+    changes: [
+      "Bestellungen und Einstellungen erhalten bis zu 50 rotierende serverseitige Sicherungen.",
+      "Beschädigte oder gelöschte Zustandsdateien werden automatisch aus der jüngsten gültigen Sicherung wiederhergestellt.",
+      "Das Deployment migriert Live-Daten nach /var/lib/gastroweb, damit sie eine Neuinstallation des Programmordners überstehen.",
+      "Bei einem Speicherfehler übernimmt der Server keinen Stand, der nicht sicher auf den Datenträger geschrieben wurde.",
+      "Druckkonfiguration und Druckwarteschlange verwenden ebenfalls absturzsichere Schreibvorgänge."
+    ]
+  },
   {
     version: "0.9.11-beta",
     date: "2026-05-14",
@@ -1616,24 +1781,22 @@ export const AdminPanel = () => {
       bedienung
     });
 
-    if (mode === "reprint") {
-      actions.reprintReceipt(session.tableId, [session.id]);
-    } else {
-      actions.printReceipt(session.tableId, [session.id]);
-    }
-
-    const result = await createPrintJob({
+    const printRequest = {
       type: mode,
       receipt,
       tableId: session.tableId,
       tableLabel: tableName
-    });
+    } as const;
+    const result =
+      mode === "reprint"
+        ? await actions.reprintReceipt(session.tableId, [session.id], printRequest)
+        : await actions.printReceipt(session.tableId, [session.id], printRequest);
 
     setFeedback({
-      tone: result.ok ? "success" : "alert",
-      message: result.ok
-        ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
-        : result.message ?? "Bon konnte nicht an den Netzwerkdrucker gesendet werden."
+      tone: result?.ok ? "success" : "alert",
+      message: result?.ok
+        ? `Der Druckauftrag für ${tableName} wurde sicher auf dem Server gespeichert.`
+        : result?.message ?? "Der Druckauftrag konnte nicht sicher gespeichert werden."
     });
   };
 
@@ -1653,7 +1816,7 @@ export const AdminPanel = () => {
       return;
     }
 
-    const result = await createPrintJob({
+    const result = await actions.enqueuePrintJob({
       type: "daily-close",
       sessions,
       tables: state.tables,
@@ -1664,8 +1827,8 @@ export const AdminPanel = () => {
     setFeedback({
       tone: result.ok ? "success" : "alert",
       message: result.ok
-        ? "Statistik für Buchungen und Abrechnungen wurde an den Netzwerkdrucker gesendet."
-        : result.message ?? "Statistik konnte nicht an den Netzwerkdrucker gesendet werden."
+        ? "Die Statistik für Buchungen und Abrechnungen wurde sicher als Druckauftrag gespeichert."
+        : result.message ?? "Die Statistik konnte nicht sicher gespeichert werden."
     });
   };
 

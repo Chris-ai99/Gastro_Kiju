@@ -19,6 +19,7 @@ import {
 } from "@kiju/domain";
 
 const THERMAL_LINE_WIDTH = 42;
+const LARGE_THERMAL_LINE_WIDTH = Math.floor(THERMAL_LINE_WIDTH / 2);
 const RECEIPT_ARTICLE_WIDTH = 24;
 const RECEIPT_QUANTITY_WIDTH = 4;
 const RECEIPT_AMOUNT_WIDTH = 12;
@@ -79,6 +80,7 @@ export type BuildReceiptDocumentFromSessionsInput = {
 export type BuildPickupTicketDocumentInput = {
   tableLabel: string;
   pickupNumber: number;
+  bedienung?: string;
   createdAt?: string;
 };
 
@@ -609,6 +611,7 @@ export function buildReceiptPrintDocument(
 export const buildPickupTicketPrintDocument = ({
   tableLabel,
   pickupNumber,
+  bedienung,
   createdAt = new Date().toISOString()
 }: BuildPickupTicketDocumentInput): ThermalPrintDocument => {
   const safePickupNumber = Math.max(
@@ -616,6 +619,7 @@ export const buildPickupTicketPrintDocument = ({
     Math.floor(Number.isFinite(pickupNumber) ? pickupNumber : 1)
   );
   const safeTableLabel = normalizeText(tableLabel) || `Zum Abholen ${safePickupNumber}`;
+  const safeBedienung = sanitizeReceiptValue(bedienung ?? "Service");
 
   return {
     title: "Abholbon",
@@ -624,9 +628,10 @@ export const buildPickupTicketPrintDocument = ({
       { text: centerLine("ABHOLBON"), emphasis: true, align: "center" },
       { text: centerLine("Zum Abholen"), align: "center" },
       { text: STRONG_SEPARATOR },
-      { text: centerLine(`NUMMER ${safePickupNumber}`), emphasis: true, align: "center" },
+      { text: `NUMMER ${safePickupNumber}`, emphasis: true, align: "center", size: "large" },
       { text: STRONG_SEPARATOR },
       { text: `BON   : ${safeTableLabel}` },
+      { text: `BEDIENUNG: ${safeBedienung}`, emphasis: true },
       { text: `ZEIT  : ${formatDateTime(createdAt)}` },
       { text: SEPARATOR },
       { text: centerLine("Für Abholung bereitlegen"), align: "center" }
@@ -707,7 +712,7 @@ export const buildKitchenTicketPrintDocument = ({
       { text: SEPARATOR },
       { text: `TISCH : ${table.name}` },
       { text: `ZEIT  : ${formatDateTime(printedAt)}` },
-      { text: `BED.  : ${sanitizeReceiptValue(batch.bedienung ?? "Service")}` },
+      { text: `BESTELLT: ${sanitizeReceiptValue(batch.bedienung ?? "Service")}` },
       {
         text: `BON   : ${batch.sequence === 1 ? "Erstsendung" : `Nachbestellung ${batch.sequence}`}`
       },
@@ -748,6 +753,24 @@ export const buildKitchenPlateLabelPrintDocument = ({
     ? wrapText(`Hinweis: ${item.note.trim()}`, THERMAL_LINE_WIDTH).map((text) => ({ text }))
     : [];
   const courseLabel = courseLabels[batch.course];
+  const bedienung = sanitizeReceiptValue(batch.bedienung ?? "Service");
+  const tableLabel = sanitizeReceiptValue(table.name || "Tisch");
+  const sentAt = new Date(batch.sentAt).getTime();
+  const completedAtTime = new Date(completedAt).getTime();
+  const elapsedSeconds =
+    Number.isFinite(sentAt) && Number.isFinite(completedAtTime)
+      ? Math.max(0, Math.floor((completedAtTime - sentAt) / 1000))
+      : 0;
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  const elapsedRemainder = elapsedSeconds % 60;
+  const waitLabel = `${elapsedMinutes}:${String(elapsedRemainder).padStart(2, "0")} Min`;
+  const buildLargeCenteredLines = (value: string): ThermalPrintLine[] =>
+    wrapText(value, LARGE_THERMAL_LINE_WIDTH).map((text) => ({
+      text,
+      emphasis: true,
+      align: "center",
+      size: "large"
+    }));
 
   return {
     title: "Tellerbon",
@@ -756,21 +779,18 @@ export const buildKitchenPlateLabelPrintDocument = ({
       { text: centerLine("TELLERBON"), emphasis: true, align: "center" },
       { text: centerLine(courseLabel), align: "center" },
       { text: SEPARATOR },
-      { text: `TISCH : ${table.name}`, emphasis: true },
+      ...buildLargeCenteredLines(tableLabel),
+      ...buildLargeCenteredLines(`BEDIENUNG ${bedienung}`),
       { text: `PLATZ : ${item ? resolveSeatLabel(table, item) : "Tisch"}` },
-      { text: `ZEIT  : ${formatDateTime(completedAt)}` },
+      { text: `WARTEZEIT: ${waitLabel}`, emphasis: true },
+      { text: `FERTIG: ${formatDateTime(completedAt)}` },
       { text: `BON   : ${batch.sequence === 1 ? "Erstsendung" : `Nachbestellung ${batch.sequence}`}` },
       { text: `PORT. : ${portionLabel}` },
       { text: SEPARATOR },
-      { text: "GERICHT:", emphasis: true },
-      ...wrapText(`1x ${productName}`, THERMAL_LINE_WIDTH).map((text, index) => ({
-        text,
-        emphasis: index === 0
-      })),
+      ...buildLargeCenteredLines(`1x ${productName}`),
       ...modifierLines,
       ...noteLines,
-      { text: SEPARATOR },
-      { text: centerLine("Zum Teller kleben"), align: "center" }
+      { text: SEPARATOR }
     ]
   };
 };

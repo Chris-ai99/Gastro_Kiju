@@ -5,6 +5,7 @@ import { appMetadata } from "@kiju/config";
 
 import { DesignModeBridge } from "../components/design-mode-bridge";
 import { ThemeProvider } from "../components/theme-provider";
+import { TransmissionStatusBanner } from "../components/transmission-status-banner";
 import { DemoAppProvider } from "../lib/app-state";
 import "./globals.css";
 import "./design-modern.css";
@@ -51,6 +52,7 @@ export default function RootLayout({
         <ThemeProvider>
           <DemoAppProvider>
             <DesignModeBridge />
+            <TransmissionStatusBanner />
             {children}
           </DemoAppProvider>
         </ThemeProvider>

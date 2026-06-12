@@ -63,7 +63,10 @@ import {
   resolveProductName,
   useDemoApp
 } from "../lib/app-state";
-import { createPrintJob } from "../lib/print-client";
+import {
+  buildPendingOrderSendSummary,
+  isServiceBookedItem
+} from "../lib/order-overview";
 import { RouteGuard } from "./route-guard";
 import { ServiceTopbarMenu } from "./service-topbar-menu";
 import { ThermalReceiptPaper } from "./thermal-receipt-paper";
@@ -76,10 +79,11 @@ const orderWizardSteps = [
 ] as const;
 const wizardSteps = ["Tisch", ...orderWizardSteps, "Abrechnung"] as const;
 type OrderWizardStepLabel = (typeof orderWizardSteps)[number];
-type WizardStepLabel = OrderWizardStepLabel | "Abrechnung";
-type WaiterOrderStep = CourseKey | "checkout";
+type WizardStepLabel = OrderWizardStepLabel | "Bestellübersicht" | "Abrechnung";
+type WaiterOrderStep = CourseKey | "overview" | "checkout";
 type WaiterStep = "table" | WaiterOrderStep;
 type CategoryDialogStage = "groups" | "products" | "review";
+type CategoryDialogReturnStep = "table" | "overview";
 type CourseGroupOption = {
   label: string;
   products: Product[];
@@ -99,6 +103,7 @@ const waiterStepLabels: Record<WaiterOrderStep, WizardStepLabel> = {
   starter: "Vorspeise",
   main: "Hauptspeise",
   dessert: "Nachtisch",
+  overview: "Bestellübersicht",
   checkout: "Abrechnung"
 };
 const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
@@ -106,6 +111,7 @@ const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
   Vorspeise: "starter",
   Hauptspeise: "main",
   Nachtisch: "dessert",
+  Bestellübersicht: "overview",
   Abrechnung: "checkout"
 };
 const serviceFeedbackTimeoutMs = 3000;
@@ -305,7 +311,14 @@ const getFoodCourseGroup = (course: CourseKey, productName: string) => {
 
   if (course === "main") {
     if (normalizedName.includes("pizza")) return "Pizza";
-    if (normalizedName.includes("nudel") || normalizedName.includes("pasta")) return "Pasta";
+    if (
+      normalizedName.includes("nudel") ||
+      normalizedName.includes("pasta") ||
+      normalizedName.includes("penne") ||
+      normalizedName.includes("tagliatelle")
+    ) {
+      return "Pasta";
+    }
     return fallbackCourseGroup;
   }
 
@@ -607,6 +620,10 @@ export const WaiterWorkspace = () => {
   const [isOrderWizardOpen, setIsOrderWizardOpen] = useState(false);
   const [activeCategoryDialog, setActiveCategoryDialog] = useState<CourseKey | null>(null);
   const [categoryDialogStage, setCategoryDialogStage] = useState<CategoryDialogStage>("groups");
+  const [categoryDialogReturnStep, setCategoryDialogReturnStep] =
+    useState<CategoryDialogReturnStep>("table");
+  const [isSendAllConfirmationOpen, setIsSendAllConfirmationOpen] = useState(false);
+  const [isSecureTransferPending, setIsSecureTransferPending] = useState(false);
   const [activeCourseGroup, setActiveCourseGroup] = useState(fallbackCourseGroup);
   const [categoryDialogInitialItemIds, setCategoryDialogInitialItemIds] = useState<string[]>([]);
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
@@ -655,6 +672,14 @@ export const WaiterWorkspace = () => {
   const selectedOrderTarget: OrderTarget =
     usesSeatMode && selectedSeatId ? { type: "seat", seatId: selectedSeatId } : tableOrderTarget;
   const activeCourse: CourseKey = isCourseStep(currentStep) ? currentStep : "drinks";
+  const activeOrderItems =
+    selectedSession?.items.filter((item) => !isOrderItemCanceled(item)) ?? [];
+  const pendingOrderSummary = buildPendingOrderSendSummary(selectedSession, state.products);
+  const activeOrderItemCount = activeOrderItems.reduce((sum, item) => sum + item.quantity, 0);
+  const activeOrderTotal = activeOrderItems.reduce(
+    (sum, item) => sum + calculateItemTotal(item, state.products),
+    0
+  );
   const waiterMenuEntries = dashboard.filter(
     (entry) => entry.table.active || entry.table.plannedOnly || entry.table.id === selectedTableId
   );
@@ -849,7 +874,12 @@ export const WaiterWorkspace = () => {
     return kitchenWaitCourses
       .map((course) => {
         const itemCount = selectedSession.items
-          .filter((item) => item.category === course && !item.sentAt)
+          .filter(
+            (item) =>
+              item.category === course &&
+              !item.sentAt &&
+              !isServiceBookedItem(item, state.products)
+          )
           .reduce((sum, item) => sum + item.quantity, 0);
         const ticket = selectedSession.courseTickets[course];
         const resolved = resolveServiceCourseStatus(selectedSession, course);
@@ -868,17 +898,19 @@ export const WaiterWorkspace = () => {
           entry.status !== "completed" &&
           entry.status !== "skipped"
       );
-  }, [selectedSession]);
+  }, [selectedSession, state.products]);
   const syncStatusLabel =
     sharedSync.status === "online"
       ? "Geräte-Sync aktiv"
-      : sharedSync.status === "connecting"
-        ? "Synchronisiere..."
-        : "Nur lokaler Stand";
+      : sharedSync.status === "pending" || sharedSync.status === "connecting"
+        ? `${sharedSync.pendingCount} Vorgänge warten`
+        : sharedSync.failedCount > 0
+          ? `${sharedSync.failedCount} Übertragungen fehlgeschlagen`
+          : "Server nicht erreichbar";
   const syncStatusTone =
     sharedSync.status === "online"
       ? "green"
-      : sharedSync.status === "connecting"
+      : sharedSync.status === "pending" || sharedSync.status === "connecting"
         ? "amber"
         : "red";
   const editableItems = useMemo(() => {
@@ -897,13 +929,26 @@ export const WaiterWorkspace = () => {
         !isOrderItemCanceled(item)
     );
   }, [activeCourse, selectedOrderTarget, selectedSession, usesSeatMode]);
+  const serviceBookedEditableItems = useMemo(
+    () => editableItems.filter((item) => isServiceBookedItem(item, state.products)),
+    [editableItems, state.products]
+  );
   const newEditableItems = useMemo(
-    () => editableItems.filter((item) => !item.sentAt),
-    [editableItems]
+    () =>
+      editableItems.filter(
+        (item) => !item.sentAt && !isServiceBookedItem(item, state.products)
+      ),
+    [editableItems, state.products]
   );
   const sentEditableItems = useMemo(
     () => editableItems.filter((item) => item.sentAt && !isOrderItemCanceled(item)),
     [editableItems]
+  );
+  const activeCourseServiceItemCount = serviceBookedEditableItems
+    .reduce((sum, item) => sum + item.quantity, 0);
+  const activeCoursePendingSendCount = pendingOrderSummary.byCourse[activeCourse].reduce(
+    (sum, item) => sum + item.quantity,
+    0
   );
   const categoryDialogInitialItemIdSet = useMemo(
     () => new Set(categoryDialogInitialItemIds),
@@ -918,6 +963,7 @@ export const WaiterWorkspace = () => {
     [categoryDialogInitialItemIdSet, newEditableItems]
   );
   const categoryDialogSentItems = sentEditableItems;
+  const categoryDialogServiceItems = serviceBookedEditableItems;
   const revisableSentItemCount = sentEditableItems.filter((item) => canReviseSentItem(item)).length;
   const tableTargetItems = useMemo(
     () => (usesSeatMode ? getTableTargetItems(selectedSession) : selectedSession?.items ?? []),
@@ -1108,6 +1154,7 @@ export const WaiterWorkspace = () => {
     setReceiptPreview(null);
     setSelectedPaymentQuantities({});
     setLinkTableSelection(selectedTableId ? [selectedTableId] : []);
+    setIsSendAllConfirmationOpen(false);
   }, [selectedTableId]);
 
   useEffect(() => {
@@ -1180,7 +1227,9 @@ export const WaiterWorkspace = () => {
     setCurrentStep(step);
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
+    setCategoryDialogReturnStep("table");
     setCategoryDialogInitialItemIds([]);
+    setIsSendAllConfirmationOpen(false);
     setIsTableActionDialogOpen(false);
     setIsOrderWizardOpen(true);
   };
@@ -1189,7 +1238,9 @@ export const WaiterWorkspace = () => {
     setCurrentStep("table");
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
+    setCategoryDialogReturnStep("table");
     setCategoryDialogInitialItemIds([]);
+    setIsSendAllConfirmationOpen(false);
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(true);
   };
@@ -1205,6 +1256,7 @@ export const WaiterWorkspace = () => {
     setCurrentStep(course);
     setActiveCategoryDialog(course);
     setCategoryDialogStage("groups");
+    setCategoryDialogReturnStep("table");
     setActiveCourseGroup(initialGroup);
     setCategoryDialogInitialItemIds(initialItemIds);
     if (course === "drinks") {
@@ -1213,13 +1265,45 @@ export const WaiterWorkspace = () => {
     setWaitPlannerOpen(false);
   };
 
+  const openOrderOverview = () => {
+    flushPendingSentItemNotes();
+    setActiveCategoryDialog(null);
+    setCategoryDialogStage("groups");
+    setCategoryDialogInitialItemIds([]);
+    setIsSendAllConfirmationOpen(false);
+    setCurrentStep("overview");
+  };
+
+  const openOverviewCourseEditor = (course: CourseKey) => {
+    const nextProducts = getOrderableProducts(state.products, course);
+    const initialGroup =
+      buildCourseGroupOptions(course, nextProducts)[0]?.label ?? fallbackCourseGroup;
+    const initialItemIds =
+      selectedSession?.items
+        .filter((item) => item.category === course && !isOrderItemCanceled(item))
+        .map((item) => item.id) ?? [];
+
+    setCurrentStep(course);
+    setActiveCategoryDialog(course);
+    setCategoryDialogStage("review");
+    setCategoryDialogReturnStep("overview");
+    setActiveCourseGroup(initialGroup);
+    setCategoryDialogInitialItemIds(initialItemIds);
+    if (course === "drinks") {
+      setActiveDrinkSubcategory(initialGroup);
+    }
+    setWaitPlannerOpen(false);
+    setIsSendAllConfirmationOpen(false);
+  };
+
   const closeCategoryDialog = () => {
+    if (isSecureTransferPending) return;
     flushPendingSentItemNotes();
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
     setCategoryDialogInitialItemIds([]);
     setWaitPlannerOpen(false);
-    setCurrentStep("table");
+    setCurrentStep(categoryDialogReturnStep);
   };
 
   const openCategoryProductGroup = (group: string) => {
@@ -1311,7 +1395,7 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleSendCourseToKitchen = () => {
+  const handleSendCourseToKitchen = async () => {
     if (!selectedTable) return;
 
     const result = actions.sendCourseToKitchen(selectedTable.id, activeCourse);
@@ -1329,14 +1413,22 @@ export const WaiterWorkspace = () => {
       return;
     }
 
-    const syncHint =
-      activeCourse === "drinks"
-        ? sharedSync.status === "online"
-          ? "Der Bon ist für die Bar und andere Geräte jetzt im gemeinsamen Stand."
-          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein."
-        : sharedSync.status === "online"
-          ? "Der Bon ist für Küche und andere Geräte jetzt im gemeinsamen Stand."
-          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein.";
+    setIsSecureTransferPending(true);
+    setServiceFeedback({
+      tone: "info",
+      title: "Wird sicher übertragen",
+      detail: "Die Bestellung bleibt geöffnet, bis der Server die Speicherung bestätigt."
+    });
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Noch nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
 
     setServiceFeedback({
       tone: "success",
@@ -1347,7 +1439,53 @@ export const WaiterWorkspace = () => {
         (activeCourse === "drinks"
           ? "Die Getränke wurden erfolgreich an die Bar gesendet."
           : "Die Positionen wurden erfolgreich an die Küche gesendet.")
-      } ${syncHint}`
+      } Die Speicherung wurde vom Server bestätigt.`
+    });
+  };
+
+  const handleSendAllPendingItems = async () => {
+    if (!selectedTable) return;
+
+    const result = actions.sendAllPendingItems(selectedTable.id);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Bestellung nicht gesendet",
+        detail: result.message ?? "Die offenen Positionen konnten nicht gesendet werden."
+      });
+      return;
+    }
+
+    setIsSecureTransferPending(true);
+    setServiceFeedback({
+      tone: "info",
+      title: "Wird sicher übertragen",
+      detail: "Alle offenen Positionen werden gespeichert. Der Dialog bleibt bis zur Bestätigung geöffnet."
+    });
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Bestellung nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
+    setIsSendAllConfirmationOpen(false);
+    const targetLabel =
+      result.targets.length === 2
+        ? "Bar und Küche"
+        : result.targets[0] === "bar"
+          ? "Bar"
+          : "Küche";
+    setServiceFeedback({
+      tone: "success",
+      title: "Bestellung vollständig gesendet",
+      detail: `${result.sentItemCount} ${
+        result.sentItemCount === 1 ? "Position wurde" : "Positionen wurden"
+      } an ${targetLabel} gesendet und vom Server bestätigt.`
     });
   };
 
@@ -1370,7 +1508,7 @@ export const WaiterWorkspace = () => {
     setWaitPlannerOpen((current) => !current);
   };
 
-  const confirmCourseWait = () => {
+  const confirmCourseWait = async () => {
     if (!selectedTable) return;
 
     const minutes = Number(waitMinutes);
@@ -1389,6 +1527,18 @@ export const WaiterWorkspace = () => {
         tone: "alert",
         title: "Wartezeit nicht gesetzt",
         detail: result.message ?? "Der Gang konnte nicht auf Warten gesetzt werden."
+      });
+      return;
+    }
+
+    setIsSecureTransferPending(true);
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Wartezeit nicht bestätigt",
+        detail: confirmation.message
       });
       return;
     }
@@ -1491,35 +1641,35 @@ export const WaiterWorkspace = () => {
     if (!selectedTable || !selectedSession) return;
     const tableName = preview.tableSummary;
 
-    if (preview.printMode === "reprint") {
-      actions.reprintReceipt(selectedTable.id, preview.sessionIds);
-    } else {
-      actions.printReceipt(selectedTable.id, preview.sessionIds);
-    }
-
-    const result = await createPrintJob({
+    const printRequest = {
       type: preview.printMode,
       receipt: preview.receipt,
       tableId: selectedTable.id,
       tableLabel: tableName
-    });
+    } as const;
+    setIsSecureTransferPending(true);
+    const result =
+      preview.printMode === "reprint"
+        ? await actions.reprintReceipt(selectedTable.id, preview.sessionIds, printRequest)
+        : await actions.printReceipt(selectedTable.id, preview.sessionIds, printRequest);
+    setIsSecureTransferPending(false);
 
     setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
+      tone: result?.ok ? "success" : "alert",
       title:
-        result.ok
+        result?.ok
           ? preview.printMode === "reprint"
-            ? "Reprint gesendet"
-            : "Bon gesendet"
+            ? "Reprint sicher gespeichert"
+            : "Bon sicher gespeichert"
           : preview.printMode === "reprint"
-            ? "Reprint nicht gesendet"
-            : "Bon nicht gesendet",
-      detail: result.ok
-        ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
-        : result.message ?? "Der Bon konnte nicht an den Netzwerkdrucker gesendet werden."
+            ? "Reprint nicht gespeichert"
+            : "Bon nicht gespeichert",
+      detail: result?.ok
+        ? `Der Druckauftrag für ${tableName} wurde dauerhaft auf dem Server eingereiht.`
+        : result?.message ?? "Der Druckauftrag konnte nicht sicher gespeichert werden."
     });
 
-    if (result.ok && clearAfterSuccess) {
+    if (result?.ok && clearAfterSuccess) {
       setReceiptPreview(null);
     }
   };
@@ -1541,21 +1691,21 @@ export const WaiterWorkspace = () => {
       openedAt,
       bedienung: resolveReceiptBedienung([session])
     });
-    actions.reprintReceipt(session.tableId, [session.id]);
-
-    const result = await createPrintJob({
+    setIsSecureTransferPending(true);
+    const result = await actions.reprintReceipt(session.tableId, [session.id], {
       type: "reprint",
       receipt,
       tableId: session.tableId,
       tableLabel: tableName
     });
+    setIsSecureTransferPending(false);
 
     setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok ? "Reprint gesendet" : "Reprint nicht gesendet",
-      detail: result.ok
-        ? `${tableName} wurde erneut an den Netzwerkdrucker gesendet.`
-        : result.message ?? "Der Reprint konnte nicht an den Netzwerkdrucker gesendet werden."
+      tone: result?.ok ? "success" : "alert",
+      title: result?.ok ? "Reprint sicher gespeichert" : "Reprint nicht gespeichert",
+      detail: result?.ok
+        ? `Der Reprint für ${tableName} wurde dauerhaft auf dem Server eingereiht.`
+        : result?.message ?? "Der Reprint konnte nicht sicher gespeichert werden."
     });
   };
 
@@ -1582,7 +1732,7 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleRecordPartialPayment = () => {
+  const handleRecordPartialPayment = async () => {
     if (!selectedTable) return;
 
     const result = actions.recordPartialPayment(
@@ -1592,19 +1742,37 @@ export const WaiterWorkspace = () => {
       selectedPaymentTotal === checkoutOpenTotal ? "Restzahlung" : "Teilzahlung"
     );
 
-    setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok ? "Zahlung verbucht" : "Zahlung nicht verbucht",
-      detail: result.message ?? (result.ok ? "Die ausgewählten Positionen sind bezahlt." : "Bitte Auswahl prüfen.")
-    });
-
-    if (result.ok) {
-      setSelectedPaymentQuantities({});
-      setReceiptPreview(null);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Zahlung nicht verbucht",
+        detail: result.message ?? "Bitte Auswahl prüfen."
+      });
+      return;
     }
+
+    setIsSecureTransferPending(true);
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Zahlung nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
+    setServiceFeedback({
+      tone: "success",
+      title: "Zahlung verbucht",
+      detail: "Die Zahlung wurde vom Server bestätigt."
+    });
+    setSelectedPaymentQuantities({});
+    setReceiptPreview(null);
   };
 
-  const handleRecordInvoiceCancellation = () => {
+  const handleRecordInvoiceCancellation = async () => {
     if (!selectedTable || selectedPaymentLineItems.length === 0) return;
 
     const selectedQuantity = selectedPaymentLineItems.reduce(
@@ -1624,59 +1792,92 @@ export const WaiterWorkspace = () => {
       "Rechnungsstorno"
     );
 
-    setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok ? "Storno gespeichert" : "Storno nicht gespeichert",
-      detail:
-        result.message ??
-        (result.ok
-          ? "Die ausgewählten Positionen wurden storniert."
-          : "Bitte Auswahl prüfen.")
-    });
-
-    if (result.ok) {
-      setSelectedPaymentQuantities({});
-      setReceiptPreview(null);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Storno nicht gespeichert",
+        detail: result.message ?? "Bitte Auswahl prüfen."
+      });
+      return;
     }
+
+    setIsSecureTransferPending(true);
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Storno nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
+    setServiceFeedback({
+      tone: "success",
+      title: "Storno gespeichert",
+      detail: "Das Storno wurde vom Server bestätigt."
+    });
+    setSelectedPaymentQuantities({});
+    setReceiptPreview(null);
   };
 
-  const handleClosePaidOrder = () => {
+  const handleClosePaidOrder = async () => {
     if (!selectedTable) return;
 
     const result = actions.closePaidOrder(selectedTable.id);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Noch nicht geschlossen",
+        detail: result.message ?? "Es sind noch Positionen offen."
+      });
+      return;
+    }
+
+    setIsSecureTransferPending(true);
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abschluss nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
     const archivedCurrentTable = result.archivedTableIds?.includes(selectedTable.id) === true;
     setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok
-        ? archivedCurrentTable
-          ? "Abholtisch archiviert"
-          : "Tisch geschlossen"
-        : "Noch nicht geschlossen",
+      tone: "success",
+      title: archivedCurrentTable ? "Abholtisch archiviert" : "Tisch geschlossen",
       detail:
         result.message ??
-        (result.ok && archivedCurrentTable
+        (archivedCurrentTable
           ? "Der Abholtisch wurde abgeschlossen und aus der Serviceansicht entfernt."
-          : result.ok
-          ? "Es sind keine offenen Positionen mehr vorhanden und der Tisch ist abgeschlossen."
-          : "Es sind noch Positionen offen.")
+          : "Der Abschluss wurde vom Server bestätigt.")
     });
 
-    if (result.ok && archivedCurrentTable) {
+    if (archivedCurrentTable) {
       setSelectedTableId(null);
       closeOrderWizard();
     }
   };
 
   const closeOrderWizard = () => {
+    if (isSecureTransferPending) return;
     flushPendingSentItemNotes();
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(false);
     setActiveCategoryDialog(null);
+    setCategoryDialogReturnStep("table");
+    setIsSendAllConfirmationOpen(false);
     setWaitPlannerOpen(false);
     setCurrentStep("table");
   };
 
   const goBack = () => {
+    if (isSecureTransferPending) return;
     if (currentStep === "table") {
       closeOrderWizard();
       return;
@@ -1689,6 +1890,12 @@ export const WaiterWorkspace = () => {
       } else {
         setCurrentStep("table");
       }
+      return;
+    }
+
+    if (currentStep === "overview") {
+      setIsSendAllConfirmationOpen(false);
+      setCurrentStep("table");
       return;
     }
 
@@ -1709,6 +1916,7 @@ export const WaiterWorkspace = () => {
   };
 
   const goNext = () => {
+    if (isSecureTransferPending) return;
     if (currentStep === "table") {
       if (!selectedTable) return;
       setCurrentStep("drinks");
@@ -1768,6 +1976,18 @@ export const WaiterWorkspace = () => {
       return;
     }
 
+    setIsSecureTransferPending(true);
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abholbon nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
     setSelectedTableId(result.tableId);
     setSelectedSeatId(usesSeatMode ? result.seatId ?? "" : "");
     setReceiptPreview(null);
@@ -1775,21 +1995,10 @@ export const WaiterWorkspace = () => {
     setIsLinkTablesOpen(false);
     openOrderWizard("table");
 
-    const printResult = await createPrintJob({
-      type: "pickup-ticket",
-      tableId: result.tableId,
-      tableLabel: result.tableName,
-      pickupNumber: result.pickupNumber,
-      createdAt: result.createdAt
-    });
-
     setServiceFeedback({
-      tone: printResult.ok ? "success" : "alert",
-      title: printResult.ok ? "Abholbon erstellt" : "Abholbon erstellt, Druck prüfen",
-      detail: printResult.ok
-        ? `${result.tableName} ist geöffnet und der Kurzbon wurde an den Drucker gesendet.`
-        : printResult.message ??
-          `${result.tableName} ist geöffnet, aber der Kurzbon konnte nicht gedruckt werden.`
+      tone: "success",
+      title: "Abholbon erstellt",
+      detail: `${result.tableName} ist geöffnet und der Druckauftrag wurde sicher gespeichert.`
     });
   };
 
@@ -2152,12 +2361,26 @@ export const WaiterWorkspace = () => {
   };
 
   const renderActiveCourseItems = (emptyMessage: string) => {
-    if (newEditableItems.length === 0 && sentEditableItems.length === 0) {
+    if (
+      serviceBookedEditableItems.length === 0 &&
+      newEditableItems.length === 0 &&
+      sentEditableItems.length === 0
+    ) {
       return renderEditableItems([], emptyMessage);
     }
 
     return (
       <div className="kiju-order-editor__groups">
+        {serviceBookedEditableItems.length > 0 ? (
+          <section className="kiju-order-editor__group">
+            <div className="kiju-order-editor__group-title">
+              <strong>Im Service gebucht</strong>
+              <span>Keine Bestätigung nötig</span>
+            </div>
+            {renderEditableItems(serviceBookedEditableItems, emptyMessage)}
+          </section>
+        ) : null}
+
         {newEditableItems.length > 0 ? (
           <section className="kiju-order-editor__group">
             <div className="kiju-order-editor__group-title">
@@ -2191,13 +2414,24 @@ export const WaiterWorkspace = () => {
     if (
       categoryDialogNewItems.length === 0 &&
       categoryDialogExistingUnsentItems.length === 0 &&
-      categoryDialogSentItems.length === 0
+      categoryDialogSentItems.length === 0 &&
+      categoryDialogServiceItems.length === 0
     ) {
       return renderEditableItems([], emptyMessage);
     }
 
     return (
       <div className="kiju-order-editor__groups">
+        {categoryDialogServiceItems.length > 0 ? (
+          <section className="kiju-order-editor__group">
+            <div className="kiju-order-editor__group-title">
+              <strong>Im Service gebucht</strong>
+              <span>Keine Bestätigung nötig</span>
+            </div>
+            {renderEditableItems(categoryDialogServiceItems, emptyMessage)}
+          </section>
+        ) : null}
+
         {categoryDialogNewItems.length > 0 ? (
           <section className="kiju-order-editor__group">
             <div className="kiju-order-editor__group-title">
@@ -2403,6 +2637,221 @@ export const WaiterWorkspace = () => {
       .filter((item) => item.category === course && !isOrderItemCanceled(item))
       .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
+  const resolveOverviewTargetLabel = (item: OrderItem) => {
+    const tableLabel = selectedTable?.name ?? "Tisch";
+    if (item.target.type === "table") return tableLabel;
+
+    const seatId = item.target.seatId;
+    const seatLabel =
+      selectedTable?.seats.find((seat) => seat.id === seatId)?.label ?? "Sitzplatz";
+    return `${tableLabel} · ${seatLabel}`;
+  };
+
+  const resolveOverviewCourseStatus = (items: OrderItem[]) => {
+    if (items.length === 0) {
+      return { label: "Keine Positionen", tone: "slate" as const };
+    }
+
+    const externallyPreparedItems = items.filter(
+      (item) => !isServiceBookedItem(item, state.products)
+    );
+    if (externallyPreparedItems.length === 0) {
+      return { label: "Im Service gebucht", tone: "green" as const };
+    }
+
+    const pendingCount = externallyPreparedItems.filter((item) => !item.sentAt).length;
+    if (pendingCount === 0) {
+      return { label: "Gesendet", tone: "green" as const };
+    }
+    if (pendingCount === externallyPreparedItems.length) {
+      return { label: "Noch nicht gesendet", tone: "amber" as const };
+    }
+
+    return { label: "Teilweise gesendet", tone: "navy" as const };
+  };
+
+  const renderOrderOverview = () => (
+    <section className="kiju-order-overview" aria-label="Bestellübersicht">
+      <div className="kiju-order-overview__summary">
+        <div>
+          <span>Gesamt</span>
+          <strong>{euro(activeOrderTotal)}</strong>
+        </div>
+        <div>
+          <span>Positionen</span>
+          <strong>{activeOrderItemCount}</strong>
+        </div>
+        <div>
+          <span>Noch zu senden</span>
+          <strong>{pendingOrderSummary.sentItemCount}</strong>
+        </div>
+      </div>
+
+      <div className="kiju-order-overview__groups">
+        {orderStepSequence.map((course) => {
+          const courseItems = activeOrderItems.filter((item) => item.category === course);
+          const courseQuantity = courseItems.reduce((sum, item) => sum + item.quantity, 0);
+          const courseTotal = courseItems.reduce(
+            (sum, item) => sum + calculateItemTotal(item, state.products),
+            0
+          );
+          const courseStatus = resolveOverviewCourseStatus(courseItems);
+
+          return (
+            <article key={course} className="kiju-order-overview-group">
+              <header className="kiju-order-overview-group__header">
+                <div>
+                  <span className="kiju-eyebrow">{courseLabels[course]}</span>
+                  <strong>
+                    {courseQuantity} {courseQuantity === 1 ? "Position" : "Positionen"} ·{" "}
+                    {euro(courseTotal)}
+                  </strong>
+                </div>
+                <div className="kiju-order-overview-group__actions">
+                  <StatusPill label={courseStatus.label} tone={courseStatus.tone} />
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--secondary"
+                    onClick={() => openOverviewCourseEditor(course)}
+                  >
+                    Bearbeiten
+                  </button>
+                </div>
+              </header>
+
+              {courseItems.length > 0 ? (
+                <div className="kiju-order-overview-group__items">
+                  {courseItems.map((item) => {
+                    const product = getProductById(state.products, item.productId);
+                    const extraIngredientLabels = resolveExtraIngredientLabels(
+                      item,
+                      product,
+                      extraIngredientsCatalog
+                    );
+                    const detailParts = [
+                      extraIngredientLabels.length > 0
+                        ? `Extras: ${extraIngredientLabels.join(", ")}`
+                        : null,
+                      item.note ? `Notiz: ${item.note}` : null
+                    ].filter((value): value is string => Boolean(value));
+
+                    return (
+                      <div key={item.id} className="kiju-order-overview-item">
+                        <div className="kiju-order-overview-item__main">
+                          <strong>
+                            {item.quantity} × {resolveProductName(state.products, item.productId)}
+                          </strong>
+                          <span>
+                            {resolveOverviewTargetLabel(item)} ·{" "}
+                            {euro(calculateItemTotal(item, state.products))}
+                          </span>
+                          {detailParts.length > 0 ? <small>{detailParts.join(" · ")}</small> : null}
+                        </div>
+                        <StatusPill
+                          label={
+                            isServiceBookedItem(item, state.products)
+                              ? "Im Service gebucht"
+                              : item.sentAt
+                                ? "Gesendet"
+                                : "Offen"
+                          }
+                          tone={
+                            isServiceBookedItem(item, state.products) || item.sentAt
+                              ? "green"
+                              : "amber"
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="kiju-order-overview-group__empty">
+                  Noch keine Positionen erfasst.
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="kiju-order-overview__footer">
+        <div>
+          <strong>Alle offenen Positionen gemeinsam senden</strong>
+          <span>
+            Nur Artikel für Bar und Küche werden gesendet. Serviceartikel bleiben direkt gebucht.
+          </span>
+        </div>
+        <button
+          type="button"
+          className="kiju-button kiju-button--primary"
+          onClick={() => setIsSendAllConfirmationOpen(true)}
+          disabled={pendingOrderSummary.sentItemCount === 0 || isSecureTransferPending}
+        >
+          <ShoppingBag size={18} />
+          Alles senden
+        </button>
+      </div>
+
+      {isSendAllConfirmationOpen ? (
+        <div
+          className="kiju-order-overview-confirmation-backdrop"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="kiju-send-all-title"
+        >
+          <section className="kiju-order-overview-confirmation">
+            <div>
+              <span className="kiju-eyebrow">Sicherheitsprüfung</span>
+              <h3 id="kiju-send-all-title">Wirklich alles senden?</h3>
+              <p>
+                {pendingOrderSummary.sentItemCount} offene{" "}
+                {pendingOrderSummary.sentItemCount === 1 ? "Position wird" : "Positionen werden"}{" "}
+                jetzt verbindlich weitergegeben.
+              </p>
+            </div>
+            <div className="kiju-order-overview-confirmation__courses">
+              {pendingOrderSummary.affectedCourses.map((course) => {
+                const itemCount = pendingOrderSummary.byCourse[course].reduce(
+                  (sum, item) => sum + item.quantity,
+                  0
+                );
+
+                return (
+                  <div key={course}>
+                    <strong>{courseLabels[course]}</strong>
+                    <span>
+                      {itemCount} {itemCount === 1 ? "Position" : "Positionen"} ·{" "}
+                      {course === "drinks" ? "Bar" : "Küche"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="kiju-order-overview-confirmation__actions">
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={() => setIsSendAllConfirmationOpen(false)}
+                disabled={isSecureTransferPending}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                className="kiju-button kiju-button--primary"
+                onClick={handleSendAllPendingItems}
+                disabled={isSecureTransferPending}
+              >
+                {isSecureTransferPending ? "Wird übertragen ..." : "Jetzt alles senden"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </section>
+  );
+
   const renderCourseCategoryGrid = () => (
     <div className="kiju-category-start">
       <div className="kiju-category-start__header">
@@ -2441,6 +2890,33 @@ export const WaiterWorkspace = () => {
             </button>
           );
         })}
+        <button
+          type="button"
+          className="kiju-course-choice kiju-category-choice kiju-category-choice--overview"
+          onClick={openOrderOverview}
+        >
+          <span className="kiju-category-choice__number">
+            <ShoppingBag size={20} />
+          </span>
+          <span className="kiju-category-choice__copy">
+            <strong>Bestellübersicht</strong>
+            <small>
+              {activeOrderItemCount === 0
+                ? "Noch keine Positionen"
+                : `${activeOrderItemCount} ${
+                    activeOrderItemCount === 1 ? "Position" : "Positionen"
+                  } · ${euro(activeOrderTotal)}`}
+            </small>
+          </span>
+          <StatusPill
+            label={
+              pendingOrderSummary.sentItemCount > 0
+                ? `${pendingOrderSummary.sentItemCount} offen`
+                : "Aktuell"
+            }
+            tone={pendingOrderSummary.sentItemCount > 0 ? "amber" : "green"}
+          />
+        </button>
       </div>
     </div>
   );
@@ -2746,14 +3222,16 @@ export const WaiterWorkspace = () => {
 
             {categoryDialogStage === "review" ? (
               <div className="kiju-step-actions kiju-wizard-service-actions kiju-category-order-actions">
-                <button
-                  type="button"
-                  className="kiju-button kiju-button--secondary"
-                  onClick={openWaitPlanner}
-                >
-                  <Clock3 size={18} />
-                  {serviceLabels.waiting}
-                </button>
+                {waitableCourses.length > 0 ? (
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--secondary"
+                    onClick={openWaitPlanner}
+                  >
+                    <Clock3 size={18} />
+                    {serviceLabels.waiting}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
@@ -2761,23 +3239,28 @@ export const WaiterWorkspace = () => {
                 >
                   Gang überspringen
                 </button>
-                <button
-                  type="button"
+                {activeCoursePendingSendCount > 0 ? (
+                  <button
+                    type="button"
                   className="kiju-button kiju-button--primary"
                   onClick={handleSendCourseToKitchen}
-                >
-                  {activeCourse === "drinks" ? (
-                    <>
-                      <Bell size={18} />
-                      {sendCourseActionLabel}
-                    </>
-                  ) : (
-                    <>
-                      <ChefHat size={18} />
-                      {sendCourseActionLabel}
-                    </>
-                  )}
-                </button>
+                  disabled={isSecureTransferPending}
+                  >
+                    {activeCourse === "drinks" ? (
+                      <>
+                        <Bell size={18} />
+                        {sendCourseActionLabel}
+                      </>
+                    ) : (
+                      <>
+                        <ChefHat size={18} />
+                        {sendCourseActionLabel}
+                      </>
+                    )}
+                  </button>
+                ) : activeCourseServiceItemCount > 0 ? (
+                  <StatusPill label="Direkt im Service gebucht" tone="green" />
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -3457,7 +3940,7 @@ export const WaiterWorkspace = () => {
                             type="button"
                             className="kiju-button kiju-button--primary"
                             onClick={handleRecordPartialPayment}
-                            disabled={selectedPaymentLineItems.length === 0}
+                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
                           >
                             Auswahl bezahlt
                           </button>
@@ -3465,7 +3948,7 @@ export const WaiterWorkspace = () => {
                             type="button"
                             className="kiju-button kiju-button--danger"
                             onClick={handleRecordInvoiceCancellation}
-                            disabled={selectedPaymentLineItems.length === 0}
+                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
                           >
                             Auswahl stornieren
                           </button>
@@ -3473,7 +3956,7 @@ export const WaiterWorkspace = () => {
                             type="button"
                             className="kiju-button kiju-button--danger"
                             onClick={handleClosePaidOrder}
-                            disabled={checkoutOpenTotal > 0}
+                            disabled={checkoutOpenTotal > 0 || isSecureTransferPending}
                           >
                             {serviceLabels.closeOrder}
                           </button>
@@ -3531,6 +4014,8 @@ export const WaiterWorkspace = () => {
                       {renderReceiptDraftPreviewPanel()}
                     </div>
                   </div>
+                ) : currentStep === "overview" ? (
+                  renderOrderOverview()
                 ) : (
                   renderCourseCategoryGrid()
                 )}
@@ -3541,9 +4026,17 @@ export const WaiterWorkspace = () => {
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
-                  onClick={currentStep === "checkout" ? goBack : closeOrderWizard}
+                  onClick={
+                    currentStep === "checkout" || currentStep === "overview"
+                      ? goBack
+                      : closeOrderWizard
+                  }
                 >
-                  {currentStep === "checkout" ? "Zurück" : "Zum Raumplan"}
+                  {currentStep === "checkout"
+                    ? "Zurück"
+                    : currentStep === "overview"
+                      ? "Zurück zu Kategorien"
+                      : "Zum Raumplan"}
                 </button>
                 <div className="kiju-wizard-footer__actions">
                   {currentStep === "checkout" ? (
@@ -3728,21 +4221,21 @@ export const WaiterWorkspace = () => {
                           <button
                             className="kiju-button kiju-button--primary"
                             onClick={handleRecordPartialPayment}
-                            disabled={selectedPaymentLineItems.length === 0}
+                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
                           >
                             Auswahl bezahlt
                           </button>
                           <button
                             className="kiju-button kiju-button--danger"
                             onClick={handleRecordInvoiceCancellation}
-                            disabled={selectedPaymentLineItems.length === 0}
+                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
                           >
                             Auswahl stornieren
                           </button>
                           <button
                             className="kiju-button kiju-button--danger"
                             onClick={handleClosePaidOrder}
-                            disabled={checkoutOpenTotal > 0}
+                            disabled={checkoutOpenTotal > 0 || isSecureTransferPending}
                           >
                             {serviceLabels.closeOrder}
                           </button>
@@ -3947,35 +4440,42 @@ export const WaiterWorkspace = () => {
                       ) : null}
 
                       <div className="kiju-step-actions">
-                        <button
-                          className="kiju-button kiju-button--secondary"
-                          onClick={openWaitPlanner}
-                        >
-                          <Clock3 size={18} />
-                          {serviceLabels.waiting}
-                        </button>
+                        {waitableCourses.length > 0 ? (
+                          <button
+                            className="kiju-button kiju-button--secondary"
+                            onClick={openWaitPlanner}
+                          >
+                            <Clock3 size={18} />
+                            {serviceLabels.waiting}
+                          </button>
+                        ) : null}
                         <button
                           className="kiju-button kiju-button--secondary"
                           onClick={() => actions.skipCourse(selectedTable.id, activeCourse)}
                         >
                           Gang überspringen
                         </button>
-                        <button
-                          className="kiju-button kiju-button--primary"
-                          onClick={handleSendCourseToKitchen}
-                        >
-                          {activeCourse === "drinks" ? (
-                            <>
-                              <Bell size={18} />
-                              {sendCourseActionLabel}
-                            </>
-                          ) : (
-                            <>
-                              <ChefHat size={18} />
-                              {sendCourseActionLabel}
-                            </>
-                          )}
-                        </button>
+                        {activeCoursePendingSendCount > 0 ? (
+                          <button
+                            className="kiju-button kiju-button--primary"
+                            onClick={handleSendCourseToKitchen}
+                            disabled={isSecureTransferPending}
+                          >
+                            {activeCourse === "drinks" ? (
+                              <>
+                                <Bell size={18} />
+                                {sendCourseActionLabel}
+                              </>
+                            ) : (
+                              <>
+                                <ChefHat size={18} />
+                                {sendCourseActionLabel}
+                              </>
+                            )}
+                          </button>
+                        ) : activeCourseServiceItemCount > 0 ? (
+                          <StatusPill label="Direkt im Service gebucht" tone="green" />
+                        ) : null}
                       </div>
                     </>
                   ) : (

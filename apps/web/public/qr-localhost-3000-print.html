@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR-Code für 127.0.0.1:3000</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f4efe6;
+        color: #1f1a17;
+      }
+
+      .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 20mm;
+        background: #fffdf9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 140mm;
+        padding: 14mm;
+        border: 1.2mm solid #1f1a17;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 6mm;
+        font-size: 10mm;
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0 0 8mm;
+        font-size: 4.8mm;
+        line-height: 1.5;
+      }
+
+      img {
+        width: 100%;
+        max-width: 95mm;
+        height: auto;
+      }
+
+      .url {
+        margin-top: 8mm;
+        font-size: 5mm;
+        font-weight: 700;
+        word-break: break-word;
+      }
+
+      .hint {
+        margin-top: 5mm;
+        font-size: 3.8mm;
+        color: #5a514b;
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .sheet {
+          padding: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <section class="card">
+        <h1>QR-Code für den lokalen Aufruf</h1>
+        <p>Scan-Ziel: lokale Adresse für den Browser</p>
+        <img src="/qr-localhost-3000.svg" alt="QR-Code für http://127.0.0.1:3000" />
+        <p class="url">http://127.0.0.1:3000</p>
+        <p class="hint">Hinweis: 127.0.0.1 funktioniert nur auf dem jeweiligen Gerät selbst.</p>
+      </section>
+    </main>
+  </body>
+</html>
