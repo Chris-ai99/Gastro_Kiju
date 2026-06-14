@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.08-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:12 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die lokale Nginx-Auslieferung verhindert jetzt gecachte App-Seiten, damit Geräte nach einem Neustart sofort den aktuellen Stand laden.
+- Änderungen:
+  HTML-Seiten und API-Antworten werden am lokalen Server mit no-store ausgeliefert.
+  Next-Static-Dateien bleiben weiterhin langfristig cachebar, damit die App schnell lädt.
+  Alte Tabs können nach einem Deploy durch Schließen und erneutes Öffnen zuverlässig den neuen Stand laden.
+
 ## 0.11.07-beta
 - Datum: 2026-06-14
 - Uhrzeit: 19:04 +02:00

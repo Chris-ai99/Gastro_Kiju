@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.08-beta",
+    date: "2026-06-14",
+    time: "19:12 +02:00",
+    type: "Fix",
+    title: "Frische App-Seiten nach Deploys",
+    summary:
+      "Die lokale Nginx-Auslieferung verhindert jetzt gecachte App-Seiten, damit Geräte nach einem Neustart sofort den aktuellen Stand laden.",
+    categories: ["Deployment", "Cache", "Stabilität"],
+    changes: [
+      "HTML-Seiten und API-Antworten werden am lokalen Server mit no-store ausgeliefert.",
+      "Next-Static-Dateien bleiben weiterhin langfristig cachebar, damit die App schnell lädt.",
+      "Alte Tabs können nach einem Deploy durch Schließen und erneutes Öffnen zuverlässig den neuen Stand laden."
+    ]
+  },
+  {
     version: "0.11.07-beta",
     date: "2026-06-14",
     time: "19:04 +02:00",
