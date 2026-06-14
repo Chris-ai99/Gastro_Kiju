@@ -52,6 +52,18 @@ Optional kann in `apps/web/.env` eine feste API-Adresse gesetzt werden:
 NEXT_PUBLIC_KIJU_API_BASE_URL=http://10.128.174.93:4000/api
 ```
 
+## QR-Selbstbestellung über mobiles Internet
+
+Gedruckte Selbstbestell-QR-Codes dürfen nicht auf `localhost`, `127.0.0.1` oder eine WLAN-IP zeigen, wenn Gäste ohne Restaurant-WLAN bestellen sollen. Dafür eine öffentliche HTTPS-Adresse setzen:
+
+```env
+NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL=https://bestellen.deine-domain.de
+```
+
+Die empfohlene Betriebsart ist ein Cloudflare Tunnel auf die lokale Web-App. Die öffentliche Domain wird in der App auf die Gastbestellung und die Self-Order-API begrenzt; Admin, Küche, Bar und Service bleiben über die interne Adresse erreichbar.
+
+Die Anleitung steht in `docs/product/qr-selbstbestellung-cloudflare-tunnel.md`, ein Beispiel für `cloudflared` in `infra/cloudflared/config.example.yml`.
+
 Die alten JSON-Dateien bleiben nach dem einmaligen Import als Sicherung erhalten, werden aber nicht mehr produktiv beschrieben. Architektur, Import und Umschaltung sind in `docs/product/sichere-uebertragung.md` beschrieben.
 
 ## Demo-Zugänge

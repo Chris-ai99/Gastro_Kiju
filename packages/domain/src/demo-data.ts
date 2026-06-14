@@ -126,8 +126,8 @@ export const demoProducts: Product[] = [
     priceCents: 800,
     taxRate: 7,
     allergens: [],
-    showInKitchen: true,
-    productionTarget: "kitchen",
+    showInKitchen: false,
+    productionTarget: "service",
     modifierGroups: []
   },
   {
@@ -619,6 +619,7 @@ export const demoSessions: OrderSession[] = [
 export const demoAppState: AppState = {
   serviceOrderMode: "table",
   designMode: "modern",
+  selfOrderLocations: [],
   linkedTableGroups: [],
   users: demoUsers,
   tables: demoTables,

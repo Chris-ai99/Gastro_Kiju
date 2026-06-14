@@ -32,12 +32,15 @@ export type PrintJobRequest =
     }
   | {
       type: "pickup-ticket";
-        tableId: string;
-        tableLabel: string;
-        pickupNumber: number;
-        bedienung?: string;
-        createdAt?: string;
-      }
+      tableId: string;
+      tableLabel: string;
+      pickupNumber: number;
+      bedienung?: string;
+      customerName?: string;
+      guestCount?: number;
+      locationName?: string;
+      createdAt?: string;
+    }
   | {
       type: "kitchen-label";
       session: OrderSession;

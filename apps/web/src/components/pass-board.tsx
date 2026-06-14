@@ -29,6 +29,7 @@ import {
 } from "@kiju/domain";
 
 import { useDemoApp } from "../lib/app-state";
+import { isServiceBookedItem } from "../lib/order-overview";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
 
@@ -96,6 +97,7 @@ type PassTicket = {
   tableId: string;
   tableName: string;
   bedienung: string;
+  customerDetails?: string;
   course: CourseKey;
   courseLabel: string;
   sentAt?: string;
@@ -107,7 +109,7 @@ type PassTicket = {
   waitAttention: WaitAttention;
   waitLabel?: string;
   waitExpired?: boolean;
-  canUndoCompletion: boolean;
+  canReopen: boolean;
   lines: PassTicketLine[];
 };
 
@@ -321,7 +323,11 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
         }
 
         const ticketItemIds = new Set(courseTicket.itemIds);
-        const items = session.items.filter((item) => ticketItemIds.has(item.id));
+        const items = session.items.filter(
+          (item) =>
+            ticketItemIds.has(item.id) &&
+            (station !== "kitchen" || !isServiceBookedItem(item, state.products))
+        );
         if (items.length === 0) {
           return [];
         }
@@ -378,6 +384,9 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
           tableId: table.id,
           tableName: table.name,
           bedienung,
+          customerDetails: session.selfOrder
+            ? `${session.selfOrder.customerName} · ${session.selfOrder.guestCount} Personen · ${session.selfOrder.locationName}`
+            : undefined,
           course: courseTicket.course,
           courseLabel,
           sentAt: courseTicket.sentAt,
@@ -392,10 +401,10 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
               : "normal",
           waitLabel: waitDisplay?.label,
           waitExpired: waitDisplay?.expired,
-          canUndoCompletion:
+          canReopen:
             station === "kitchen" &&
             ticketStatus === "completed" &&
-            items.every((item) => !item.servedAt),
+            session.status !== "closed",
           lines
         };
 
@@ -541,6 +550,13 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
               <span>Bestellt von</span>
               <strong>{ticket.bedienung}</strong>
             </div>
+            {ticket.customerDetails ? (
+              <div className="kiju-pass-ticket__ordered-by">
+                <UserRound size={13} />
+                <span>Abholung</span>
+                <strong>{ticket.customerDetails}</strong>
+              </div>
+            ) : null}
             {station === "kitchen" && ticket.status !== "completed" ? (
               <div className={`kiju-pass-ticket__elapsed is-${ticket.waitAttention}`}>
                 <Clock3 size={14} />
@@ -743,15 +759,18 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                       </strong>
                       <span>{formatClock(ticket.completedAt)}</span>
                     </div>
-                    {ticket.canUndoCompletion ? (
+                    {ticket.canReopen ? (
                       <button
                         type="button"
                         className="kiju-kitchen-wallboard__archive-action"
-                        onClick={() => actions.reopenKitchenBatch(ticket.tableId, ticket.id)}
-                        aria-label={`${ticket.courseLabel} für ${ticket.tableName} zurücksetzen`}
+                        onClick={() => {
+                          actions.reopenKitchenBatch(ticket.tableId, ticket.id);
+                          setShowArchived(false);
+                        }}
+                        aria-label={`${ticket.courseLabel} für ${ticket.tableName} zurückholen`}
                       >
                         <RotateCcw size={14} />
-                        Zurück
+                        Zurückholen
                       </button>
                     ) : null}
                   </article>

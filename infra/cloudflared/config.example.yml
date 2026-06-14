@@ -1,0 +1,7 @@
+tunnel: <Tunnel-UUID>
+credentials-file: C:\Users\<Benutzer>\.cloudflared\<Tunnel-UUID>.json
+
+ingress:
+  - hostname: bestellen.deine-domain.de
+    service: http://127.0.0.1:3000
+  - service: http_status:404

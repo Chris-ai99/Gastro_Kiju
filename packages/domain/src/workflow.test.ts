@@ -91,6 +91,42 @@ describe("domain workflow", () => {
     expect(normalized.products.some((product) => product.id === "starter-greeting")).toBe(false);
   });
 
+  it("normalizes desserts and the kitchen greeting as service bookings", () => {
+    const state = structuredClone(demoAppState);
+    const greeting = state.products.find((product) => product.id === "starter-greeting")!;
+    greeting.productionTarget = "kitchen";
+    greeting.showInKitchen = true;
+    state.products.push({
+      id: "dessert-custom-test",
+      name: "Testnachtisch",
+      category: "dessert",
+      description: "Nur für den Normalisierungstest.",
+      priceCents: 500,
+      taxRate: 7,
+      allergens: [],
+      showInKitchen: true,
+      productionTarget: "kitchen",
+      modifierGroups: []
+    });
+
+    const normalized = normalizeOperationalState(state);
+    const normalizedGreeting = normalized.products.find(
+      (product) => product.id === "starter-greeting"
+    );
+    const normalizedDessert = normalized.products.find(
+      (product) => product.id === "dessert-custom-test"
+    );
+
+    expect(normalizedGreeting).toMatchObject({
+      productionTarget: "service",
+      showInKitchen: false
+    });
+    expect(normalizedDessert).toMatchObject({
+      productionTarget: "service",
+      showInKitchen: false
+    });
+  });
+
   it("migrates sent kitchen courses into kitchen ticket batches", () => {
     const legacyState = structuredClone(demoAppState) as any;
     delete legacyState.sessions[0]!.kitchenTicketBatches;

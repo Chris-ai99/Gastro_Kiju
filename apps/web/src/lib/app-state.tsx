@@ -43,6 +43,7 @@ import {
   type ProductionTarget,
   type Role,
   type ServiceOrderMode,
+  type SelfOrderLocation,
   type TableLayout,
   type UserAccount
 } from "@kiju/domain";
@@ -61,6 +62,10 @@ import {
 import type { CreatePrintJobRequest } from "./print-contract";
 import {
   buildPendingOrderSendSummary,
+  getOpenKitchenLabelUnits,
+  isAlwaysServiceBookedProduct,
+  isServiceBookedItem,
+  resetKitchenItemsForReopen,
   type OrderSendTarget
 } from "./order-overview";
 import {
@@ -250,6 +255,21 @@ type DemoActions = {
     message?: string;
     confirmation?: Promise<CommitResult>;
   };
+  createSelfOrderLocation: (name: string) => {
+    ok: boolean;
+    location?: SelfOrderLocation;
+    message?: string;
+  };
+  updateSelfOrderLocation: (
+    locationId: string,
+    patch: Partial<Pick<SelfOrderLocation, "name" | "sortOrder" | "active">>
+  ) => { ok: boolean; message?: string };
+  deleteSelfOrderLocation: (locationId: string) => { ok: boolean; message?: string };
+  rotateSelfOrderLocationKey: (locationId: string) => {
+    ok: boolean;
+    accessKey?: string;
+    message?: string;
+  };
   updateTable: (
     tableId: string,
     patch: Partial<Pick<TableLayout, "name" | "note" | "active" | "plannedOnly" | "archivedAt">>
@@ -361,6 +381,17 @@ const createClientId = (prefix: string) => {
   }
 
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+};
+
+const createSelfOrderAccessKey = () => {
+  const nativeCrypto = globalThis.crypto;
+  if (nativeCrypto?.getRandomValues) {
+    const bytes = new Uint8Array(18);
+    nativeCrypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return createClientId("qr").replace(/[^a-zA-Z0-9]/g, "");
 };
 
 const normalizeLookupText = (value: string) => value.trim().toLocaleLowerCase("de-DE");
@@ -872,7 +903,9 @@ const serviceNotificationKinds: AppNotification["kind"][] = [
   "service-drinks",
   "service-drinks-accepted",
   "service-course-ready",
-  "service-course-ready-accepted"
+  "service-course-ready-accepted",
+  "self-order-payment",
+  "self-order-payment-accepted"
 ];
 
 const isServiceNotification = (notification: AppNotification) =>
@@ -1474,18 +1507,13 @@ const reopenCompletedKitchenBatch = (
   batch: KitchenTicketBatch
 ) => {
   const batchItems = getBatchItems(session, batch);
-  if (batchItems.length === 0) return false;
-  if (batchItems.some((item) => item.servedAt)) return false;
+  const reopenedItemIds = resetKitchenItemsForReopen(batchItems, next.products);
+  if (reopenedItemIds.length === 0) return false;
 
+  batch.itemIds = reopenedItemIds;
   batch.status = "ready";
   batch.completedAt = undefined;
   batch.readyAt = new Date().toISOString();
-
-  batchItems.forEach((item) => {
-    const unitCount = getKitchenUnitCount(item);
-    item.kitchenUnitStates = createKitchenUnitStates(unitCount, "pending");
-    delete item.preparedAt;
-  });
 
   removeKitchenReadyNotifications(next, tableId, batch.course, batch.itemIds);
   session.status = "waiting";
@@ -2588,7 +2616,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       const pendingCourseItems = session.items.filter(
-        (item) => item.category === course && !item.sentAt
+        (item) =>
+          item.category === course &&
+          !item.sentAt &&
+          !isServiceBookedItem(item, next.products)
       );
       if (pendingCourseItems.length === 0) {
         return {
@@ -2825,6 +2856,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const item = getBatchItems(session, batch).find((entry) => entry.id === itemId);
       if (!item) return { ok: false, message: "Position wurde nicht gefunden." };
+      if (isServiceBookedItem(item, next.products)) {
+        return {
+          ok: false,
+          message: "Serviceartikel werden nicht in der Küche bearbeitet oder gedruckt."
+        };
+      }
 
       const changedAt = new Date().toISOString();
       const nextStatus = cycleKitchenUnitState(item, unitIndex, changedAt);
@@ -2864,7 +2901,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (tableId: string, batchId: string) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
+      if (!session || session.status === "closed") return;
 
       const batch = session.kitchenTicketBatches.find((entry) => entry.id === batchId);
       if (!batch || batch.status !== "completed") return;
@@ -2949,12 +2986,32 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         return;
       }
 
+      const openKitchenLabelUnits =
+        course !== "drinks" && batch
+          ? getOpenKitchenLabelUnits(getBatchItems(session, batch), next.products)
+          : [];
       completeCourseOrBatch(next, session, tableId, course, completedAt, batch);
+      const table = next.tables.find((entry) => entry.id === tableId);
+      const printRequests: CreatePrintJobRequest[] =
+        batch && table
+          ? openKitchenLabelUnits.map(({ itemId, unitIndex }) => ({
+              type: "kitchen-label",
+              session: structuredClone(session),
+              table: structuredClone(table),
+              products: structuredClone(next.products),
+              batch: structuredClone(batch),
+              itemId,
+              unitIndex,
+              completedAt
+            }))
+          : [];
+
       emitOperatorFeedback();
       void commit(
         next,
         undefined,
-        course === "drinks" ? "bar.status" : "kitchen.status"
+        course === "drinks" ? "bar.status" : "kitchen.status",
+        printRequests
       );
     },
     [commit, state]
@@ -3437,6 +3494,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
       const drinkSubcategory =
         input.category === "drinks" ? (input.drinkSubcategory ?? "").trim() : undefined;
+      const productionTarget =
+        input.category === "dessert" ? ("service" as const) : input.productionTarget;
 
       const next = structuredClone(state);
       next.products.unshift({
@@ -3448,8 +3507,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         priceCents: Math.max(0, input.priceCents),
         taxRate: input.taxRate,
         allergens: [],
-        showInKitchen: input.productionTarget === "kitchen",
-        productionTarget: input.productionTarget,
+        showInKitchen: productionTarget === "kitchen",
+        productionTarget,
         modifierGroups: [],
         ...(input.supportsExtraIngredients ? { supportsExtraIngredients: true } : {})
       });
@@ -3526,7 +3585,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (product.category !== "drinks") {
         delete product.drinkSubcategory;
       }
-      if (patch.productionTarget !== undefined && patch.showInKitchen === undefined) {
+      if (isAlwaysServiceBookedProduct(product)) {
+        product.productionTarget = "service";
+        product.showInKitchen = false;
+      } else if (patch.productionTarget !== undefined && patch.showInKitchen === undefined) {
         product.showInKitchen = patch.productionTarget === "kitchen";
       }
       void commit(next, undefined, "catalog.update");
@@ -3961,6 +4023,118 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, state]
   );
 
+  const createSelfOrderLocation = useCallback(
+    (name: string) => {
+      const normalizedName = name.trim().replace(/\s+/g, " ");
+      if (normalizedName.length < 2 || normalizedName.length > 80) {
+        return {
+          ok: false,
+          message: "Der Ortsname muss zwischen 2 und 80 Zeichen lang sein."
+        };
+      }
+      if (
+        state.selfOrderLocations.some(
+          (location) =>
+            location.name.toLocaleLowerCase("de-DE") ===
+            normalizedName.toLocaleLowerCase("de-DE")
+        )
+      ) {
+        return { ok: false, message: "Dieser Ort ist bereits angelegt." };
+      }
+
+      const next = structuredClone(state);
+      const createdAt = new Date().toISOString();
+      const location: SelfOrderLocation = {
+        id: createClientId("self-order-location"),
+        name: normalizedName,
+        accessKey: createSelfOrderAccessKey(),
+        sortOrder:
+          next.selfOrderLocations.reduce(
+            (highest, entry) => Math.max(highest, entry.sortOrder),
+            -1
+          ) + 1,
+        active: true,
+        createdAt,
+        updatedAt: createdAt
+      };
+      next.selfOrderLocations.push(location);
+      withNotification(
+        next,
+        {
+          title: "Selbstbestell-Ort angelegt",
+          body: `${normalizedName} besitzt jetzt einen eigenen Bestell-QR-Code.`,
+          tone: "success",
+          targetRoles: ["admin"]
+        },
+        currentUserId
+      );
+      void commit(next, undefined, "settings.update");
+      return { ok: true, location };
+    },
+    [commit, currentUserId, state]
+  );
+
+  const updateSelfOrderLocation = useCallback(
+    (
+      locationId: string,
+      patch: Partial<Pick<SelfOrderLocation, "name" | "sortOrder" | "active">>
+    ) => {
+      const next = structuredClone(state);
+      const location = next.selfOrderLocations.find((entry) => entry.id === locationId);
+      if (!location) return { ok: false, message: "Der Ort wurde nicht gefunden." };
+
+      if (patch.name !== undefined) {
+        const normalizedName = patch.name.trim().replace(/\s+/g, " ");
+        if (normalizedName.length < 2 || normalizedName.length > 80) {
+          return {
+            ok: false,
+            message: "Der Ortsname muss zwischen 2 und 80 Zeichen lang sein."
+          };
+        }
+        location.name = normalizedName;
+      }
+      if (patch.sortOrder !== undefined) {
+        location.sortOrder = Math.max(0, Math.round(patch.sortOrder));
+      }
+      if (patch.active !== undefined) {
+        location.active = patch.active;
+      }
+      location.updatedAt = new Date().toISOString();
+      void commit(next, undefined, "settings.update");
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const deleteSelfOrderLocation = useCallback(
+    (locationId: string) => {
+      const next = structuredClone(state);
+      if (!next.selfOrderLocations.some((entry) => entry.id === locationId)) {
+        return { ok: false, message: "Der Ort wurde nicht gefunden." };
+      }
+      next.selfOrderLocations = next.selfOrderLocations.filter(
+        (entry) => entry.id !== locationId
+      );
+      void commit(next, undefined, "settings.update");
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const rotateSelfOrderLocationKey = useCallback(
+    (locationId: string) => {
+      const next = structuredClone(state);
+      const location = next.selfOrderLocations.find((entry) => entry.id === locationId);
+      if (!location) return { ok: false, message: "Der Ort wurde nicht gefunden." };
+
+      location.accessKey = createSelfOrderAccessKey();
+      location.updatedAt = new Date().toISOString();
+      void commit(next, undefined, "settings.update");
+      return { ok: true, accessKey: location.accessKey };
+    },
+    [commit, state]
+  );
+
   const setServiceOrderMode = useCallback(
     (mode: ServiceOrderMode) => {
       const next = structuredClone(state);
@@ -4270,7 +4444,18 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       if (notification.acceptedByUserId === currentUser.id) {
         notification.kind =
-          notification.kind === "service-drinks-accepted" ? "service-drinks" : "service-course-ready";
+          notification.kind === "service-drinks-accepted"
+            ? "service-drinks"
+            : notification.kind === "self-order-payment-accepted"
+              ? "self-order-payment"
+              : "service-course-ready";
+        if (notification.kind === "self-order-payment" && notification.tableId) {
+          const session = getSessionForTable(next.sessions, notification.tableId);
+          if (session?.selfOrder) {
+            session.selfOrder.paymentCallStatus = "requested";
+            session.selfOrder.paymentAcceptedAt = undefined;
+          }
+        }
         notification.acceptedByUserId = undefined;
         notification.acceptedByName = undefined;
         notification.sourceNotificationId = undefined;
@@ -4371,6 +4556,36 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         if (!notification || notification.read) return;
 
         notification.read = true;
+
+        if (scope === "shared" && notification.kind === "self-order-payment") {
+          const acceptedByUser = next.users.find((user) => user.id === currentUserId);
+          const acceptedByName = acceptedByUser?.name ?? "Service";
+          const session = notification.tableId
+            ? getSessionForTable(next.sessions, notification.tableId)
+            : undefined;
+          if (session?.selfOrder) {
+            session.selfOrder.paymentCallStatus = "accepted";
+            session.selfOrder.paymentAcceptedAt = new Date().toISOString();
+          }
+          withNotification(
+            next,
+            {
+              kind: "self-order-payment-accepted",
+              title: "Bezahlung übernommen",
+              body: `${acceptedByName} kümmert sich jetzt um die Bezahlung.`,
+              tone: "success",
+              tableId: notification.tableId,
+              targetUserIds: acceptedByUser?.id ? [acceptedByUser.id] : undefined,
+              acceptedByUserId: acceptedByUser?.id,
+              acceptedByName,
+              sourceNotificationId: notification.id
+            },
+            currentUserId
+          );
+          emitOperatorFeedback();
+          void commit(next, undefined, "notification.update");
+          return;
+        }
 
         if (
           scope === "shared" &&
@@ -4575,6 +4790,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         deleteUser,
         createTable,
         createPickupTable,
+        createSelfOrderLocation,
+        updateSelfOrderLocation,
+        deleteSelfOrderLocation,
+        rotateSelfOrderLocationKey,
         updateTable,
         setServiceOrderMode,
         setDesignMode,
@@ -4605,6 +4824,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       createProduct,
       createTable,
       createPickupTable,
+      createSelfOrderLocation,
       createUser,
       cycleKitchenItemUnitStatus,
       canUndoServiceHandover,
@@ -4614,6 +4834,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       currentUser,
       deleteProductHard,
       deleteSession,
+      deleteSelfOrderLocation,
       deleteUser,
       enqueuePrintJob,
       hydrated,
@@ -4634,6 +4855,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       resetDailyState,
       releaseServiceTasks,
       retryPendingTransactions,
+      rotateSelfOrderLocationKey,
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
@@ -4656,6 +4878,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       updateTable,
       updateItem,
       updateProduct,
+      updateSelfOrderLocation,
       updateUser
     ]
   );
@@ -4672,8 +4895,18 @@ export const useDemoApp = () => {
   return context;
 };
 
-export const resolveCourseStatus = (session: OrderSession | undefined, course: CourseKey) => {
-  const unsentItems = session?.items.filter((item) => item.category === course && !item.sentAt) ?? [];
+export const resolveCourseStatus = (
+  session: OrderSession | undefined,
+  course: CourseKey,
+  products: Product[] = []
+) => {
+  const unsentItems =
+    session?.items.filter(
+      (item) =>
+        item.category === course &&
+        !item.sentAt &&
+        !isServiceBookedItem(item, products)
+    ) ?? [];
   if (unsentItems.length > 0) {
     return {
       status: "not-recorded" as const,

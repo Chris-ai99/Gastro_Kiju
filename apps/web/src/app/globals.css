@@ -2841,6 +2841,13 @@ button {
   white-space: pre;
 }
 
+.kiju-receipt-paper__bitmap {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
 .kiju-receipt-paper__line--emphasis {
   font-weight: 700;
 }
@@ -6753,6 +6760,30 @@ html[data-theme="dark"] .kiju-product-card.is-added {
     0 18px 34px rgba(34, 197, 94, 0.18);
 }
 
+html[data-theme="dark"] .kiju-order-wizard-alert {
+  border-color: rgba(245, 158, 11, 0.64);
+  background: rgba(120, 53, 15, 0.72);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .kiju-order-wizard-alert .kiju-eyebrow {
+  color: #fde68a;
+}
+
+html[data-theme="dark"] .kiju-order-wizard-alert small {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .kiju-checkout-selection-toolbar {
+  border-color: rgba(71, 85, 105, 0.86);
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .kiju-checkout-selection-toolbar span {
+  color: #cbd5e1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kiju-product-card.is-added,
   .kiju-pass-ticket.wait-urgent {
@@ -7238,8 +7269,9 @@ html[data-theme="dark"] .kiju-service-drink-popup__dismiss:hover {
 }
 .kiju-transmission-status {
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -7250,16 +7282,6 @@ html[data-theme="dark"] .kiju-service-drink-popup__dismiss:hover {
   border-radius: 0.9rem;
   box-shadow: 0 0.8rem 2rem rgb(15 23 42 / 18%);
   color: #f8fafc;
-}
-
-.kiju-transmission-status.is-online {
-  background: #166534;
-  border-color: #22c55e;
-}
-
-.kiju-transmission-status.is-pending {
-  background: #92400e;
-  border-color: #f59e0b;
 }
 
 .kiju-transmission-status.is-error {
@@ -7298,21 +7320,540 @@ html[data-theme="dark"] .kiju-service-drink-popup__dismiss:hover {
   cursor: pointer;
 }
 
-.kiju-transmission-status__spinner {
-  animation: kiju-transmission-spin 1s linear infinite;
-}
-
-@keyframes kiju-transmission-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @media (max-width: 640px) {
   .kiju-transmission-status {
-    right: 0.65rem;
-    bottom: 0.65rem;
-    left: 0.65rem;
-    max-width: none;
+    width: calc(100vw - 1.3rem);
+    max-width: 34rem;
+  }
+}
+/* Öffentliche QR-Selbstbestellung */
+.kiju-self-order-shell {
+  --self-navy: #12306b;
+  --self-blue: #1d4ed8;
+  --self-soft: #eff6ff;
+  --self-line: #dbe4f0;
+  --self-green: #15803d;
+  min-height: 100vh;
+  padding: 18px 14px 48px;
+  color: #172033;
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 36%),
+    #f6f8fc;
+}
+
+.kiju-self-order-shell > * {
+  width: min(760px, 100%);
+  margin-inline: auto;
+}
+
+.kiju-self-order-loading,
+.kiju-self-order-error {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 28px;
+  text-align: center;
+  color: #172033;
+  background: #f6f8fc;
+}
+
+.kiju-self-order-error h1,
+.kiju-self-order-error p {
+  margin: 0;
+}
+
+.kiju-self-order-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 26px;
+  color: #fff;
+  background: linear-gradient(135deg, #102a5e, #1d4ed8);
+  box-shadow: 0 20px 50px rgba(30, 64, 175, 0.22);
+}
+
+.kiju-self-order-hero span,
+.kiju-self-order-hero p {
+  color: #dbeafe;
+}
+
+.kiju-self-order-hero h1,
+.kiju-self-order-hero p {
+  margin: 4px 0 0;
+}
+
+.kiju-self-order-customer,
+.kiju-self-order-status,
+.kiju-self-order-cart,
+.kiju-self-order-summary {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--self-line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+}
+
+.kiju-self-order-customer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 12px;
+}
+
+.kiju-self-order-customer label,
+.kiju-self-order-note {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+
+.kiju-self-order-customer input,
+.kiju-self-order-note textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: #172033;
+  background: #fff;
+  font: inherit;
+}
+
+.kiju-self-order-status {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 14px;
+  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff, #fff);
+}
+
+.kiju-self-order-status > div {
+  display: grid;
+  gap: 3px;
+}
+
+.kiju-self-order-status > div:first-child strong {
+  font-size: 34px;
+  color: var(--self-blue);
+}
+
+.kiju-self-order-status > div:nth-child(2) strong {
+  font-size: 19px;
+}
+
+.kiju-self-order-status > small {
+  grid-column: 1 / -1;
+  color: #526176;
+}
+
+.kiju-self-order-status.is-ready {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #dcfce7, #fff);
+}
+
+.kiju-self-order-status.is-ready > div:first-child strong {
+  color: var(--self-green);
+}
+
+.kiju-self-order-categories {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 4px 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kiju-self-order-categories button {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: #334155;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+}
+
+.kiju-self-order-categories button.is-active {
+  border-color: var(--self-blue);
+  color: #fff;
+  background: var(--self-blue);
+}
+
+.kiju-self-order-categories small {
+  opacity: 0.78;
+}
+
+.kiju-self-order-products {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kiju-self-order-products > article {
+  display: grid;
+  align-content: space-between;
+  min-height: 210px;
+  padding: 17px;
+  border: 1px solid var(--self-line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 9px 28px rgba(15, 23, 42, 0.06);
+}
+
+.kiju-self-order-products span {
+  color: var(--self-blue);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kiju-self-order-products h2 {
+  margin: 7px 0 5px;
+  font-size: 19px;
+}
+
+.kiju-self-order-products p,
+.kiju-self-order-products small {
+  color: #64748b;
+}
+
+.kiju-self-order-products p {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.kiju-self-order-products footer,
+.kiju-self-order-cart header,
+.kiju-self-order-summary header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kiju-self-order-products footer {
+  margin-top: 16px;
+}
+
+.kiju-self-order-products button,
+.kiju-self-order-submit,
+.kiju-self-order-service-call,
+.kiju-self-order-dialog-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 13px;
+  padding: 11px 14px;
+  color: #fff;
+  background: var(--self-blue);
+  font: inherit;
+  font-weight: 900;
+}
+
+.kiju-self-order-product-dialog {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.kiju-self-order-product-dialog__card {
+  width: min(680px, 100%);
+  max-height: 90vh;
+  margin-inline: auto;
+  padding: 20px;
+  overflow-y: auto;
+  border-radius: 25px 25px 18px 18px;
+  color: #172033;
+  background: #fff;
+}
+
+.kiju-self-order-product-dialog__card > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.kiju-self-order-product-dialog__card h2 {
+  margin: 4px 0 0;
+}
+
+.kiju-self-order-product-dialog fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 13px;
+  border: 1px solid var(--self-line);
+  border-radius: 16px;
+}
+
+.kiju-self-order-product-dialog legend {
+  display: grid;
+  gap: 2px;
+  padding: 0 5px;
+  font-weight: 900;
+}
+
+.kiju-self-order-product-dialog legend small {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.kiju-self-order-product-dialog fieldset label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.kiju-self-order-note {
+  margin-top: 14px;
+}
+
+.kiju-self-order-note textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.kiju-self-order-note small {
+  justify-self: end;
+  color: #64748b;
+}
+
+.kiju-self-order-quantity,
+.kiju-self-order-cart__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kiju-self-order-quantity {
+  justify-content: center;
+  margin: 18px 0;
+}
+
+.kiju-self-order-quantity button,
+.kiju-self-order-cart__actions button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  color: #172033;
+  background: #fff;
+}
+
+.kiju-self-order-quantity strong {
+  min-width: 42px;
+  text-align: center;
+  font-size: 22px;
+}
+
+.kiju-self-order-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+}
+
+.kiju-self-order-dialog-actions button {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.kiju-self-order-dialog-actions button.is-primary {
+  color: #fff;
+  background: var(--self-blue);
+}
+
+.kiju-self-order-cart header h2 {
+  margin: 3px 0 0;
+}
+
+.kiju-self-order-cart > div > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.kiju-self-order-cart > div > article > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.kiju-self-order-cart small,
+.kiju-self-order-summary small {
+  color: #64748b;
+}
+
+.kiju-self-order-feedback {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  color: #1e3a8a;
+  background: #dbeafe;
+  font-weight: 700;
+}
+
+.kiju-self-order-submit,
+.kiju-self-order-service-call {
+  width: 100%;
+  margin-top: 14px;
+  padding: 15px;
+  font-size: 16px;
+}
+
+.kiju-self-order-submit:disabled,
+.kiju-self-order-service-call:disabled {
+  opacity: 0.55;
+}
+
+.kiju-self-order-cart > small {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.kiju-self-order-summary > div > article {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.kiju-self-order-service-call {
+  background: #0f766e;
+}
+
+.kiju-self-order-closed {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  color: #166534;
+  background: #dcfce7;
+  font-weight: 800;
+}
+
+.kiju-self-order-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kiju-self-order-admin-card {
+  align-content: start;
+}
+
+.kiju-self-order-admin-card__qr {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  margin: 10px 0;
+  padding: 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.kiju-self-order-admin-card__qr svg {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+}
+
+.kiju-self-order-admin-card__url {
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.kiju-self-order-public-url {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.kiju-self-order-public-url.is-warning {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.kiju-self-order-public-url code {
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .kiju-self-order-shell {
+    padding: 10px 10px 34px;
+  }
+
+  .kiju-self-order-hero {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .kiju-self-order-customer,
+  .kiju-self-order-status {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-self-order-status > small {
+    grid-column: auto;
+  }
+
+  .kiju-self-order-products {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-self-order-products > article {
+    min-height: 0;
+  }
+
+  .kiju-self-order-cart > div > article {
+    align-items: flex-start;
+  }
+
+  .kiju-self-order-admin-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -13,6 +13,7 @@ import {
   MonitorUp,
   PlusCircle,
   Printer,
+  QrCode,
   ReceiptText,
   RotateCcw,
   Save,
@@ -21,7 +22,12 @@ import {
   X
 } from "lucide-react";
 
-import { routeConfig } from "@kiju/config";
+import {
+  resolveAppUrl,
+  resolveSelfOrderPublicUrl,
+  routeConfig,
+  selfOrderPublicConfig
+} from "@kiju/config";
 import {
   buildClosedSessions,
   calculateGuestCount,
@@ -44,6 +50,7 @@ import { buildReceiptDocumentFromSessions } from "@kiju/print-bridge";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
 import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
+import { isAlwaysServiceBookedProduct } from "../lib/order-overview";
 import { PrinterAdminPanel } from "./printer-admin-panel";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
@@ -69,6 +76,192 @@ type AdminChangelogEntry = {
 };
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
+  {
+    version: "0.11.02-beta",
+    date: "2026-06-13",
+    time: "23:43 +02:00",
+    type: "Fix",
+    title: "Kassenbon-Grafik richtig ausgerichtet",
+    summary:
+      "Der PiPa-Kassenbon druckt den Grafik-Kopf jetzt nicht mehr gedreht und nutzt druckrobuste Symbole für Pizza, Pilze und Besteck.",
+    categories: ["Kassenbon", "Grafik", "Druck"],
+    changes: [
+      "Der Kassenbon deaktiviert den ESC/POS-Drehmodus, damit Logo-Text und Bontext richtig herum ausgegeben werden.",
+      "Pizza, Pilze und Besteck wurden als einfache, dicke Schwarz-Weiß-Formen neu gezeichnet.",
+      "Die Rastergrafik wird neu erzeugt und bleibt weiterhin exakt 512 Punkte breit.",
+      "Ein automatisierter Test stellt sicher, dass Kassenbons nicht mehr mit dem Drehkommando `ESC { 1` beginnen.",
+      "Andere Bonarten behalten ihren bisherigen Druckmodus unverändert."
+    ]
+  },
+  {
+    version: "0.11.01-beta",
+    date: "2026-06-13",
+    time: "23:40 +02:00",
+    type: "Verbesserung",
+    title: "Öffentliche QR-Adresse für Cloudflare Tunnel",
+    summary:
+      "QR-Codes können jetzt fest auf eine öffentliche HTTPS-Bestelldomain zeigen, damit Gäste auch ohne Restaurant-WLAN bestellen können.",
+    categories: ["Selbstbestellung", "QR-Code", "Cloudflare Tunnel", "Sicherheit"],
+    changes: [
+      "Die Admin-QRs verwenden NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL als feste öffentliche Bestelladresse.",
+      "QR-Vorschau, SVG-Download und Druckvorlage nutzen dieselbe öffentliche URL statt automatisch die lokale Browseradresse.",
+      "Die öffentliche Bestelldomain wird per Middleware auf Gastbestellung, Self-Order-API und notwendige Assets begrenzt.",
+      "Der Admin sieht direkt, ob eine öffentliche Bestelldomain konfiguriert ist oder ob noch eine lokale Adresse gedruckt würde.",
+      "README und Produktdokumentation erklären den Cloudflare-Tunnel-Betrieb ohne Portfreigabe."
+    ]
+  },
+  {
+    version: "0.11.00-beta",
+    date: "2026-06-13",
+    time: "23:18 +02:00",
+    type: "Funktion",
+    title: "QR-Selbstbestellung für Abholbons",
+    summary:
+      "Gäste bestellen über ortsgebundene QR-Codes, können nachbestellen, ihre Abholnummer verfolgen und den Service zum Bezahlen rufen.",
+    categories: ["Selbstbestellung", "QR-Code", "Abholbon", "Service", "Küche", "Bar"],
+    changes: [
+      "Der Admin verwaltet feste Bestellorte mit eigenem QR-Code, Druckvorlage, SVG-Download und erneuerbarem Schlüssel.",
+      "Die mobile Gastansicht bietet das vollständige Sortiment mit Varianten, Extras, Mengen, Hinweisen und Warenkorb.",
+      "Erst- und Nachbestellungen werden sicher an Küche und Bar gesendet und unter derselben Abholnummer geführt.",
+      "Kunden sehen den Gesamtstatus und können den Service zum Bezahlen rufen.",
+      "Service, Küche, Bar und Abholbon zeigen Name, Personenzahl und Ort.",
+      "Öffentliche Endpunkte bleiben vom internen Betriebszustand getrennt und sind durch Token, Idempotenz und Begrenzungen geschützt."
+    ]
+  },
+  {
+    version: "0.10.17-beta",
+    date: "2026-06-13",
+    time: "23:15 +02:00",
+    type: "Verbesserung",
+    title: "PiPa-Kassenbon mit echtem Grafiklogo",
+    summary:
+      "Der Kassenbon bildet die gelieferte PiPa-Vorlage jetzt mit einem hochauflösenden Schwarz-Weiß-Grafikkopf, Herz und Standort-Pin ab.",
+    categories: ["Kassenbon", "Grafik", "Druck", "Vorschau"],
+    changes: [
+      "Der Kopf wird als 512-Punkt-Raster mit Pizza-, Besteck- und Pasta-Symbolen gedruckt.",
+      "BISTRO, PiPa, Pizza & Pasta und KASSENBON sind Bestandteil der Grafik und nicht mehr von Druckerschriften abhängig.",
+      "Das Herz sowie Standort-Pin und Anschrift werden ebenfalls als scharfe Rastergrafiken ausgegeben.",
+      "API, lokaler Druck und Browser-Vorschau verwenden dieselben gespeicherten Bilddaten.",
+      "Automatisierte Tests prüfen Bildmaße, Rasterbytezahl und das Epson-ESC/POS-Grafikkommando."
+    ]
+  },
+  {
+    version: "0.10.16-beta",
+    date: "2026-06-13",
+    time: "23:01 +02:00",
+    type: "Fix",
+    title: "Kassenbon an echte Druckbreite angepasst",
+    summary:
+      "Der Kassenbon ist wieder exakt auf die 42 Zeichen des Epson-Druckers abgestimmt und folgt dem gewünschten PiPa-Aufbau.",
+    categories: ["Kassenbon", "Druck", "Layout"],
+    changes: [
+      "Die Druckbreite wurde von unpassenden 48 Zeichen auf die tatsächlichen 42 Zeichen zurückgestellt.",
+      "PiPa und KASSENBON werden als kurze, zentrierte Großschrift-Zeilen ohne Randüberlauf gedruckt.",
+      "Bonnummer, Datum, Bedienung und Tisch stehen übersichtlich mit rechtsbündigen Werten.",
+      "Die Spalten Artikel, Menge und Betrag sind für 80-mm-Papier neu ausgerichtet.",
+      "Die Summe wird groß gedruckt und nutzt exakt die verfügbare Breite der doppelten Schrift.",
+      "Hinweistext und Anschrift entsprechen dem Aufbau der gelieferten Bildvorlage."
+    ]
+  },
+  {
+    version: "0.10.15-beta",
+    date: "2026-06-13",
+    time: "22:48 +02:00",
+    type: "Fix",
+    title: "Kassenbon-Reihenfolge korrigiert",
+    summary:
+      "Kassenbons nutzen wieder die passende Druckbreite und führen Stornos direkt beim zugehörigen Artikel auf.",
+    categories: ["Kassenbon", "Druck", "Abrechnung"],
+    changes: [
+      "Der Kassenbon ist wieder auf die vorgesehene Breite von 48 Zeichen abgestimmt.",
+      "Jedes Storno wird direkt unter dem zugehörigen Artikel und vor dem nächsten Artikel gedruckt.",
+      "Die Gesamtsumme berücksichtigt stornierte Mengen korrekt.",
+      "Überschriften und Summen werden wieder sauber ausgerichtet.",
+      "Ein automatisierter Regressionstest sichert Reihenfolge, Breite und Summenbildung ab."
+    ]
+  },
+  {
+    version: "0.10.14-beta",
+    date: "2026-06-13",
+    time: "22:35 +02:00",
+    type: "Fix",
+    title: "Abrechnung einzeln und Dunkelmodus lesbar",
+    summary:
+      "Mehrfach bestellte Speisen werden in der Abrechnung einzeln aufgeführt; Küchenpass und Auswahlleiste erhalten klare Dunkelmodusfarben.",
+    categories: ["Abrechnung", "Dunkelmodus", "Küchenpass", "Oberfläche"],
+    changes: [
+      "Jede offene Portion erscheint als eigene auswählbare Zeile mit ihrem Einzelpreis.",
+      "Drei gemeinsam bestellte Margherita werden dadurch als drei getrennte Positionen dargestellt.",
+      "Teilzahlung und Rechnungsstorno fassen ausgewählte Einzelportionen intern weiterhin korrekt zusammen.",
+      "Der Küchenpass verwendet im Dunkelmodus einen dunklen amberfarbenen Hintergrund mit gut lesbarer Schrift.",
+      "Die Auswahlleiste der Abrechnung verwendet im Dunkelmodus eine dunkle Fläche mit hohem Textkontrast."
+    ]
+  },
+  {
+    version: "0.10.13-beta",
+    date: "2026-06-13",
+    time: "22:29 +02:00",
+    type: "Verbesserung",
+    title: "Alte Küchenbons zurückholen",
+    summary:
+      "Abgeschlossene Bons laufender Bestellungen können aus Alte Bons wieder in die aktive Küchenansicht geholt werden.",
+    categories: ["Küche", "Alte Bons", "Status"],
+    changes: [
+      "Jeder abgeschlossene Bon einer laufenden Bestellung zeigt die Aktion Zurückholen.",
+      "Nach dem Zurückholen erscheint der Bon sofort wieder als aktiv und bereit.",
+      "Die enthaltenen Portionen werden erneut auf offen gesetzt, auch wenn sie bereits als serviert markiert waren.",
+      "Bereits abgerechnete Bestellungen bleiben vor nachträglichen Änderungen geschützt."
+    ]
+  },
+  {
+    version: "0.10.12-beta",
+    date: "2026-06-13",
+    time: "22:26 +02:00",
+    type: "Fix",
+    title: "Sammelhaken druckt alle offenen Tellerbons",
+    summary:
+      "Wird ein kompletter Küchenbon mit dem grünen Doppelhaken fertiggestellt, werden alle noch offenen Portionen einzeln gedruckt.",
+    categories: ["Küche", "Tellerbon", "Bondruck"],
+    changes: [
+      "Der grüne Doppelhaken erzeugt für jede noch offene Portion einen Tellerbon.",
+      "Bereits einzeln fertiggestellte und gedruckte Portionen werden nicht erneut gedruckt.",
+      "Stornierte Positionen und reine Serviceartikel bleiben vom Druck ausgeschlossen.",
+      "Statusänderung und alle Druckaufträge werden gemeinsam sicher übertragen."
+    ]
+  },
+  {
+    version: "0.10.11-beta",
+    date: "2026-06-13",
+    time: "22:22 +02:00",
+    type: "Verbesserung",
+    title: "Nachtisch und Küchengruß bleiben im Service",
+    summary:
+      "Nachtisch und Gruß aus der Küche werden weiterhin gebucht und berechnet, aber nicht mehr an Küche oder Bondruck übergeben.",
+    categories: ["Bestellung", "Küche", "Bondruck", "Admin"],
+    changes: [
+      "Alle Nachtisch-Positionen bleiben direkt unter Im Service gebucht gespeichert.",
+      "Gruß aus der Küche wird ebenfalls ausschließlich als Servicebuchung behandelt.",
+      "Beide Artikelarten erscheinen nicht mehr auf dem Küchenmonitor und erzeugen keinen Tellerbon.",
+      "Auch ältere, abweichend konfigurierte Produkte werden automatisch auf Service umgestellt.",
+      "Das Produktionsziel ist für diese Artikel in der Produktpflege fest auf Service gesetzt."
+    ]
+  },
+  {
+    version: "0.10.10-beta",
+    date: "2026-06-13",
+    time: "22:14 +02:00",
+    type: "Verbesserung",
+    title: "Übertragungsanzeige nur noch bei Fehlern",
+    summary:
+      "Der normale Verbindungsstatus bleibt unsichtbar; echte Übertragungsfehler erscheinen zentral und deutlich.",
+    categories: ["Übertragung", "Oberfläche", "Fehlermeldung"],
+    changes: [
+      "Der grüne Hinweis Mit Server verbunden · vollständig bestätigt wird nicht mehr eingeblendet.",
+      "Normale laufende oder wartende Übertragungen erzeugen kein dauerhaftes Banner.",
+      "Nur Server- und Übertragungsfehler öffnen die rote Anzeige.",
+      "Die Fehlermeldung wird mittig im sichtbaren Bereich dargestellt und bietet weiterhin Erneut senden an."
+    ]
+  },
   {
     version: "0.10.09-beta",
     date: "2026-06-12",
@@ -1047,6 +1240,30 @@ const formatAdminDateTime = (value: string) =>
     timeStyle: "short"
   });
 
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[character] ?? character
+  );
+
+const buildSelfOrderUrl = (
+  accessKey: string,
+  currentOrigin?: string,
+  publicBaseUrl?: string
+) =>
+  resolveSelfOrderPublicUrl(
+    `/bestellen/${encodeURIComponent(accessKey)}`,
+    currentOrigin,
+    publicBaseUrl
+  );
+
 const getTimestamp = (value?: string) => {
   if (!value) return null;
 
@@ -1237,7 +1454,16 @@ const playAdminReceiptAlarm = async () => {
   }
 };
 
-export const AdminPanel = () => {
+type AdminPanelProps = {
+  selfOrderPublicBaseUrl?: string;
+};
+
+export const AdminPanel = ({
+  selfOrderPublicBaseUrl = selfOrderPublicConfig.baseUrl
+}: AdminPanelProps) => {
+  const effectiveSelfOrderPublicBaseUrl =
+    selfOrderPublicBaseUrl || selfOrderPublicConfig.baseUrl;
+  const selfOrderPublicBaseConfigured = effectiveSelfOrderPublicBaseUrl.length > 0;
   const { state, actions, currentUser, unreadNotifications } = useDemoApp();
   const router = useRouter();
   const closedSessions = useMemo(() => buildClosedSessions(state), [state]);
@@ -1283,6 +1509,8 @@ export const AdminPanel = () => {
     active: true,
     note: ""
   });
+  const [selfOrderLocationName, setSelfOrderLocationName] = useState("");
+  const [selfOrderQrSvg, setSelfOrderQrSvg] = useState<Record<string, string>>({});
   const [dashboardProductByTable, setDashboardProductByTable] = useState<Record<string, string>>({});
   const [adminPrintMode, setAdminPrintMode] = useState<"staff-logins" | null>(null);
   const [isLiveDashboardOpen, setIsLiveDashboardOpen] = useState(false);
@@ -1641,6 +1869,37 @@ export const AdminPanel = () => {
     playedReceiptAlarmIdsRef.current.add(activeReceiptAlarm.id);
     void playAdminReceiptAlarm();
   }, [activeReceiptAlarm]);
+
+  useEffect(() => {
+    let active = true;
+    void import("qrcode").then(async (QRCode) => {
+      const entries = await Promise.all(
+        state.selfOrderLocations.map(async (location) => {
+          const url = buildSelfOrderUrl(
+            location.accessKey,
+            window.location.origin,
+            effectiveSelfOrderPublicBaseUrl
+          );
+          const svg = await QRCode.toString(url, {
+            type: "svg",
+            width: 280,
+            margin: 1,
+            errorCorrectionLevel: "M",
+            color: {
+              dark: "#102a5e",
+              light: "#ffffff"
+            }
+          });
+          return [location.id, svg] as const;
+        })
+      );
+      if (active) setSelfOrderQrSvg(Object.fromEntries(entries));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [effectiveSelfOrderPublicBaseUrl, state.selfOrderLocations]);
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -2070,6 +2329,124 @@ export const AdminPanel = () => {
     setFeedback({ tone: "success", message: "Tisch erfolgreich angelegt." });
   };
 
+  const getSelfOrderUrl = (accessKey: string) =>
+    buildSelfOrderUrl(
+      accessKey,
+      typeof window === "undefined" ? undefined : window.location.origin,
+      effectiveSelfOrderPublicBaseUrl
+    );
+
+  const handleCreateSelfOrderLocation = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const result = actions.createSelfOrderLocation(selfOrderLocationName);
+    if (!result.ok) {
+      setFeedback({
+        tone: "alert",
+        message: result.message ?? "Der Selbstbestell-Ort konnte nicht angelegt werden."
+      });
+      return;
+    }
+    setSelfOrderLocationName("");
+    setFeedback({
+      tone: "success",
+      message: "Der Ort und sein eigener Bestell-QR-Code wurden angelegt."
+    });
+  };
+
+  const handleRotateSelfOrderKey = (locationId: string) => {
+    if (
+      !window.confirm(
+        "QR-Schlüssel wirklich erneuern? Bereits gedruckte QR-Codes für diesen Ort werden dadurch ungültig."
+      )
+    ) {
+      return;
+    }
+    const result = actions.rotateSelfOrderLocationKey(locationId);
+    setFeedback({
+      tone: result.ok ? "success" : "alert",
+      message: result.ok
+        ? "Der QR-Schlüssel wurde erneuert. Alte Ausdrucke sind nicht mehr gültig."
+        : result.message ?? "Der QR-Schlüssel konnte nicht erneuert werden."
+    });
+  };
+
+  const handleDeleteSelfOrderLocation = (locationId: string) => {
+    if (!window.confirm("Diesen Selbstbestell-Ort und seinen QR-Code wirklich löschen?")) {
+      return;
+    }
+    const result = actions.deleteSelfOrderLocation(locationId);
+    setFeedback({
+      tone: result.ok ? "success" : "alert",
+      message: result.ok
+        ? "Der Selbstbestell-Ort wurde gelöscht."
+        : result.message ?? "Der Ort konnte nicht gelöscht werden."
+    });
+  };
+
+  const handleDownloadSelfOrderQr = (locationId: string, name: string) => {
+    const svg = selfOrderQrSvg[locationId];
+    if (!svg) return;
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kiju-selbstbestellung-${name
+      .toLocaleLowerCase("de-DE")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "ort"}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintSelfOrderQr = (locationId: string) => {
+    const location = state.selfOrderLocations.find((entry) => entry.id === locationId);
+    const svg = selfOrderQrSvg[locationId];
+    if (!location || !svg) return;
+
+    const orderUrl = getSelfOrderUrl(location.accessKey);
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      setFeedback({
+        tone: "alert",
+        message: "Das Druckfenster wurde vom Browser blockiert."
+      });
+      return;
+    }
+    printWindow.document.write(`<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>QR-Selbstbestellung ${escapeHtml(location.name)}</title>
+    <style>
+      @page { size: A4 portrait; margin: 18mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; color: #102a5e; }
+      main { min-height: 250mm; display: grid; place-content: center; text-align: center; }
+      .card { width: 150mm; padding: 14mm; border: 3px solid #102a5e; border-radius: 8mm; }
+      h1 { margin: 0 0 4mm; font-size: 28pt; }
+      p { margin: 0 0 7mm; color: #334155; font-size: 15pt; }
+      .qr { width: 90mm; margin: 0 auto 6mm; }
+      .qr svg { display: block; width: 100%; height: auto; }
+      strong { display: block; font-size: 18pt; }
+      small { display: block; margin-top: 5mm; color: #64748b; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h1>Selbst bestellen</h1>
+        <p>QR-Code scannen, Name und Personenzahl angeben und direkt bestellen.</p>
+        <div class="qr">${svg}</div>
+        <strong>Ort: ${escapeHtml(location.name)}</strong>
+        <small>${escapeHtml(orderUrl)}</small>
+      </section>
+    </main>
+    <script>window.addEventListener("load", () => window.print());</script>
+  </body>
+</html>`);
+    printWindow.document.close();
+  };
+
   const handleDeleteTable = (tableId: string) => {
     const result = actions.removeTableAndServices(tableId);
     if (!result.ok) {
@@ -2237,6 +2614,9 @@ export const AdminPanel = () => {
             </a>
             <a className="kiju-admin-link-pill" href="#drucker">
               Drucker
+            </a>
+            <a className="kiju-admin-link-pill" href="#selbstbestellung">
+              Selbstbestellung
             </a>
             <a className="kiju-admin-link-pill" href="#changelog">
               Changelog
@@ -2852,6 +3232,198 @@ export const AdminPanel = () => {
         </div>
 
         <div className="kiju-admin-stack">
+          <div id="selbstbestellung">
+            <AccordionSection
+              title="QR-Selbstbestellung"
+              eyebrow="Orte, Zugänge und Druckvorlagen"
+              defaultOpen={false}
+              className="kiju-admin-accordion"
+              action={
+                <StatusPill
+                  label={`${state.selfOrderLocations.length} Orte`}
+                  tone={state.selfOrderLocations.some((location) => location.active) ? "green" : "slate"}
+                />
+              }
+            >
+              <div className="kiju-admin-layout">
+                <form className="kiju-admin-panel" onSubmit={handleCreateSelfOrderLocation}>
+                  <div className="kiju-admin-heading-stack">
+                    <strong>Neuen Bestellort anlegen</strong>
+                    <span>
+                      Jeder Ort erhält einen eigenen QR-Code. Der Ort ist nach dem Scannen bereits
+                      fest ausgewählt.
+                    </span>
+                  </div>
+                  <label className="kiju-inline-field">
+                    <span>Ortsname</span>
+                    <input
+                      value={selfOrderLocationName}
+                      maxLength={80}
+                      placeholder="Zum Beispiel Saal oder Terrasse"
+                      onChange={(event) => setSelfOrderLocationName(event.target.value)}
+                    />
+                  </label>
+                  <button type="submit" className="kiju-button kiju-button--primary">
+                    <PlusCircle size={18} />
+                    Ort und QR-Code anlegen
+                  </button>
+                </form>
+
+                <article className="kiju-admin-panel">
+                  <div className="kiju-admin-heading-stack">
+                    <strong>So funktioniert es</strong>
+                    <span>
+                      Gäste scannen den QR-Code, geben Name und Personenzahl an und senden ihre
+                      Bestellung direkt an Küche und Bar.
+                    </span>
+                  </div>
+                  <div className="kiju-admin-meta">
+                    <span>Bezahlung erfolgt vor Ort.</span>
+                    <span>Nachbestellungen bleiben unter derselben Abholnummer.</span>
+                    <span>Der Service kann direkt zum Bezahlen gerufen werden.</span>
+                  </div>
+                  <div
+                    className={`kiju-self-order-public-url ${
+                      selfOrderPublicBaseConfigured ? "is-configured" : "is-warning"
+                    }`}
+                  >
+                    <strong>
+                      {selfOrderPublicBaseConfigured
+                        ? "Öffentliche Bestelldomain aktiv"
+                        : "Öffentliche Bestelldomain fehlt"}
+                    </strong>
+                    <span>
+                      {selfOrderPublicBaseConfigured
+                        ? "Gedruckte QR-Codes funktionieren auch über mobiles Internet."
+                        : "Ohne NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL druckt der QR-Code nur die aktuelle Browseradresse."}
+                    </span>
+                    <code>
+                      {selfOrderPublicBaseConfigured
+                        ? effectiveSelfOrderPublicBaseUrl
+                        : "NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL=https://bestellen.deine-domain.de"}
+                    </code>
+                  </div>
+                </article>
+              </div>
+
+              {state.selfOrderLocations.length > 0 ? (
+                <div className="kiju-self-order-admin-grid">
+                  {state.selfOrderLocations.map((location) => {
+                    const orderUrl = getSelfOrderUrl(location.accessKey);
+                    return (
+                      <article key={location.id} className="kiju-admin-panel kiju-self-order-admin-card">
+                        <div className="kiju-admin-row kiju-admin-row--top">
+                          <div className="kiju-admin-heading-stack">
+                            <strong>{location.name}</strong>
+                            <span>{location.active ? "QR-Code aktiv" : "QR-Code deaktiviert"}</span>
+                          </div>
+                          <StatusPill
+                            label={location.active ? "Aktiv" : "Inaktiv"}
+                            tone={location.active ? "green" : "slate"}
+                          />
+                        </div>
+
+                        <div
+                          className="kiju-self-order-admin-card__qr"
+                          aria-label={`QR-Code für ${location.name}`}
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              selfOrderQrSvg[location.id] ??
+                              "<span>QR-Code wird erzeugt …</span>"
+                          }}
+                        />
+
+                        <label className="kiju-inline-field">
+                          <span>Name</span>
+                          <input
+                            value={location.name}
+                            onChange={(event) =>
+                              actions.updateSelfOrderLocation(location.id, {
+                                name: event.target.value
+                              })
+                            }
+                          />
+                        </label>
+                        <div className="kiju-admin-row">
+                          <label className="kiju-inline-field">
+                            <span>Reihenfolge</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={location.sortOrder}
+                              onChange={(event) =>
+                                actions.updateSelfOrderLocation(location.id, {
+                                  sortOrder: Number(event.target.value || "0")
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="kiju-checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={location.active}
+                              onChange={(event) =>
+                                actions.updateSelfOrderLocation(location.id, {
+                                  active: event.target.checked
+                                })
+                              }
+                            />
+                            <span>QR-Bestellung aktiv</span>
+                          </label>
+                        </div>
+
+                        <div className="kiju-self-order-admin-card__url">{orderUrl}</div>
+
+                        <div className="kiju-admin-action-row">
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handlePrintSelfOrderQr(location.id)}
+                            disabled={!selfOrderQrSvg[location.id]}
+                          >
+                            <Printer size={16} />
+                            Drucken
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handleDownloadSelfOrderQr(location.id, location.name)}
+                            disabled={!selfOrderQrSvg[location.id]}
+                          >
+                            <FileDown size={16} />
+                            SVG herunterladen
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handleRotateSelfOrderKey(location.id)}
+                          >
+                            <RotateCcw size={16} />
+                            Schlüssel erneuern
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--danger"
+                            onClick={() => handleDeleteSelfOrderLocation(location.id)}
+                          >
+                            <Trash2 size={16} />
+                            Löschen
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="kiju-inline-panel">
+                  <QrCode size={20} />
+                  <span>Noch kein Selbstbestell-Ort angelegt.</span>
+                </div>
+              )}
+            </AccordionSection>
+          </div>
+
           <PrinterAdminPanel />
 
           <div id="changelog">
@@ -3050,12 +3622,16 @@ export const AdminPanel = () => {
                         <span>Kategorie</span>
                         <select
                           value={productForm.category}
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            const category = event.target.value as ProductCategory;
                             setProductForm((current) => ({
                               ...current,
-                              category: event.target.value as ProductCategory
-                            }))
-                          }
+                              category,
+                              ...(category === "dessert"
+                                ? { productionTarget: "service" as const }
+                                : {})
+                            }));
+                          }}
                         >
                           {productCategoryOrder.map((category) => (
                             <option key={category} value={category}>
@@ -3068,6 +3644,7 @@ export const AdminPanel = () => {
                         <span>Produktionsziel</span>
                         <select
                           value={productForm.productionTarget}
+                          disabled={productForm.category === "dessert"}
                           onChange={(event) =>
                             setProductForm((current) => ({
                               ...current,
@@ -3368,6 +3945,7 @@ export const AdminPanel = () => {
                                   <span>Produktionsziel</span>
                                   <select
                                     value={product.productionTarget}
+                                    disabled={isAlwaysServiceBookedProduct(product)}
                                     onChange={(event) =>
                                       actions.updateProduct(product.id, {
                                         productionTarget: event.target.value as ProductionTarget

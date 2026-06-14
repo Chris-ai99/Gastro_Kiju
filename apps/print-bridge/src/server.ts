@@ -108,10 +108,41 @@ const resolveCharacterSize = (size: ThermalPrintDocument["lines"][number]["size"
   return 0x00;
 };
 
+const buildRasterBitmapBuffer = (
+  bitmap: NonNullable<ThermalPrintDocument["lines"][number]["bitmap"]>
+) => {
+  const width = Math.max(1, Math.floor(bitmap.width));
+  const height = Math.max(1, Math.floor(bitmap.height));
+  const bytesPerRow = Math.ceil(width / 8);
+  const raster = Buffer.from(bitmap.dataBase64, "base64");
+  const expectedLength = bytesPerRow * height;
+
+  if (raster.length !== expectedLength) {
+    throw new Error(
+      `Ungültige Rastergrafik: ${raster.length} Byte vorhanden, ${expectedLength} Byte erwartet.`
+    );
+  }
+
+  return Buffer.concat([
+    Buffer.from([
+      GS,
+      0x76,
+      0x30,
+      0x00,
+      bytesPerRow & 0xff,
+      (bytesPerRow >> 8) & 0xff,
+      height & 0xff,
+      (height >> 8) & 0xff
+    ]),
+    raster
+  ]);
+};
+
 export const buildEscPosDocumentBuffer = (document: ThermalPrintDocument) => {
+  const upsideDown = document.upsideDown ?? true;
   const chunks: Buffer[] = [
     Buffer.from([ESC, 0x40]),
-    Buffer.from([ESC, 0x7b, 0x01]),
+    Buffer.from([ESC, 0x7b, upsideDown ? 0x01 : 0x00]),
     Buffer.from([ESC, 0x74, WPC1252_CODEPAGE]),
     Buffer.from([ESC, 0x32])
   ];
@@ -120,6 +151,13 @@ export const buildEscPosDocumentBuffer = (document: ThermalPrintDocument) => {
     chunks.push(Buffer.from([ESC, 0x61, resolveAlignment(line.align)]));
     chunks.push(Buffer.from([ESC, 0x45, line.emphasis ? 1 : 0]));
     chunks.push(Buffer.from([GS, 0x21, resolveCharacterSize(line.size)]));
+
+    if (line.bitmap) {
+      chunks.push(buildRasterBitmapBuffer(line.bitmap));
+      chunks.push(Buffer.from("\n", "ascii"));
+      continue;
+    }
+
     chunks.push(encodeLine(line.text));
     chunks.push(Buffer.from("\n", "ascii"));
   }

@@ -1,5 +1,154 @@
 # Changelog
 
+## 0.11.02-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:43 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der PiPa-Kassenbon druckt den Grafik-Kopf jetzt nicht mehr gedreht und nutzt druckrobuste Symbole für Pizza, Pilze und Besteck.
+- Änderungen:
+  Der Kassenbon deaktiviert den ESC/POS-Drehmodus, damit Logo-Text und Bontext richtig herum ausgegeben werden.
+  Pizza, Pilze und Besteck wurden als einfache, dicke Schwarz-Weiß-Formen neu gezeichnet.
+  Die Rastergrafik wird neu erzeugt und bleibt weiterhin exakt 512 Punkte breit.
+  Ein automatisierter Test stellt sicher, dass Kassenbons nicht mehr mit dem Drehkommando `ESC { 1` beginnen.
+  Andere Bonarten behalten ihren bisherigen Druckmodus unverändert.
+
+## 0.11.01-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:40 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  QR-Codes können jetzt fest auf eine öffentliche HTTPS-Bestelldomain für Cloudflare Tunnel zeigen, damit Gäste auch ohne Restaurant-WLAN bestellen können.
+- Änderungen:
+  Der Admin nutzt `NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL` für QR-Vorschau, SVG-Download und Druckvorlage.
+  Ohne konfigurierte öffentliche Adresse zeigt der Admin einen deutlichen Hinweis, dass sonst nur die aktuelle Browseradresse gedruckt wird.
+  Die öffentliche Bestelldomain ist per Middleware auf Gastbestellung, Self-Order-API und notwendige Assets begrenzt.
+  `.env.example`, README, Produktdokumentation und `infra/cloudflared/config.example.yml` beschreiben den Cloudflare-Tunnel-Betrieb ohne Portfreigabe.
+
+## 0.11.00-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:18 +02:00
+- Typ: Funktion
+- Zusammenfassung:
+  Gäste können über ortsgebundene QR-Codes selbst bestellen, nachbestellen, ihren Abholstatus verfolgen und den Service zum Bezahlen rufen.
+- Änderungen:
+  Der Admin kann Selbstbestell-Orte anlegen, benennen, sortieren, aktivieren, deaktivieren, löschen und mit erneuerbaren QR-Schlüsseln absichern.
+  Für jeden Ort stehen QR-Vorschau, SVG-Download und eine druckfertige A4-Vorlage bereit.
+  Die öffentliche mobile Bestellseite zeigt das vollständige Sortiment mit Preisen, Varianten, Extras, Mengen, Hinweisen und Warenkorb.
+  Erstbestellungen erzeugen sicher und idempotent eine Abholnummer, einen Abholtisch, Küchen- und Barbatches sowie einen Abholbon.
+  Nachbestellungen laufen unter derselben privaten Bestellung und werden als neue Küchen- beziehungsweise Barbatches gesendet.
+  Kunden sehen einen einfachen Gesamtstatus von „Bestellung eingegangen“ bis „Abgeschlossen“ und können den Service zum Bezahlen rufen.
+  Service, Küche, Bar und Abholbon zeigen Kundenname, Personenzahl und den festgelegten Ort.
+  Öffentliche Endpunkte liefern keine internen Benutzer- oder Betriebsdaten und schützen Schreibvorgänge durch Zugriffstoken, Idempotenz und IP-Begrenzung.
+  Automatisierte Tests sichern Modifierprüfung, Nachbestellungssequenzen, Status, Personenzählung, API-Schutz und Bonmetadaten ab.
+
+## 0.10.17-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:15 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Kassenbon bildet die gelieferte PiPa-Vorlage jetzt mit einem hochauflösenden Schwarz-Weiß-Grafikkopf, Herz und Standort-Pin ab.
+- Änderungen:
+  Der Kopf wird als 512-Punkt-Raster mit Pizza-, Besteck- und Pasta-Symbolen gedruckt.
+  BISTRO, PiPa, Pizza & Pasta und KASSENBON sind Bestandteil der Grafik und nicht mehr von Druckerschriften abhängig.
+  Das Herz sowie Standort-Pin und Anschrift werden ebenfalls als scharfe Rastergrafiken ausgegeben.
+  API, lokaler Druck und Browser-Vorschau verwenden dieselben gespeicherten Bilddaten.
+  Automatisierte Tests prüfen Bildmaße, Rasterbytezahl und das Epson-ESC/POS-Grafikkommando.
+
+## 0.10.16-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:01 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Kassenbon ist wieder exakt auf die 42 Zeichen des Epson-Druckers abgestimmt und folgt dem gewünschten PiPa-Aufbau.
+- Änderungen:
+  Die Druckbreite wurde von unpassenden 48 Zeichen auf die tatsächlichen 42 Zeichen zurückgestellt.
+  PiPa und KASSENBON werden als kurze, zentrierte Großschrift-Zeilen ohne Randüberlauf gedruckt.
+  Bonnummer, Datum, Bedienung und Tisch stehen übersichtlich mit rechtsbündigen Werten.
+  Die Spalten Artikel, Menge und Betrag sind für 80-mm-Papier neu ausgerichtet.
+  Die Summe wird groß gedruckt und nutzt exakt die verfügbare Breite der doppelten Schrift.
+  Hinweistext und Anschrift entsprechen dem Aufbau der gelieferten Bildvorlage.
+
+## 0.10.15-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:48 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Kassenbons nutzen wieder die passende Druckbreite und führen Stornos direkt beim zugehörigen Artikel auf.
+- Änderungen:
+  Der Kassenbon ist wieder auf die vorgesehene Breite von 48 Zeichen abgestimmt.
+  Jedes Storno wird direkt unter dem zugehörigen Artikel und vor dem nächsten Artikel gedruckt.
+  Die Gesamtsumme berücksichtigt stornierte Mengen korrekt.
+  Überschriften und Summen werden wieder sauber ausgerichtet.
+  Ein automatisierter Regressionstest sichert Reihenfolge, Breite und Summenbildung ab.
+
+## 0.10.14-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:35 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Mehrfach bestellte Speisen werden in der Abrechnung einzeln aufgeführt; Küchenpass und Auswahlleiste sind im Dunkelmodus wieder klar lesbar.
+- Änderungen:
+  Jede offene Portion erscheint als eigene Checkbox-Zeile mit ihrem Einzelpreis.
+  Drei gemeinsam bestellte Pizza Margherita werden als drei getrennte Abrechnungspositionen dargestellt.
+  Ausgewählte Einzelportionen werden für Zahlung und Rechnungsstorno weiterhin korrekt zur ursprünglichen Bestellung zusammengefasst.
+  Der Küchenpass erhält im Dunkelmodus einen dunklen amberfarbenen Hintergrund und kontrastreiche Texte.
+  Die Auswahlleiste der Abrechnung erhält im Dunkelmodus eine dunkle Fläche mit gut lesbaren Haupt- und Nebentexten.
+  Automatisierte Tests sichern die Aufteilung einer Mehrfachmenge in einzelne Abrechnungszeilen ab.
+
+## 0.10.13-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:29 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Abgeschlossene Bons laufender Bestellungen lassen sich aus „Alte Bons“ wieder in die aktive Küchenansicht zurückholen.
+- Änderungen:
+  Die Aktion heißt eindeutig „Zurückholen“ und wird auch bei bereits als serviert markierten Bons angeboten.
+  Nach dem Zurückholen schließt sich die Altbon-Liste und der Bon erscheint sofort wieder in der aktiven Übersicht.
+  Alle nicht stornierten Küchenportionen des Bons werden erneut auf „Offen“ gesetzt.
+  Vorherige Fertig- und Serviert-Markierungen sowie die zugehörigen Servicehinweise werden entfernt.
+  Bereits abgerechnete Bestellungen bleiben gesperrt und können nicht nachträglich verändert werden.
+  Ein automatisierter Test sichert das Zurücksetzen mehrerer Portionen und den Ausschluss von Serviceartikeln ab.
+
+## 0.10.12-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:26 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Beim Fertigstellen eines vollständigen Küchenbons mit dem grünen Doppelhaken werden jetzt alle noch offenen Portionen gedruckt.
+- Änderungen:
+  Für jede offene Portion wird ein eigener Tellerbon erzeugt.
+  Bereits einzeln fertiggestellte und gedruckte Portionen werden nicht doppelt gedruckt.
+  Stornierte Positionen sowie Nachtisch und „Gruß aus der Küche“ bleiben vom Druck ausgeschlossen.
+  Die Statusänderung und alle Tellerbon-Druckaufträge werden gemeinsam sicher übertragen.
+  Ein automatisierter Test prüft die Auswahl offener, fertiger und stornierter Portionen.
+
+## 0.10.11-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:22 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Nachtisch und „Gruß aus der Küche“ bleiben vollständig gebucht und abrechenbar, werden aber weder auf dem Küchenmonitor noch im Bondruck ausgegeben.
+- Änderungen:
+  Alle Nachtisch-Positionen werden unabhängig von einer älteren Produktkonfiguration direkt als Servicebuchung behandelt.
+  „Gruß aus der Küche“ wird ebenfalls fest dem Service zugeordnet.
+  Diese Positionen werden beim Senden nicht in Küchenbons übernommen und lösen beim Abhaken keinen Tellerbon aus.
+  Bereits vorhandene alte Küchenbon-Einträge dieser Artikel werden auf dem Küchenmonitor ausgeblendet.
+  In der Produktpflege ist das Produktionsziel für Nachtisch und „Gruß aus der Küche“ fest auf „Service“ gesetzt.
+  Automatisierte Tests sichern Versandfilter und Migration bestehender Produktdaten ab.
+
+## 0.10.10-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:14 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die Übertragungsanzeige bleibt im Normalbetrieb verborgen und erscheint nur noch bei echten Verbindungsfehlern.
+- Änderungen:
+  Der grüne Hinweis „Mit Server verbunden · vollständig bestätigt“ wird nicht mehr angezeigt.
+  Auch normale laufende oder wartende Übertragungen blenden kein dauerhaftes Banner mehr ein.
+  Bei einem Server- oder Übertragungsfehler erscheint die rote Meldung mittig im sichtbaren Bereich.
+  Die Fehleranzeige behält den erklärenden Text und die Schaltfläche „Erneut senden“.
+
 ## 0.10.09-beta
 - Datum: 2026-06-12
 - Uhrzeit: 22:09 +02:00

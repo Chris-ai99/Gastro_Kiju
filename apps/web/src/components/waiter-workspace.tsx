@@ -65,6 +65,7 @@ import {
 } from "../lib/app-state";
 import {
   buildPendingOrderSendSummary,
+  expandCheckoutUnitEntries,
   isServiceBookedItem
 } from "../lib/order-overview";
 import { RouteGuard } from "./route-guard";
@@ -534,7 +535,11 @@ const resolveExtraIngredientLabels = (
   );
 };
 
-const resolveServiceCourseStatus = (session: OrderSession, course: CourseKey) => {
+const resolveServiceCourseStatus = (
+  session: OrderSession,
+  course: CourseKey,
+  products: Product[]
+) => {
   const items = session.items.filter((item) => item.category === course);
   if (items.length > 0 && items.every((item) => Boolean(item.servedAt))) {
     return {
@@ -543,7 +548,7 @@ const resolveServiceCourseStatus = (session: OrderSession, course: CourseKey) =>
     };
   }
 
-  return resolveCourseStatus(session, course);
+  return resolveCourseStatus(session, course, products);
 };
 
 const formatCourseStatusLabel = (
@@ -629,7 +634,7 @@ export const WaiterWorkspace = () => {
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
   const [showMobileFloorplan, setShowMobileFloorplan] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
-  const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
+  const [selectedPaymentUnits, setSelectedPaymentUnits] = useState<Record<string, boolean>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
@@ -863,7 +868,9 @@ export const WaiterWorkspace = () => {
       : selectedTable?.seats.find((seat) => seat.id === selectedOrderTarget.seatId)?.label ??
         "Sitzplatz";
   const activeCourseTicketState =
-    !selectedSession ? null : resolveServiceCourseStatus(selectedSession, activeCourse);
+    !selectedSession
+      ? null
+      : resolveServiceCourseStatus(selectedSession, activeCourse, state.products);
   const activeCourseItemCount =
     selectedSession?.items
       .filter((item) => item.category === activeCourse && !isOrderItemCanceled(item))
@@ -882,7 +889,7 @@ export const WaiterWorkspace = () => {
           )
           .reduce((sum, item) => sum + item.quantity, 0);
         const ticket = selectedSession.courseTickets[course];
-        const resolved = resolveServiceCourseStatus(selectedSession, course);
+        const resolved = resolveServiceCourseStatus(selectedSession, course, state.products);
 
         return {
           course,
@@ -981,7 +988,7 @@ export const WaiterWorkspace = () => {
         const itemCount = selectedSession.items
           .filter((item) => item.category === course)
           .reduce((sum, item) => sum + item.quantity, 0);
-        const resolved = resolveCourseStatus(selectedSession, course);
+        const resolved = resolveCourseStatus(selectedSession, course, state.products);
 
         return {
           course,
@@ -991,7 +998,7 @@ export const WaiterWorkspace = () => {
         };
       })
       .filter((entry) => entry.itemCount > 0 || entry.status !== "not-recorded");
-  }, [selectedSession]);
+  }, [selectedSession, state.products]);
 
   const sessionTotal = calculateSessionTotal(selectedSession, state.products);
   const sessionBillableTotal = calculateSessionBillableTotal(selectedSession, state.products);
@@ -1013,36 +1020,32 @@ export const WaiterWorkspace = () => {
       unitTotal: Math.round(calculateItemTotal(item, state.products) / item.quantity)
     }))
   );
+  const checkoutOpenUnitEntries = expandCheckoutUnitEntries(checkoutOpenEntries);
+  const getSelectedPaymentQuantity = (itemId: string, openQuantity: number) =>
+    Array.from({ length: openQuantity }, (_, unitIndex) => `${itemId}:${unitIndex}`).filter(
+      (unitKey) => selectedPaymentUnits[unitKey]
+    ).length;
   const selectedPaymentLineItems = checkoutOpenEntries
     .map(({ item, openQuantity }) => ({
       itemId: item.id,
-      quantity: Math.min(openQuantity, Math.max(0, selectedPaymentQuantities[item.id] ?? 0))
+      quantity: getSelectedPaymentQuantity(item.id, openQuantity)
     }))
     .filter((lineItem) => lineItem.quantity > 0);
-  const selectedPaymentTotal = checkoutOpenEntries.reduce((sum, entry) => {
-    const quantity = Math.min(
-      entry.openQuantity,
-      Math.max(0, selectedPaymentQuantities[entry.item.id] ?? 0)
-    );
-    return sum + entry.unitTotal * quantity;
-  }, 0);
+  const selectedPaymentTotal = checkoutOpenUnitEntries.reduce(
+    (sum, entry) => sum + (selectedPaymentUnits[entry.unitKey] ? entry.unitTotal : 0),
+    0
+  );
   const selectedPaymentQuantityTotal = selectedPaymentLineItems.reduce(
     (sum, lineItem) => sum + lineItem.quantity,
     0
   );
-  const checkoutOpenQuantityTotal = checkoutOpenEntries.reduce(
-    (sum, entry) => sum + entry.openQuantity,
-    0
-  );
+  const checkoutOpenQuantityTotal = checkoutOpenUnitEntries.length;
   const areAllCheckoutPositionsSelected =
-    checkoutOpenEntries.length > 0 &&
-    checkoutOpenEntries.every(
-      ({ item, openQuantity }) =>
-        Math.min(openQuantity, Math.max(0, selectedPaymentQuantities[item.id] ?? 0)) === openQuantity
-    );
+    checkoutOpenUnitEntries.length > 0 &&
+    checkoutOpenUnitEntries.every(({ unitKey }) => selectedPaymentUnits[unitKey]);
   const checkoutOpenGroups = checkoutSessions
     .map(({ table, session }) => {
-      const entries = checkoutOpenEntries.filter((entry) => entry.table.id === table.id);
+      const entries = checkoutOpenUnitEntries.filter((entry) => entry.table.id === table.id);
       return {
         table,
         session,
@@ -1059,12 +1062,15 @@ export const WaiterWorkspace = () => {
     selectedSession?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
   const openServiceDeliveryNotifications = unreadNotifications.filter(
     (notification) =>
-      notification.kind === "service-drinks" || notification.kind === "service-course-ready"
+      notification.kind === "service-drinks" ||
+      notification.kind === "service-course-ready" ||
+      notification.kind === "self-order-payment"
   );
   const acceptedServiceDeliveryNotifications = unreadNotifications.filter(
     (notification) =>
       (notification.kind === "service-drinks-accepted" ||
-        notification.kind === "service-course-ready-accepted") &&
+        notification.kind === "service-course-ready-accepted" ||
+        notification.kind === "self-order-payment-accepted") &&
       (!notification.acceptedByUserId || notification.acceptedByUserId === currentUser?.id)
   );
   const serviceDeliveryNotifications = [
@@ -1152,7 +1158,7 @@ export const WaiterWorkspace = () => {
 
   useEffect(() => {
     setReceiptPreview(null);
-    setSelectedPaymentQuantities({});
+    setSelectedPaymentUnits({});
     setLinkTableSelection(selectedTableId ? [selectedTableId] : []);
     setIsSendAllConfirmationOpen(false);
   }, [selectedTableId]);
@@ -1709,24 +1715,20 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const setPaymentQuantity = (itemId: string, quantity: number, maxQuantity: number) => {
-    setSelectedPaymentQuantities((current) => ({
+  const togglePaymentUnit = (unitKey: string, checked: boolean) => {
+    setSelectedPaymentUnits((current) => ({
       ...current,
-      [itemId]: Math.min(maxQuantity, Math.max(0, Math.floor(quantity)))
+      [unitKey]: checked
     }));
   };
 
-  const togglePaymentItem = (itemId: string, checked: boolean, maxQuantity: number) => {
-    setPaymentQuantity(itemId, checked ? maxQuantity : 0, maxQuantity);
-  };
-
   const selectAllPaymentItems = () => {
-    if (checkoutOpenEntries.length === 0) return;
+    if (checkoutOpenUnitEntries.length === 0) return;
 
-    setSelectedPaymentQuantities((current) => {
+    setSelectedPaymentUnits((current) => {
       const next = { ...current };
-      checkoutOpenEntries.forEach(({ item, openQuantity }) => {
-        next[item.id] = openQuantity;
+      checkoutOpenUnitEntries.forEach(({ unitKey }) => {
+        next[unitKey] = true;
       });
       return next;
     });
@@ -1768,7 +1770,7 @@ export const WaiterWorkspace = () => {
       title: "Zahlung verbucht",
       detail: "Die Zahlung wurde vom Server bestätigt."
     });
-    setSelectedPaymentQuantities({});
+    setSelectedPaymentUnits({});
     setReceiptPreview(null);
   };
 
@@ -1818,7 +1820,7 @@ export const WaiterWorkspace = () => {
       title: "Storno gespeichert",
       detail: "Das Storno wurde vom Server bestätigt."
     });
-    setSelectedPaymentQuantities({});
+    setSelectedPaymentUnits({});
     setReceiptPreview(null);
   };
 
@@ -1991,7 +1993,7 @@ export const WaiterWorkspace = () => {
     setSelectedTableId(result.tableId);
     setSelectedSeatId(usesSeatMode ? result.seatId ?? "" : "");
     setReceiptPreview(null);
-    setSelectedPaymentQuantities({});
+    setSelectedPaymentUnits({});
     setIsLinkTablesOpen(false);
     openOrderWizard("table");
 
@@ -2034,12 +2036,19 @@ export const WaiterWorkspace = () => {
   const handleNotificationAction = (notification: (typeof unreadNotifications)[number]) => {
     if (
       isWaiterView &&
-      (notification.kind === "service-drinks" || notification.kind === "service-course-ready")
+      (notification.kind === "service-drinks" ||
+        notification.kind === "service-course-ready" ||
+        notification.kind === "self-order-payment")
     ) {
       actions.markNotificationRead(notification.id, "shared");
       setServiceFeedback({
         tone: "info",
-        title: notification.kind === "service-drinks" ? "Getränke angenommen" : "Speisen angenommen",
+        title:
+          notification.kind === "service-drinks"
+            ? "Getränke angenommen"
+            : notification.kind === "self-order-payment"
+              ? "Bezahlung übernommen"
+              : "Speisen angenommen",
         detail: "Alle im Service sehen jetzt, dass du dich darum kümmerst."
       });
       return;
@@ -2048,7 +2057,8 @@ export const WaiterWorkspace = () => {
     if (
       isWaiterView &&
       (notification.kind === "service-drinks-accepted" ||
-        notification.kind === "service-course-ready-accepted")
+        notification.kind === "service-course-ready-accepted" ||
+        notification.kind === "self-order-payment-accepted")
     ) {
       actions.markNotificationRead(notification.id, "shared");
       setServiceFeedback({
@@ -2056,6 +2066,8 @@ export const WaiterWorkspace = () => {
         title:
           notification.kind === "service-drinks-accepted"
             ? "Getränke ausgeliefert"
+            : notification.kind === "self-order-payment-accepted"
+              ? "Bezahlung erledigt"
             : "Speisen ausgeliefert",
         detail: "Der Auftrag wurde aus deiner Auslieferung entfernt."
       });
@@ -2499,31 +2511,31 @@ export const WaiterWorkspace = () => {
             <div className="kiju-checkout-table-group__header">
               <div>
                 <strong>{table.name}</strong>
-                <small>{entries.length} offene Einträge</small>
+                <small>
+                  {entries.length} offene {entries.length === 1 ? "Position" : "Positionen"}
+                </small>
               </div>
               <strong>{euro(openTotal)}</strong>
             </div>
 
             <div className="kiju-review-list kiju-wizard-payment-list">
-              {entries.map(({ item, openQuantity, unitTotal }) => {
-                const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
+              {entries.map(({ item, openQuantity, unitTotal, unitIndex, unitKey }) => {
                 const modifierLabels = resolveItemModifierLabels(item, state.products);
 
                 return (
-                  <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
+                  <article key={`${table.id}-${unitKey}`} className="kiju-payment-line">
                     <label>
                       <input
-                        name={`checkout-item-${item.id}`}
+                        name={`checkout-item-${unitKey}`}
                         type="checkbox"
-                        checked={selectedQuantity > 0}
-                        onChange={(event) =>
-                          togglePaymentItem(item.id, event.target.checked, openQuantity)
-                        }
+                        checked={Boolean(selectedPaymentUnits[unitKey])}
+                        onChange={(event) => togglePaymentUnit(unitKey, event.target.checked)}
                       />
                       <span>
                         <strong>{resolveProductName(state.products, item.productId)}</strong>
                         <small>
-                          {table.name} · {courseLabels[item.category]} · offen {openQuantity}
+                          {table.name} · {courseLabels[item.category]} · Portion {unitIndex + 1} von{" "}
+                          {openQuantity}
                         </small>
                         {modifierLabels.length > 0 || item.note ? (
                           <small>
@@ -2534,18 +2546,7 @@ export const WaiterWorkspace = () => {
                         ) : null}
                       </span>
                     </label>
-                    <input
-                      name={`payment-quantity-${item.id}`}
-                      type="number"
-                      min={0}
-                      max={openQuantity}
-                      value={selectedQuantity}
-                      aria-label="Anzahl für Zahlung"
-                      onChange={(event) =>
-                        setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
-                      }
-                    />
-                    <strong>{euro(unitTotal * selectedQuantity)}</strong>
+                    <strong>{euro(unitTotal)}</strong>
                   </article>
                 );
               })}
@@ -2861,7 +2862,9 @@ export const WaiterWorkspace = () => {
       <div className="kiju-course-choice-grid kiju-category-choice-grid" aria-label="Bestellkategorien">
         {orderStepSequence.map((course, index) => {
           const itemCount = getCourseItemQuantity(course);
-          const ticketState = selectedSession ? resolveServiceCourseStatus(selectedSession, course) : null;
+          const ticketState = selectedSession
+            ? resolveServiceCourseStatus(selectedSession, course, state.products)
+            : null;
 
           return (
             <button
@@ -3362,8 +3365,11 @@ export const WaiterWorkspace = () => {
                     ? "Getränke-Service"
                     : primaryServiceDeliveryNotification.kind === "service-course-ready"
                       ? "Küchenpass"
+                    : primaryServiceDeliveryNotification.kind === "self-order-payment"
+                      ? "Bezahlung"
                     : primaryServiceDeliveryNotification.kind === "service-drinks-accepted" ||
-                        primaryServiceDeliveryNotification.kind === "service-course-ready-accepted"
+                        primaryServiceDeliveryNotification.kind === "service-course-ready-accepted" ||
+                        primaryServiceDeliveryNotification.kind === "self-order-payment-accepted"
                       ? "Übernommen"
                       : "Serviceauftrag"}
                 </span>
@@ -3377,7 +3383,8 @@ export const WaiterWorkspace = () => {
               >
                 <CheckCircle2 size={18} />
                 {primaryServiceDeliveryNotification.kind === "service-drinks" ||
-                primaryServiceDeliveryNotification.kind === "service-course-ready"
+                primaryServiceDeliveryNotification.kind === "service-course-ready" ||
+                primaryServiceDeliveryNotification.kind === "self-order-payment"
                   ? "Annehmen"
                   : "Erledigt"}
               </button>
@@ -3425,7 +3432,8 @@ export const WaiterWorkspace = () => {
                       <strong>{notification.title}</strong>
                       <span>{notification.body}</span>
                       {notification.kind === "service-drinks-accepted" ||
-                      notification.kind === "service-course-ready-accepted" ? (
+                      notification.kind === "service-course-ready-accepted" ||
+                      notification.kind === "self-order-payment-accepted" ? (
                         <small>Angenommen von {notification.acceptedByName ?? "Service"}</small>
                       ) : null}
                     </div>
@@ -3436,7 +3444,8 @@ export const WaiterWorkspace = () => {
                     >
                       <CheckCircle2 size={18} />
                       {notification.kind === "service-drinks-accepted" ||
-                      notification.kind === "service-course-ready-accepted"
+                      notification.kind === "service-course-ready-accepted" ||
+                      notification.kind === "self-order-payment-accepted"
                         ? "Erledigt"
                         : "Annehmen"}
                     </button>
@@ -3588,6 +3597,9 @@ export const WaiterWorkspace = () => {
                   >
                     <strong>{entry.table.name}</strong>
                     <small>
+                      {entry.session?.selfOrder
+                        ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName} · `
+                        : ""}
                       {statusLabel[entry.status] ?? "Status"} · {euro(entry.total)}
                     </small>
                   </button>
@@ -3751,7 +3763,9 @@ export const WaiterWorkspace = () => {
                 <span className="kiju-eyebrow">Tisch ausgewählt</span>
                 <h2 id="kiju-table-action-title">{selectedTable.name}</h2>
                 <p>
-                  {linkedTableGroup
+                  {selectedSession?.selfOrder
+                    ? `${selectedSession.selfOrder.customerName} · ${selectedSession.selfOrder.guestCount} Personen · ${selectedSession.selfOrder.locationName}`
+                    : linkedTableGroup
                     ? `Gekoppelt: ${linkedTableGroup.label}`
                     : "Was möchtest du als Nächstes machen?"}
                 </p>
@@ -3832,6 +3846,8 @@ export const WaiterWorkspace = () => {
                           ? "Getränke-Service"
                           : primaryServiceDeliveryNotification.kind === "service-course-ready"
                             ? "Küchenpass"
+                            : primaryServiceDeliveryNotification.kind === "self-order-payment"
+                              ? "Bezahlung"
                             : "Übernommen"}
                       </span>
                       <strong>{primaryServiceDeliveryNotification.title}</strong>
@@ -3849,7 +3865,8 @@ export const WaiterWorkspace = () => {
                     >
                       <CheckCircle2 size={18} />
                       {primaryServiceDeliveryNotification.kind === "service-drinks" ||
-                      primaryServiceDeliveryNotification.kind === "service-course-ready"
+                      primaryServiceDeliveryNotification.kind === "service-course-ready" ||
+                      primaryServiceDeliveryNotification.kind === "self-order-payment"
                         ? "Annehmen"
                         : "Erledigt"}
                     </button>
@@ -3931,7 +3948,11 @@ export const WaiterWorkspace = () => {
                             <strong>Auswahl</strong>
                             <span>{euro(selectedPaymentTotal)}</span>
                             <small>
-                              {selectedPaymentQuantityTotal}x in {selectedPaymentLineItems.length} Einträgen
+                              {selectedPaymentQuantityTotal}{" "}
+                              {selectedPaymentQuantityTotal === 1
+                                ? "Position"
+                                : "Positionen"}{" "}
+                              ausgewählt
                             </small>
                           </div>
                         </div>
@@ -4082,7 +4103,9 @@ export const WaiterWorkspace = () => {
                     >
                       <strong>{entry.table.name}</strong>
                       <small>
-                        {serviceOrderMode === "seat"
+                        {entry.session?.selfOrder
+                          ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName}`
+                          : serviceOrderMode === "seat"
                           ? `${getVisibleSeats(entry.table.seats).length} sichtbare Plätze`
                           : "Tischmodus"}{" "}
                         · {statusLabel[entry.status] ?? "Status"}

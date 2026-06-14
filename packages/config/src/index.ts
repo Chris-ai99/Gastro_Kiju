@@ -17,6 +17,23 @@ const joinBasePath = (basePath: string, path: string) => {
   return normalizedPath === "/" ? `${basePath}/` : `${basePath}${normalizedPath}`;
 };
 
+export const normalizeSelfOrderPublicBaseUrl = (value?: string) => {
+  if (!value) return "";
+
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" && url.hostname !== "localhost") {
+      return "";
+    }
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+};
+
 const runtimeScope = globalThis as typeof globalThis & {
   process?: {
     env?: Record<string, string | undefined>;
@@ -60,6 +77,38 @@ export const deploymentConfig = {
 } as const;
 
 export const resolveAppUrl = (path = "/") => joinBasePath(deploymentConfig.basePath, path);
+
+export const selfOrderPublicConfig = {
+  baseUrl: normalizeSelfOrderPublicBaseUrl(
+    runtimeScope.process?.env?.["NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL"]
+  )
+} as const;
+
+export const resolveSelfOrderPublicUrl = (
+  path = "/",
+  currentOrigin?: string,
+  publicBaseUrl = selfOrderPublicConfig.baseUrl
+) => {
+  const appPath = resolveAppUrl(path);
+  const fallbackOrigin = currentOrigin?.trim().replace(/\/+$/, "") ?? "";
+  const baseUrl = normalizeSelfOrderPublicBaseUrl(publicBaseUrl) || fallbackOrigin;
+
+  return baseUrl ? `${baseUrl}${appPath}` : appPath;
+};
+
+export const isSelfOrderPublicHost = (
+  host?: string,
+  publicBaseUrl = selfOrderPublicConfig.baseUrl
+) => {
+  const normalizedPublicBaseUrl = normalizeSelfOrderPublicBaseUrl(publicBaseUrl);
+  if (!host || !normalizedPublicBaseUrl) return false;
+
+  try {
+    return host.toLowerCase() === new URL(normalizedPublicBaseUrl).host.toLowerCase();
+  } catch {
+    return false;
+  }
+};
 
 export const routeConfig = {
   login: "/",

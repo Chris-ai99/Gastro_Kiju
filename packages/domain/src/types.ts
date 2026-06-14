@@ -40,7 +40,16 @@ export type NotificationKind =
   | "service-drinks-accepted"
   | "service-course-ready"
   | "service-course-ready-accepted"
+  | "self-order-payment"
+  | "self-order-payment-accepted"
   | "admin-receipt-alarm";
+export type SelfOrderCustomerStatus =
+  | "received"
+  | "preparing"
+  | "partially-ready"
+  | "ready"
+  | "closed";
+export type SelfOrderPaymentCallStatus = "idle" | "requested" | "accepted";
 
 export interface UserAccount {
   id: string;
@@ -109,6 +118,16 @@ export interface TableLayout {
   note?: string;
   archivedAt?: string;
   seats: TableSeat[];
+}
+
+export interface SelfOrderLocation {
+  id: string;
+  name: string;
+  accessKey: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface OrderModifierSelection {
@@ -205,6 +224,19 @@ export interface ReceiptRecord {
   closedAt?: string;
 }
 
+export interface SelfOrderSessionData {
+  customerName: string;
+  guestCount: number;
+  locationId: string;
+  locationName: string;
+  pickupNumber: number;
+  accessTokenHash: string;
+  createdAt: string;
+  paymentCallStatus: SelfOrderPaymentCallStatus;
+  paymentRequestedAt?: string;
+  paymentAcceptedAt?: string;
+}
+
 export interface OrderSession {
   id: string;
   tableId: string;
@@ -220,6 +252,7 @@ export interface OrderSession {
   cancellations: OrderCancellation[];
   partyGroups: OrderPartyGroup[];
   receipt: ReceiptRecord;
+  selfOrder?: SelfOrderSessionData;
 }
 
 export interface DailyStats {
@@ -264,12 +297,21 @@ export interface ThermalPrintLine {
   emphasis?: boolean;
   align?: ThermalPrintAlign;
   size?: ThermalPrintSize;
+  bitmap?: ThermalPrintBitmap;
+}
+
+export interface ThermalPrintBitmap {
+  width: number;
+  height: number;
+  dataBase64: string;
+  alt: string;
 }
 
 export interface ThermalPrintDocument {
   title: string;
   width: number;
   lines: ThermalPrintLine[];
+  upsideDown?: boolean;
 }
 
 export interface NetworkPrinterConfig {
@@ -316,6 +358,7 @@ export interface AppState {
   catalogVersion?: number;
   serviceOrderMode: ServiceOrderMode;
   designMode: DesignMode;
+  selfOrderLocations: SelfOrderLocation[];
   linkedTableGroups: LinkedTableGroup[];
   deletedTableIds?: string[];
   deletedUserIds?: string[];
