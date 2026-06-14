@@ -1757,9 +1757,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const broadcast = useCallback((nextState: AppState) => {
-    channelRef.current?.postMessage({
-      state: nextState
-    });
+    try {
+      channelRef.current?.postMessage({
+        state: nextState
+      });
+    } catch {
+      channelRef.current = null;
+    }
   }, []);
 
   const applyPendingQueue = useCallback(
@@ -2245,6 +2249,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         queueRetryTimerRef.current = null;
       }
       channelRef.current?.close();
+      channelRef.current = null;
     };
   }, [applyPendingQueue, updateSyncFromQueue]);
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.07-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Ein geschlossener Browser-Sync-Kanal wird beim Neuladen oder Bereichswechsel nicht mehr erneut angesprochen.
+- Änderungen:
+  Der lokale Broadcast-Kanal wird nach dem Schließen sauber zurückgesetzt.
+  Falls ein Gerät während eines Bereichswechsels noch einen Sync sendet, wird der Fehler abgefangen statt die Oberfläche zu stören.
+
 ## 0.11.06-beta
 - Datum: 2026-06-14
 - Uhrzeit: 19:00 +02:00

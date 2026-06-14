@@ -77,6 +77,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.07-beta",
+    date: "2026-06-14",
+    time: "19:04 +02:00",
+    type: "Fix",
+    title: "Geräte-Sync beim Neuladen stabilisiert",
+    summary:
+      "Ein geschlossener Browser-Sync-Kanal wird beim Neuladen oder Bereichswechsel nicht mehr erneut angesprochen.",
+    categories: ["Stabilität", "Login", "Sync"],
+    changes: [
+      "Der lokale Broadcast-Kanal wird nach dem Schließen sauber zurückgesetzt.",
+      "Falls ein Gerät während eines Bereichswechsels noch einen Sync sendet, wird der Fehler abgefangen statt die Oberfläche zu stören."
+    ]
+  },
+  {
     version: "0.11.06-beta",
     date: "2026-06-14",
     time: "19:00 +02:00",
