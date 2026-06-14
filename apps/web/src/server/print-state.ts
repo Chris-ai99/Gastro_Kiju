@@ -186,6 +186,19 @@ const sortJobsForResponse = (jobs: PersistedPrintJob[]) =>
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
   });
 
+const ACTIVE_PRINT_JOB_STATUSES = new Set(["pending", "processing", "failed"]);
+const PRINT_OVERVIEW_RECENT_JOB_LIMIT = 80;
+
+const limitJobsForOverview = (jobs: PersistedPrintJob[]) => {
+  const sortedJobs = sortJobsForResponse(jobs);
+  const activeJobs = sortedJobs.filter((job) => ACTIVE_PRINT_JOB_STATUSES.has(job.status));
+  const recentJobs = sortedJobs
+    .filter((job) => !ACTIVE_PRINT_JOB_STATUSES.has(job.status))
+    .slice(0, PRINT_OVERVIEW_RECENT_JOB_LIMIT);
+
+  return sortJobsForResponse([...activeJobs, ...recentJobs]);
+};
+
 const createReceiptJob = (request: Extract<CreatePrintJobRequest, { type: "receipt" | "reprint" }>) => {
   const tableLabel = request.tableLabel?.trim() || request.tableId?.replace("table-", "Tisch ") || "Kassenbon";
   const document = buildReceiptPrintDocument(request.receipt);
@@ -445,7 +458,7 @@ export const getPrintOverview = async () => {
     const state = loadPrintState();
     return {
       printer: structuredClone(state.printer),
-      jobs: sortJobsForResponse(state.jobs)
+      jobs: limitJobsForOverview(state.jobs)
     };
   });
 };

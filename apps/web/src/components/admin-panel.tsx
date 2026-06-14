@@ -77,6 +77,22 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.06-beta",
+    date: "2026-06-14",
+    time: "19:00 +02:00",
+    type: "Fix",
+    title: "Notfall-Entlastung für Geräte-Login",
+    summary:
+      "Die interne Oberfläche fragt Live-Daten seltener und kontrollierter ab, damit Handys und schwächere Geräte nicht mehr beim Laden einfrieren.",
+    categories: ["Performance", "Login", "Sync", "Druck"],
+    changes: [
+      "Der Live-Sync läuft nicht mehr jede Sekunde, sondern in einem ruhigeren 5-Sekunden-Takt.",
+      "Überlappende State-Abfragen werden übersprungen, damit Geräte keine Anfrage-Stapel aufbauen.",
+      "Ausgeblendete Browser-Tabs pausieren den Live-Sync, bis sie wieder sichtbar sind.",
+      "Die Admin-Druckübersicht lädt deutlich seltener und liefert nur aktive sowie die letzten abgeschlossenen Druckjobs aus."
+    ]
+  },
+  {
     version: "0.11.05-beta",
     date: "2026-06-14",
     time: "18:09 +02:00",

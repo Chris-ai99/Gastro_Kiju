@@ -86,7 +86,7 @@ const LEGACY_AUTH_KEY = "kiju-auth-v2";
 const NOTIFICATION_READS_KEY = "kiju-notification-reads-v1";
 const NOTIFICATION_DEVICE_KEY = "kiju-notification-device-v1";
 const TRANSACTION_DEVICE_KEY = "kiju-transaction-device-v1";
-const SHARED_SYNC_POLL_MS = 1000;
+const SHARED_SYNC_POLL_MS = 5000;
 const SHARED_SYNC_REQUEST_TIMEOUT_MS = 2500;
 
 type SharedSyncState = {
@@ -2120,6 +2120,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     window.addEventListener("storage", handleStorage);
     let isActive = true;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
+    let isPollingSharedState = false;
 
     const synchronizeFromServer = async () => {
       const snapshot = await fetchSharedSnapshot();
@@ -2171,39 +2172,54 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     };
 
     const pollSharedState = async () => {
-      const latestSnapshot = await fetchSharedSnapshot();
-      if (!latestSnapshot || !isActive) {
+      if (isPollingSharedState) return;
+      isPollingSharedState = true;
+
+      try {
+        const latestSnapshot = await fetchSharedSnapshot();
+        if (!latestSnapshot || !isActive) {
+          const transactions = await listPendingTransactions();
+          updateSyncFromQueue(
+            transactions,
+            transactions.some((entry) => entry.status === "failed")
+              ? "error"
+              : "offline",
+            "Server nicht erreichbar. Offene Vorgänge bleiben lokal gespeichert."
+          );
+          return;
+        }
+
+        if (
+          sharedVersionRef.current !== null &&
+          latestSnapshot.version <= sharedVersionRef.current
+        ) {
+          return;
+        }
+
+        sharedVersionRef.current = latestSnapshot.version;
+        sharedSyncEnabledRef.current = true;
+        const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
+        confirmedStateRef.current = normalizedSnapshotState;
+        commitConfirmedStorage(normalizedSnapshotState);
         const transactions = await listPendingTransactions();
-        updateSyncFromQueue(
-          transactions,
-          transactions.some((entry) => entry.status === "failed")
-            ? "error"
-            : "offline",
-          "Server nicht erreichbar. Offene Vorgänge bleiben lokal gespeichert."
-        );
+        applyPendingQueue(normalizedSnapshotState, transactions);
+        updateSyncFromQueue(transactions);
+        setSharedSync((current) => ({
+          ...current,
+          usingSharedState: true,
+          lastSyncedAt: latestSnapshot.updatedAt
+        }));
+      } finally {
+        isPollingSharedState = false;
+      }
+    };
+
+    const pollSharedStateIfVisible = async () => {
+      if (document.visibilityState === "hidden") {
         return;
       }
 
-      if (
-        sharedVersionRef.current !== null &&
-        latestSnapshot.version <= sharedVersionRef.current
-      ) {
-        return;
-      }
-
-      sharedVersionRef.current = latestSnapshot.version;
-      sharedSyncEnabledRef.current = true;
-      const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
-      confirmedStateRef.current = normalizedSnapshotState;
-      commitConfirmedStorage(normalizedSnapshotState);
-      const transactions = await listPendingTransactions();
-      applyPendingQueue(normalizedSnapshotState, transactions);
-      updateSyncFromQueue(transactions);
-      setSharedSync((current) => ({
-        ...current,
-        usingSharedState: true,
-        lastSyncedAt: latestSnapshot.updatedAt
-      }));
+      await pollSharedState();
     };
 
     const handleOnline = () => {
@@ -2214,7 +2230,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     window.addEventListener("online", handleOnline);
     void synchronizeFromServer();
     pollTimer = setInterval(() => {
-      void pollSharedState();
+      void pollSharedStateIfVisible();
     }, SHARED_SYNC_POLL_MS);
 
     return () => {

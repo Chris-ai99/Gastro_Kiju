@@ -27,6 +27,8 @@ const DEFAULT_PRINTER_CONFIG: NetworkPrinterConfig = {
   port: 9100,
   model: "Epson TM-T70II"
 };
+const ACTIVE_PRINT_JOB_STATUSES = ["pending", "processing", "failed"];
+const PRINT_OVERVIEW_RECENT_JOB_LIMIT = 80;
 const courseLabels: Record<Exclude<CourseKey, "drinks">, string> = {
   starter: "Vorspeise",
   main: "Hauptspeise",
@@ -95,13 +97,33 @@ export class PrintQueueService implements OnModuleInit {
 
   async getOverview() {
     this.schedule();
-    const [printer, jobs] = await Promise.all([
+    const [printer, activeJobs, recentJobs] = await Promise.all([
       this.getPrinterConfig(),
       this.prisma.printJob.findMany({
+        where: {
+          status: {
+            in: ACTIVE_PRINT_JOB_STATUSES
+          }
+        },
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
+      }),
+      this.prisma.printJob.findMany({
+        where: {
+          status: {
+            notIn: ACTIVE_PRINT_JOB_STATUSES
+          }
+        },
+        take: PRINT_OVERVIEW_RECENT_JOB_LIMIT,
         orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
       })
     ]);
-    return { printer, jobs: jobs.map((job) => this.toPersistedJob(job)) };
+    const jobsById = new Map(
+      [...activeJobs, ...recentJobs].map((job) => [job.id, job])
+    );
+    return {
+      printer,
+      jobs: [...jobsById.values()].map((job) => this.toPersistedJob(job))
+    };
   }
 
   async getPrinterConfig() {
