@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.05-beta
+- Datum: 2026-06-14
+- Uhrzeit: 18:09 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Hinweis auf wartende Übertragungen verdeckt die Arbeitsoberfläche nicht mehr und erscheint als sehr kleine Statusleiste am unteren Bildschirmrand.
+- Änderungen:
+  Der Übertragungshinweis wurde vom Bildschirmzentrum an den unteren Rand verschoben.
+  Schrift, Symbole, Abstände und Schaltfläche wurden deutlich verkleinert.
+  Der lange Erklärungstext entfällt; die Funktion Erneut senden bleibt direkt verfügbar.
+
 ## 0.11.04-beta
 - Datum: 2026-06-14
 - Uhrzeit: 18:04 +02:00

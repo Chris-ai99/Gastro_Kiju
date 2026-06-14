@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.05-beta",
+    date: "2026-06-14",
+    time: "18:09 +02:00",
+    type: "Verbesserung",
+    title: "Übertragungshinweis kompakt am unteren Rand",
+    summary:
+      "Der Hinweis auf wartende Übertragungen verdeckt die Arbeitsoberfläche nicht mehr und erscheint als sehr kleine Statusleiste am unteren Bildschirmrand.",
+    categories: ["Oberfläche", "Übertragung", "Mobil"],
+    changes: [
+      "Der Übertragungshinweis wurde vom Bildschirmzentrum an den unteren Rand verschoben.",
+      "Schrift, Symbole, Abstände und Schaltfläche wurden deutlich verkleinert.",
+      "Der lange Erklärungstext entfällt; die Funktion Erneut senden bleibt direkt verfügbar."
+    ]
+  },
+  {
     version: "0.11.04-beta",
     date: "2026-06-14",
     time: "18:04 +02:00",

@@ -20,13 +20,10 @@ export const TransmissionStatusBanner = () => {
       role="status"
       aria-live="polite"
     >
-      <RefreshCw size={20} />
-      <div>
-        <strong>{label}</strong>
-        <span>Die Software bleibt nutzbar. Du kannst den Vorgang erneut senden.</span>
-      </div>
+      <RefreshCw size={12} />
+      <strong>{label}</strong>
       <button type="button" onClick={actions.retryPendingTransactions}>
-        <RefreshCw size={16} />
+        <RefreshCw size={11} />
         Erneut senden
       </button>
     </aside>
