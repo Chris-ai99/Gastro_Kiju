@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.09-beta",
+    date: "2026-06-14",
+    time: "19:21 +02:00",
+    type: "Fix",
+    title: "Alte Login-Warteschlange automatisch bereinigt",
+    summary:
+      "Harmlose zuletzt-gesehen-Updates aus der lokalen Gerätewarteschlange werden automatisch entfernt, damit keine dauerhafte Übertragungsleiste auf allen Geräten stehen bleibt.",
+    categories: ["Sync", "Login", "Stabilität"],
+    changes: [
+      "Fehlgeschlagene oder alte reine lastSeenAt-Updates aus dem Geräte-Login werden beim Laden der App verworfen.",
+      "Bestellungen, Zahlungen, Druckjobs und andere fachliche Transaktionen bleiben weiterhin in der sicheren Warteschlange geschützt.",
+      "Der Erneut-senden-Knopf räumt diese harmlosen Präsenz-Einträge ebenfalls auf, bevor echte offene Vorgänge erneut gesendet werden."
+    ]
+  },
+  {
     version: "0.11.08-beta",
     date: "2026-06-14",
     time: "19:12 +02:00",

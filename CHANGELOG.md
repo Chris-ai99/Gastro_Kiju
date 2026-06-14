@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.09-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:21 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Harmlose zuletzt-gesehen-Updates aus der lokalen Gerätewarteschlange werden automatisch entfernt, damit keine dauerhafte Übertragungsleiste auf allen Geräten stehen bleibt.
+- Änderungen:
+  Fehlgeschlagene oder alte reine lastSeenAt-Updates aus dem Geräte-Login werden beim Laden der App verworfen.
+  Bestellungen, Zahlungen, Druckjobs und andere fachliche Transaktionen bleiben weiterhin in der sicheren Warteschlange geschützt.
+  Der Erneut-senden-Knopf räumt diese harmlosen Präsenz-Einträge ebenfalls auf, bevor echte offene Vorgänge erneut gesendet werden.
+
 ## 0.11.08-beta
 - Datum: 2026-06-14
 - Uhrzeit: 19:12 +02:00

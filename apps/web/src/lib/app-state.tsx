@@ -1790,6 +1790,50 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [broadcast]
   );
 
+  const isDisposablePresenceTransaction = (transaction: PendingTransaction) => {
+    if (transaction.request.operation.kind !== "staff.update") return false;
+    if (transaction.request.printJobs?.length) return false;
+
+    const patches = transaction.request.operation.patches;
+    return (
+      patches.length > 0 &&
+      patches.every((patch) => {
+        const userSegment = patch.path[1];
+        return (
+          patch.op === "set" &&
+          patch.path.length === 3 &&
+          patch.path[0] === "users" &&
+          typeof userSegment === "object" &&
+          userSegment !== null &&
+          !Array.isArray(userSegment) &&
+          typeof (userSegment as { id?: unknown }).id === "string" &&
+          patch.path[2] === "lastSeenAt"
+        );
+      })
+    );
+  };
+
+  const discardDisposablePresenceTransactions = useCallback(
+    async (transactions: PendingTransaction[]) => {
+      const disposableTransactions = transactions.filter(isDisposablePresenceTransaction);
+      if (disposableTransactions.length === 0) return transactions;
+
+      const disposableIds = new Set(
+        disposableTransactions.map((transaction) => transaction.transactionId)
+      );
+      await Promise.all(
+        disposableTransactions.map((transaction) =>
+          removePendingTransaction(transaction.transactionId)
+        )
+      );
+
+      return transactions.filter(
+        (transaction) => !disposableIds.has(transaction.transactionId)
+      );
+    },
+    []
+  );
+
   const updateSyncFromQueue = useCallback(
     (
       transactions: PendingTransaction[],
@@ -1831,7 +1875,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     try {
       while (true) {
-        const transactions = await listPendingTransactions();
+        const transactions = await discardDisposablePresenceTransactions(
+          await listPendingTransactions()
+        );
         if (transactions.length === 0) {
           setSharedSync((current) => ({
             status: "online",
@@ -1895,7 +1941,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           sharedSyncEnabledRef.current = true;
           commitConfirmedStorage(confirmedState);
 
-          const remainingTransactions = await listPendingTransactions();
+          const remainingTransactions = await discardDisposablePresenceTransactions(
+            await listPendingTransactions()
+          );
           applyPendingQueue(confirmedState, remainingTransactions);
           setSharedSync({
             status:
@@ -1963,7 +2011,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     } finally {
       queueProcessingRef.current = false;
     }
-  }, [applyPendingQueue, updateSyncFromQueue]);
+  }, [applyPendingQueue, discardDisposablePresenceTransactions, updateSyncFromQueue]);
 
   drainQueueRef.current = () => {
     void drainQueue();
@@ -2128,7 +2176,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     const synchronizeFromServer = async () => {
       const snapshot = await fetchSharedSnapshot();
-      const transactions = await listPendingTransactions();
+      const transactions = await discardDisposablePresenceTransactions(
+        await listPendingTransactions()
+      );
 
       if (snapshot && isActive) {
         sharedSyncEnabledRef.current = true;
@@ -2182,7 +2232,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       try {
         const latestSnapshot = await fetchSharedSnapshot();
         if (!latestSnapshot || !isActive) {
-          const transactions = await listPendingTransactions();
+          const transactions = await discardDisposablePresenceTransactions(
+            await listPendingTransactions()
+          );
           updateSyncFromQueue(
             transactions,
             transactions.some((entry) => entry.status === "failed")
@@ -2205,7 +2257,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
         confirmedStateRef.current = normalizedSnapshotState;
         commitConfirmedStorage(normalizedSnapshotState);
-        const transactions = await listPendingTransactions();
+        const transactions = await discardDisposablePresenceTransactions(
+          await listPendingTransactions()
+        );
         applyPendingQueue(normalizedSnapshotState, transactions);
         updateSyncFromQueue(transactions);
         setSharedSync((current) => ({
@@ -2251,7 +2305,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       channelRef.current?.close();
       channelRef.current = null;
     };
-  }, [applyPendingQueue, updateSyncFromQueue]);
+  }, [applyPendingQueue, discardDisposablePresenceTransactions, updateSyncFromQueue]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -4713,8 +4767,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
   const retryPendingTransactions = useCallback(() => {
     void listPendingTransactions().then(async (transactions) => {
+      const activeTransactions =
+        await discardDisposablePresenceTransactions(transactions);
       await Promise.all(
-        transactions
+        activeTransactions
           .filter((transaction) => transaction.status === "failed")
           .map((transaction) =>
             savePendingTransaction({
@@ -4727,7 +4783,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
             })
           )
       );
-      const nextTransactions = await listPendingTransactions();
+      const nextTransactions = await discardDisposablePresenceTransactions(
+        await listPendingTransactions()
+      );
       updateSyncFromQueue(
         nextTransactions,
         nextTransactions.length > 0 ? "pending" : "online",
@@ -4737,7 +4795,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       );
       drainQueueRef.current();
     });
-  }, [updateSyncFromQueue]);
+  }, [discardDisposablePresenceTransactions, updateSyncFromQueue]);
 
   const cancelFailedTransaction = useCallback(
     (transactionId: string) => {
