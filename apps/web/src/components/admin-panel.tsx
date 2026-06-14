@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.10-beta",
+    date: "2026-06-14",
+    time: "19:28 +02:00",
+    type: "Fix",
+    title: "Service-Sync-Status ohne alte Pending-Zähler",
+    summary:
+      "Der Service-Kopf zeigt alte wartende Login-Übertragungen nicht mehr als große Warnung oben rechts.",
+    categories: ["Service", "Sync", "Oberfläche"],
+    changes: [
+      "Die Status-Pille oben rechts wertet reine wartende Übertragungen nicht mehr als Warnung.",
+      "Bei aktivem gemeinsamen Zustand wird Geräte-Sync aktiv angezeigt, auch wenn harmlose lokale Einträge noch bereinigt werden.",
+      "Nur echte fehlgeschlagene Einträge bleiben als kleine Prüfungsmeldung sichtbar."
+    ]
+  },
+  {
     version: "0.11.09-beta",
     date: "2026-06-14",
     time: "19:21 +02:00",

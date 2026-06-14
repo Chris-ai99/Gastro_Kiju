@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.10-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:28 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Service-Kopf zeigt alte wartende Login-Übertragungen nicht mehr als große Warnung oben rechts.
+- Änderungen:
+  Die Status-Pille oben rechts wertet reine wartende Übertragungen nicht mehr als Warnung.
+  Bei aktivem gemeinsamen Zustand wird Geräte-Sync aktiv angezeigt, auch wenn harmlose lokale Einträge noch bereinigt werden.
+  Nur echte fehlgeschlagene Einträge bleiben als kleine Prüfungsmeldung sichtbar.
+
 ## 0.11.09-beta
 - Datum: 2026-06-14
 - Uhrzeit: 19:21 +02:00

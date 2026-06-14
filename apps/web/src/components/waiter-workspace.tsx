@@ -914,17 +914,17 @@ export const WaiterWorkspace = () => {
       );
   }, [selectedSession, state.products]);
   const syncStatusLabel =
-    sharedSync.status === "online"
-      ? "Geräte-Sync aktiv"
-      : sharedSync.pendingCount > 0 || sharedSync.failedCount > 0
-        ? `${Math.max(sharedSync.pendingCount, sharedSync.failedCount)} Vorgänge warten auf Übertragung`
+    sharedSync.failedCount > 0
+      ? `${sharedSync.failedCount} Vorgänge prüfen`
+      : sharedSync.usingSharedState || sharedSync.status === "online" || sharedSync.pendingCount > 0
+        ? "Geräte-Sync aktiv"
         : "Lokal verfügbar";
   const syncStatusTone =
-    sharedSync.status === "online"
-      ? "green"
-      : sharedSync.pendingCount > 0 || sharedSync.failedCount > 0
+    sharedSync.failedCount > 0
         ? "amber"
-        : "slate";
+        : sharedSync.usingSharedState || sharedSync.status === "online" || sharedSync.pendingCount > 0
+          ? "green"
+          : "slate";
   const editableItems = useMemo(() => {
     if (!selectedSession) return [];
 
