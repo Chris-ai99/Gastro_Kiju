@@ -1223,6 +1223,39 @@ button {
   background: rgba(248, 250, 252, 0.78);
 }
 
+.kiju-pickup-create-panel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.82);
+}
+
+.kiju-pickup-create-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.kiju-pickup-create-panel__header > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.kiju-pickup-create-panel__header span {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.kiju-pickup-create-panel__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .kiju-link-tables-panel__header {
   display: flex;
   align-items: flex-start;
@@ -5269,12 +5302,18 @@ button.kiju-admin-link-pill {
     padding: 0.85rem;
   }
 
-  .kiju-link-tables-panel {
+  .kiju-link-tables-panel,
+  .kiju-pickup-create-panel {
     padding: 0.7rem;
   }
 
-  .kiju-link-tables-panel__header {
+  .kiju-link-tables-panel__header,
+  .kiju-pickup-create-panel__header {
     display: grid;
+  }
+
+  .kiju-pickup-create-panel__fields {
+    grid-template-columns: 1fr;
   }
 
   .kiju-linked-table-list .kiju-inline-panel {
@@ -6724,6 +6763,7 @@ html[data-theme="dark"] .kiju-seat-chip,
 html[data-theme="dark"] .kiju-step-tab,
 html[data-theme="dark"] .kiju-table-menu__button,
 html[data-theme="dark"] .kiju-link-tables-panel,
+html[data-theme="dark"] .kiju-pickup-create-panel,
 html[data-theme="dark"] .kiju-mobile-service-summary,
 html[data-theme="dark"] .kiju-drink-group-tab,
 html[data-theme="dark"] .kiju-floorplan-caption,
@@ -7287,6 +7327,11 @@ html[data-theme="dark"] .kiju-service-drink-popup__dismiss:hover {
 .kiju-transmission-status.is-error {
   background: #991b1b;
   border-color: #ef4444;
+}
+
+.kiju-transmission-status.is-warning {
+  background: #92400e;
+  border-color: #f59e0b;
 }
 
 .kiju-transmission-status > div {

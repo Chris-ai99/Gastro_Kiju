@@ -77,6 +77,37 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.04-beta",
+    date: "2026-06-14",
+    time: "18:04 +02:00",
+    type: "Fix",
+    title: "Mobile Anmeldung ohne falschen Offline-Alarm",
+    summary:
+      "Die Anmeldung im lokalen WLAN wird nicht mehr von falschen Meldungen wie Server nicht erreichbar oder Übertragung fehlgeschlagen überlagert.",
+    categories: ["Login", "WLAN", "Mobil", "Übertragung"],
+    changes: [
+      "Auf der Loginseite erscheint kein Verbindungsbanner mehr, solange niemand angemeldet ist.",
+      "Ein nicht erreichbarer Sync ohne offene Vorgänge wird nicht mehr als roter Fehler dargestellt.",
+      "Echte offene Übertragungen werden neutral als wartende Vorgänge angezeigt, während die Software weiter nutzbar bleibt.",
+      "Die Service-Statusanzeige verwendet Lokal verfügbar statt Server nicht erreichbar und vermeidet die Formulierung fehlgeschlagen."
+    ]
+  },
+  {
+    version: "0.11.03-beta",
+    date: "2026-06-14",
+    time: "17:38 +02:00",
+    type: "Fix",
+    title: "Pflichtdaten für manuelle Abholbons",
+    summary:
+      "Der Service muss beim manuellen Abholbon jetzt Kundenname und Ort angeben, bevor der Abholtisch und der Druckauftrag entstehen.",
+    categories: ["Service", "Abholung", "Abholbon", "Druck"],
+    changes: [
+      "Der Service-Bildschirm zeigt beim Abholbon-Erstellen ein Pflichtformular für Name und Ort.",
+      "Leere oder zu kurze Angaben verhindern das Anlegen des Abholtisches und zeigen eine verständliche Meldung.",
+      "Name und Ort werden im Tisch-Hinweis gespeichert, in der Service-Tischliste angezeigt und an den Abholbon-Druckauftrag übergeben."
+    ]
+  },
+  {
     version: "0.11.02-beta",
     date: "2026-06-13",
     time: "23:43 +02:00",

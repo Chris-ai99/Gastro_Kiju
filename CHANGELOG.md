@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.11.04-beta
+- Datum: 2026-06-14
+- Uhrzeit: 18:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die Anmeldung im lokalen WLAN wird nicht mehr von falschen Meldungen wie Server nicht erreichbar oder Übertragung fehlgeschlagen überlagert.
+- Änderungen:
+  Auf der Loginseite erscheint kein Verbindungsbanner mehr, solange niemand angemeldet ist.
+  Ein nicht erreichbarer Sync ohne offene Vorgänge wird nicht mehr als roter Fehler dargestellt.
+  Echte offene Übertragungen werden neutral als wartende Vorgänge angezeigt, während die Software weiter nutzbar bleibt.
+  Die Service-Statusanzeige verwendet Lokal verfügbar statt Server nicht erreichbar und vermeidet die Formulierung fehlgeschlagen.
+
+## 0.11.03-beta
+- Datum: 2026-06-14
+- Uhrzeit: 17:38 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Service muss beim manuellen Abholbon jetzt Kundenname und Ort angeben, bevor der Abholtisch und der Druckauftrag entstehen.
+- Änderungen:
+  Der Service-Bildschirm zeigt beim Abholbon-Erstellen ein Pflichtformular für Name und Ort.
+  Leere oder zu kurze Angaben verhindern das Anlegen des Abholtisches und zeigen eine verständliche Meldung.
+  Name und Ort werden im Tisch-Hinweis gespeichert, in der Service-Tischliste angezeigt und an den Abholbon-Druckauftrag übergeben.
+
 ## 0.11.02-beta
 - Datum: 2026-06-13
 - Uhrzeit: 23:43 +02:00

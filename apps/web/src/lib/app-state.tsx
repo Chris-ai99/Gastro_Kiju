@@ -245,7 +245,7 @@ type DemoActions = {
     active: boolean;
     note?: string;
   }) => { ok: boolean; message?: string };
-  createPickupTable: () => {
+  createPickupTable: (input: { customerName: string; locationName: string }) => {
     ok: boolean;
     tableId?: string;
     tableName?: string;
@@ -3949,17 +3949,33 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, currentUserId, state]
   );
 
-  const createPickupTable = useCallback(() => {
+  const createPickupTable = useCallback((input: { customerName: string; locationName: string }) => {
     const next = structuredClone(state);
     const nextNumber = getNextTableNumber(next.tables);
     const pickupNumber = getNextPickupNumber(next.tables);
     const tableId = `table-${nextNumber}`;
     const tableName = `Zum Abholen ${pickupNumber}`;
     const createdAt = new Date().toISOString();
+    const customerName = input.customerName.trim().replace(/\s+/g, " ");
+    const locationName = input.locationName.trim().replace(/\s+/g, " ");
     const bedienung =
       next.users.find((user) => user.id === currentUserId)?.name?.trim() || "Service";
     const seatCount = 1;
     const seats = createSeats(tableId, seatCount);
+
+    if (customerName.length < 2 || customerName.length > 80) {
+      return {
+        ok: false,
+        message: "Bitte gib einen Kundennamen mit 2 bis 80 Zeichen an."
+      };
+    }
+
+    if (locationName.length < 2 || locationName.length > 80) {
+      return {
+        ok: false,
+        message: "Bitte gib einen Ort mit 2 bis 80 Zeichen an."
+      };
+    }
 
     next.deletedTableIds = (next.deletedTableIds ?? []).filter((deletedId) => deletedId !== tableId);
     next.tables.push({
@@ -3968,14 +3984,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       seatCount,
       active: true,
       plannedOnly: false,
-      note: `Zum Abholen · Bon ${pickupNumber}`,
+      note: `Abholung · ${customerName} · Ort ${locationName} · Bon ${pickupNumber}`,
       seats,
       ...resolveTablePlacement(next.tables.length)
     });
 
     withNotification(next, {
       title: "Abholbon angelegt",
-      body: `${tableName} wurde als normaler Tisch angelegt.`,
+      body: `${tableName} wurde für ${customerName} am Ort ${locationName} angelegt.`,
       tone: "success"
     }, currentUserId);
     emitOperatorFeedback();
@@ -3986,6 +4002,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableLabel: tableName,
         pickupNumber,
         bedienung,
+        customerName,
+        locationName,
         createdAt
       }
     ]);

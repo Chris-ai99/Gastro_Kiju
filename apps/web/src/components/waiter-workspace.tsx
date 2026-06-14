@@ -214,6 +214,11 @@ const statusLabel: Record<string, string> = {
   planned: "Geplant"
 };
 
+const pickupTableNamePattern = /^Zum Abholen\s+\d+$/i;
+
+const getManualPickupTableDetail = (table: { name: string; note?: string }) =>
+  pickupTableNamePattern.test(table.name.trim()) ? table.note?.trim() ?? "" : "";
+
 const paymentMethodLabels: Record<"cash" | "card" | "voucher", string> = {
   cash: "Bar",
   card: "Karte",
@@ -637,6 +642,8 @@ export const WaiterWorkspace = () => {
   const [selectedPaymentUnits, setSelectedPaymentUnits] = useState<Record<string, boolean>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
+  const [pickupCustomerName, setPickupCustomerName] = useState("");
+  const [pickupLocationName, setPickupLocationName] = useState("");
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
   const [serviceFeedback, setServiceFeedback] = useState<{
     tone: "success" | "alert" | "info";
@@ -909,17 +916,15 @@ export const WaiterWorkspace = () => {
   const syncStatusLabel =
     sharedSync.status === "online"
       ? "Geräte-Sync aktiv"
-      : sharedSync.status === "pending" || sharedSync.status === "connecting"
-        ? `${sharedSync.pendingCount} Vorgänge warten`
-        : sharedSync.failedCount > 0
-          ? `${sharedSync.failedCount} Übertragungen fehlgeschlagen`
-          : "Server nicht erreichbar";
+      : sharedSync.pendingCount > 0 || sharedSync.failedCount > 0
+        ? `${Math.max(sharedSync.pendingCount, sharedSync.failedCount)} Vorgänge warten auf Übertragung`
+        : "Lokal verfügbar";
   const syncStatusTone =
     sharedSync.status === "online"
       ? "green"
-      : sharedSync.status === "pending" || sharedSync.status === "connecting"
+      : sharedSync.pendingCount > 0 || sharedSync.failedCount > 0
         ? "amber"
-        : "red";
+        : "slate";
   const editableItems = useMemo(() => {
     if (!selectedSession) return [];
 
@@ -1967,7 +1972,9 @@ export const WaiterWorkspace = () => {
         : "Alles an Küche senden";
 
   const handleCreatePickupTable = async () => {
-    const result = actions.createPickupTable();
+    const customerName = pickupCustomerName.trim().replace(/\s+/g, " ");
+    const locationName = pickupLocationName.trim().replace(/\s+/g, " ");
+    const result = actions.createPickupTable({ customerName, locationName });
 
     if (!result.ok || !result.tableId || !result.tableName || !result.pickupNumber) {
       setServiceFeedback({
@@ -1995,12 +2002,14 @@ export const WaiterWorkspace = () => {
     setReceiptPreview(null);
     setSelectedPaymentUnits({});
     setIsLinkTablesOpen(false);
+    setPickupCustomerName("");
+    setPickupLocationName("");
     openOrderWizard("table");
 
     setServiceFeedback({
       tone: "success",
       title: "Abholbon erstellt",
-      detail: `${result.tableName} ist geöffnet und der Druckauftrag wurde sicher gespeichert.`
+      detail: `${result.tableName} für ${customerName} am Ort ${locationName} ist geöffnet und wurde gedruckt.`
     });
   };
 
@@ -3586,34 +3595,79 @@ export const WaiterWorkspace = () => {
               }
             >
               <div className="kiju-table-menu kiju-table-menu--compact">
-                {waiterMenuEntries.map((entry) => (
-                  <button
-                    key={entry.table.id}
-                    type="button"
-                    className={`kiju-table-menu__button ${
-                      entry.table.id === selectedTableId ? "is-selected" : ""
-                    }`}
-                    onClick={() => selectTable(entry.table.id)}
-                  >
-                    <strong>{entry.table.name}</strong>
-                    <small>
-                      {entry.session?.selfOrder
-                        ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName} · `
-                        : ""}
-                      {statusLabel[entry.status] ?? "Status"} · {euro(entry.total)}
-                    </small>
-                  </button>
-                ))}
+                {waiterMenuEntries.map((entry) => {
+                  const manualPickupDetail = getManualPickupTableDetail(entry.table);
+
+                  return (
+                    <button
+                      key={entry.table.id}
+                      type="button"
+                      className={`kiju-table-menu__button ${
+                        entry.table.id === selectedTableId ? "is-selected" : ""
+                      }`}
+                      onClick={() => selectTable(entry.table.id)}
+                    >
+                      <strong>{entry.table.name}</strong>
+                      <small>
+                        {entry.session?.selfOrder
+                          ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName} · `
+                          : manualPickupDetail
+                            ? `${manualPickupDetail} · `
+                            : ""}
+                        {statusLabel[entry.status] ?? "Status"} · {euro(entry.total)}
+                      </small>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="kiju-step-actions">
+              <form
+                className="kiju-pickup-create-panel"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleCreatePickupTable();
+                }}
+              >
+                <div className="kiju-pickup-create-panel__header">
+                  <div>
+                    <strong>Abholbon erstellen</strong>
+                    <span>Name und Ort sind Pflicht und werden auf dem Abholbon gedruckt.</span>
+                  </div>
+                  <StatusPill label="Pflichtdaten" tone="amber" />
+                </div>
+                <div className="kiju-pickup-create-panel__fields">
+                  <label className="kiju-inline-field">
+                    <span>Name</span>
+                    <input
+                      value={pickupCustomerName}
+                      onChange={(event) => setPickupCustomerName(event.target.value)}
+                      placeholder="Name des Kunden"
+                      minLength={2}
+                      maxLength={80}
+                      required
+                    />
+                  </label>
+                  <label className="kiju-inline-field">
+                    <span>Ort</span>
+                    <input
+                      value={pickupLocationName}
+                      onChange={(event) => setPickupLocationName(event.target.value)}
+                      placeholder="Zum Beispiel Tresen oder Terrasse"
+                      minLength={2}
+                      maxLength={80}
+                      required
+                    />
+                  </label>
+                </div>
                 <button
-                  type="button"
+                  type="submit"
                   className="kiju-button kiju-button--primary"
-                  onClick={() => void handleCreatePickupTable()}
+                  disabled={isSecureTransferPending}
                 >
                   <ShoppingBag size={18} />
                   Abholbon erstellen
                 </button>
+              </form>
+              <div className="kiju-step-actions">
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
@@ -4094,24 +4148,30 @@ export const WaiterWorkspace = () => {
             >
               {currentStep === "table" && waiterMenuEntries.length > 0 ? (
                 <div className="kiju-table-menu" role="tablist" aria-label="Tischauswahl">
-                  {waiterMenuEntries.map((entry) => (
-                    <button
-                      key={entry.table.id}
-                      type="button"
-                      className={`kiju-table-menu__button ${entry.table.id === selectedTableId ? "is-selected" : ""}`}
-                      onClick={() => selectTable(entry.table.id)}
-                    >
-                      <strong>{entry.table.name}</strong>
-                      <small>
-                        {entry.session?.selfOrder
-                          ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName}`
-                          : serviceOrderMode === "seat"
-                          ? `${getVisibleSeats(entry.table.seats).length} sichtbare Plätze`
-                          : "Tischmodus"}{" "}
-                        · {statusLabel[entry.status] ?? "Status"}
-                      </small>
-                    </button>
-                  ))}
+                  {waiterMenuEntries.map((entry) => {
+                    const manualPickupDetail = getManualPickupTableDetail(entry.table);
+
+                    return (
+                      <button
+                        key={entry.table.id}
+                        type="button"
+                        className={`kiju-table-menu__button ${entry.table.id === selectedTableId ? "is-selected" : ""}`}
+                        onClick={() => selectTable(entry.table.id)}
+                      >
+                        <strong>{entry.table.name}</strong>
+                        <small>
+                          {entry.session?.selfOrder
+                            ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName}`
+                            : manualPickupDetail
+                              ? manualPickupDetail
+                              : serviceOrderMode === "seat"
+                                ? `${getVisibleSeats(entry.table.seats).length} sichtbare Plätze`
+                                : "Tischmodus"}{" "}
+                          · {statusLabel[entry.status] ?? "Status"}
+                        </small>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
 
