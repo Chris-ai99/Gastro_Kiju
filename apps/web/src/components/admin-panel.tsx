@@ -71,6 +71,51 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.14-beta",
+    date: "2026-09-17",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Raumplan an Gebäude und Außenbereich angepasst",
+    summary:
+      "Der interaktive Raumplan orientiert sich jetzt stärker am tatsächlichen Gebäude und Außenbereich.",
+    categories: ["Service", "Tische", "Raumplan", "Oberfläche"],
+    changes: [
+      "Die Grundgrafik zeigt den gepflasterten Hof, die Begrünung, Eingänge und Treppen sowie die vorhandene Raumstruktur klarer.",
+      "Innen- und Außentische greifen die fotografisch erkennbare Holzoptik, rote Polster und rot-weiß karierten Tischdecken auf.",
+      "Die Grafik bleibt frei von eingebrannten Tischtexten; Nummern, Status und Klickflächen kommen weiterhin aktuell aus der Oberfläche."
+    ]
+  },
+  {
+    version: "0.9.13-beta",
+    date: "2026-09-17",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Kellner-Ansicht ohne Raumplan und Tischübersicht",
+    summary:
+      "Die Kellner-Ansicht zeigt kein großes Raumplan-Bild und keine separate Tischübersicht mehr.",
+    categories: ["Service", "Tische", "Mobile", "Oberfläche"],
+    changes: [
+      "Das große Raumplan-Bild wurde aus dem Kellner-Arbeitsbereich entfernt.",
+      "Die separate Tischübersicht wurde durch eine kompakte Tisch-Auswahl ersetzt.",
+      "Bestellen, Abrechnen, Abholbons und das Koppeln von Tischen bleiben erreichbar."
+    ]
+  },
+  {
+    version: "0.9.12-beta",
+    date: "2026-09-17",
+    time: "laufend",
+    type: "Fix",
+    title: "Tagesreset bewahrt Küchen- und Getränke-Konten",
+    summary:
+      "Der Tagesreset löscht die festen Küchen- und Getränke-Systemkonten nicht mehr.",
+    categories: ["Admin", "Tagesreset", "Küche", "Getränke"],
+    changes: [
+      "Der Tagesreset lässt die festen Küchen- und Getränke-Systemkonten erhalten und entfernt nur tagesabhängige Mitarbeiterkonten.",
+      "Bereits als gelöscht markierte Küchen- und Getränke-Konten werden automatisch wiederhergestellt.",
+      "Das manuelle Löschen der beiden festen Systemkonten wird verhindert."
+    ]
+  },
+  {
     version: "0.9.11-beta",
     date: "2026-05-14",
     time: "laufend",
@@ -1732,7 +1777,7 @@ export const AdminPanel = () => {
 
   const handleDailyReset = () => {
     const confirmed = window.confirm(
-      "Tagesstand wirklich zurücksetzen? Umsatz heute wird auf 0 gesetzt und offene Bestellungen werden geschlossen."
+      "Tagesstand wirklich zurücksetzen? Umsatz heute wird auf 0 gesetzt, offene Bestellungen werden geschlossen und Tageskonten werden bereinigt. Das feste Küchen- und Getränke-Konto bleibt erhalten."
     );
     if (!confirmed) return;
 
@@ -3829,7 +3874,7 @@ export const AdminPanel = () => {
                     <p>
                       Setzt Umsatz heute, Tagesgäste und Tagesabschlüsse auf 0. Offene
                       Bestellungen werden geschlossen, damit ein neuer Tag ohne Altlasten starten
-                      kann. Tische, Leistungen, Benutzer und Hinweise bleiben erhalten.
+                      kann. Tische, Leistungen, Admin-Konten sowie das feste Küchen- und Getränke-Konto bleiben erhalten.
                     </p>
                     <small>
                       Vor dem Tagesreset wird ein Rückgängig-Snapshot für diese Admin-Sitzung

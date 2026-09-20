@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.9.19-beta
+- Datum: 2026-09-18
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die Tischauswahl verwendet jetzt ausschließlich feste Nummernkacheln nebeneinander.
+- Änderungen:
+  Das ausklappbare Tisch-Auswahlfeld und die doppelte Tischanzahl unter dem Grundriss wurden entfernt.
+  Die Nummernkacheln 1 bis 12 bleiben direkt unter der Grundrissansicht sichtbar; Abholbon und Tischkopplung bleiben als separate Aktionen verfügbar.
+
+## 0.9.18-beta
+- Datum: 2026-09-18
+- Uhrzeit: laufend
+- Typ: Verbesserung / Fix
+- Zusammenfassung:
+  Die Sitzplanansicht nutzt jetzt die volle 16:9-Fläche und bietet zusätzlich eine kompakte Nummernauswahl.
+- Änderungen:
+  Die weiße Außenfläche der Grundrissgrafik wurde auf einen schmalen technischen Rand reduziert.
+  Die Tischflächen wurden verkleinert und an die Ausrichtung des Sitzplans angepasst; die Rundtische 10 und 11 bleiben kreisförmig.
+  Tisch 5 und Tisch 6 haben jetzt einen klaren Abstand zueinander.
+  Unter dem Grundriss stehen die auswählbaren Nummern 1 bis 12 als schlanke Schnellansicht zur Verfügung.
+
+## 0.9.17-beta
+- Datum: 2026-09-18
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Die Tischflächen sitzen jetzt direkt auf den entsprechenden Bereichen des neuen Grundrisses.
+- Änderungen:
+  Die Overlay-Größen und -Positionen wurden an die ODP-Koordinaten angepasst, damit sie keine benachbarten Raumlinien mehr überdecken.
+  Die Reihenfolge von Tisch 1 und Tisch 2 sowie die Anordnung der Tische 7 bis 9 entsprechen jetzt dem Sitzplan.
+  Die Trefferflächen der Biertische wurden zusätzlich voneinander und vom Rundtischbereich getrennt.
+
+## 0.9.16-beta
+- Datum: 2026-09-18
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Die dynamischen Tischflächen sind wieder an der tatsächlichen ODP-Raumstruktur ausgerichtet.
+- Änderungen:
+  Tisch 1 und Tisch 2 verwenden jetzt die korrekte vertikale Reihenfolge.
+  Die Positionen von Tischen 3 bis 12 wurden an die begradigte 16:9-Grundrissgrafik angepasst.
+
+## 0.9.15-beta
+- Datum: 2026-09-18
+- Uhrzeit: 19:05:13 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Sitzplan verwendet jetzt eine klare 16:9-Grundrissgrafik ohne fest eingebrannte Tische.
+- Änderungen:
+  Die ODP-Raumstruktur wurde als schlichte, begradigte PNG-Grundlage für die Gastro-Software exportiert.
+  Die Kellner-Ansicht verwendet die neue Grafik; dynamische Tisch-Schaltflächen bleiben als interaktive Oberfläche erhalten.
+
+## 0.9.14-beta
+- Datum: 2026-09-17
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der interaktive Raumplan orientiert sich jetzt stärker am tatsächlichen Gebäude und Außenbereich.
+- Änderungen:
+  Die Grundgrafik zeigt den gepflasterten Hof, die Begrünung, Eingänge und Treppen sowie die vorhandene Raumstruktur klarer.
+  Innen- und Außentische greifen die fotografisch erkennbare Holzoptik, rote Polster und rot-weiß karierten Tischdecken auf.
+  Die Grafik bleibt frei von eingebrannten Tischtexten; Nummern, Status und Klickflächen kommen weiterhin aktuell aus der Oberfläche.
+
+## 0.9.13-beta
+- Datum: 2026-09-17
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die Kellner-Ansicht zeigt kein großes Raumplan-Bild und keine separate Tischübersicht mehr.
+- Änderungen:
+  Das große Raumplan-Bild wurde aus dem Kellner-Arbeitsbereich entfernt.
+  Die separate Tischübersicht wurde durch eine kompakte Tisch-Auswahl ersetzt.
+  Bestellen, Abrechnen, Abholbons und das Koppeln von Tischen bleiben erreichbar.
+
+## 0.9.12-beta
+- Datum: 2026-09-17
+- Uhrzeit: laufend
+- Typ: Fix
+- Zusammenfassung:
+  Der Tagesreset löscht die festen Küchen- und Getränke-Systemkonten nicht mehr.
+- Änderungen:
+  Der Tagesreset entfernt weiterhin tagesabhängige Service-Konten, lässt das feste Küchen- und Getränke-Konto aber erhalten.
+  Bereits durch einen früheren Reset als gelöscht markierte Küchen- und Getränke-Konten werden automatisch wiederhergestellt.
+  Die Verwaltung verhindert zusätzlich das manuelle Löschen dieser beiden festen Systemkonten.
+
 ## 0.9.11-beta
 - Datum: 2026-05-14
 - Uhrzeit: laufend

@@ -320,6 +320,41 @@ const floorplanSeatOverrides: Partial<Record<TableLayout["id"], number>> = {
   "table-5": 4,
   "table-6": 5
 };
+const waiterRoomTableMigrations: Record<
+  string,
+  { name: string; active: boolean; plannedOnly: boolean; legacyNames?: string[]; legacyPrefix?: string }
+> = {
+  "table-7": {
+    name: "Biertisch 7",
+    active: true,
+    plannedOnly: false,
+    legacyNames: ["Sicherheitstisch 7"]
+  },
+  "table-8": {
+    name: "Biertisch 8",
+    active: true,
+    plannedOnly: false,
+    legacyPrefix: "Tisch 8 "
+  },
+  "table-9": {
+    name: "Biertisch 9",
+    active: true,
+    plannedOnly: false,
+    legacyPrefix: "Tisch 9 "
+  },
+  "table-10": {
+    name: "Rundtisch 10",
+    active: true,
+    plannedOnly: false,
+    legacyPrefix: "Tisch 10 "
+  },
+  "table-11": {
+    name: "Rundtisch 11",
+    active: true,
+    plannedOnly: false,
+    legacyNames: ["Zum Abholen 1"]
+  }
+};
 const normalizeSeatList = (
   tableId: string,
   seatCount: number,
@@ -339,30 +374,32 @@ const normalizeFloorplanTables = (appState: AppState) => {
   let hasChanges = false;
   const tables = appState.tables.map((table) => {
     const requiredSeatCount = floorplanSeatOverrides[table.id];
-    const isMenuOnlySafetyTable = table.id === "table-7";
+    const roomMigration = waiterRoomTableMigrations[table.id];
+    const hasOpenSession = appState.sessions.some(
+      (session) => session.tableId === table.id && session.status !== "closed"
+    );
+    const matchesLegacyRoomTable =
+      roomMigration !== undefined &&
+      !hasOpenSession &&
+      (roomMigration.legacyNames?.includes(table.name) === true ||
+        roomMigration.legacyPrefix !== undefined && table.name.startsWith(roomMigration.legacyPrefix));
 
     const shouldNormalizeSeatCount =
       requiredSeatCount !== undefined &&
       (table.seatCount < requiredSeatCount || table.seats.length < requiredSeatCount);
 
-    const shouldNormalizeSafetyTable =
-      isMenuOnlySafetyTable &&
-      (table.name !== "Sicherheitstisch 7" ||
-        table.note !== "Nur über das Menü auswählbar" ||
-        table.active ||
-        !table.plannedOnly);
-
-    if (!shouldNormalizeSeatCount && !shouldNormalizeSafetyTable) {
+    if (!shouldNormalizeSeatCount && !matchesLegacyRoomTable) {
       return table;
     }
 
     hasChanges = true;
     return {
       ...table,
-      name: isMenuOnlySafetyTable ? "Sicherheitstisch 7" : table.name,
-      note: isMenuOnlySafetyTable ? "Nur über das Menü auswählbar" : table.note,
-      active: isMenuOnlySafetyTable ? false : table.active,
-      plannedOnly: isMenuOnlySafetyTable ? true : table.plannedOnly,
+      name: matchesLegacyRoomTable && roomMigration ? roomMigration.name : table.name,
+      note: matchesLegacyRoomTable ? undefined : table.note,
+      active: matchesLegacyRoomTable && roomMigration ? roomMigration.active : table.active,
+      plannedOnly:
+        matchesLegacyRoomTable && roomMigration ? roomMigration.plannedOnly : table.plannedOnly,
       seatCount: shouldNormalizeSeatCount && requiredSeatCount ? requiredSeatCount : table.seatCount,
       seats:
         shouldNormalizeSeatCount && requiredSeatCount
@@ -802,6 +839,9 @@ const setSessionServiceUserIds = (session: OrderSession, userIds: string[]) => {
 
 const employeeRoles: Role[] = ["waiter", "kitchen", "bar"];
 const isEmployeeAccount = (user: UserAccount) => employeeRoles.includes(user.role);
+const protectedSystemUserIds = new Set(["user-kitchen", "user-bar"]);
+const isResettableEmployeeAccount = (user: UserAccount) =>
+  isEmployeeAccount(user) && !protectedSystemUserIds.has(user.id);
 
 const serviceNotificationKinds: AppNotification["kind"][] = [
   "service-drinks",
@@ -3383,6 +3423,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         return { ok: false, message: "Das aktuell angemeldete Konto kann nicht gelöscht werden." };
       }
 
+      if (protectedSystemUserIds.has(userId)) {
+        return { ok: false, message: "Das feste Küchen- oder Getränke-Konto kann nicht gelöscht werden." };
+      }
+
       if (user.role === "admin" && state.users.filter((entry) => entry.role === "admin").length <= 1) {
         return { ok: false, message: "Mindestens ein Admin-Konto muss erhalten bleiben." };
       }
@@ -3619,7 +3663,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       });
     });
 
-    const removedEmployeeIds = new Set(next.users.filter(isEmployeeAccount).map((user) => user.id));
+    const removedEmployeeIds = new Set(next.users.filter(isResettableEmployeeAccount).map((user) => user.id));
     next.users = next.users.filter((user) => !removedEmployeeIds.has(user.id));
     next.deletedUserIds = [
       ...new Set([...(next.deletedUserIds ?? []), ...removedEmployeeIds])

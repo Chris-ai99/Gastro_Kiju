@@ -15,6 +15,7 @@ import type {
 import { demoProducts, demoTables } from "./demo-data";
 
 const SYSTEM_CATALOG_VERSION = 1;
+const protectedSystemUserIds = new Set(["user-kitchen", "user-bar"]);
 const drinkSubcategoryFallback = "Sonstiges";
 const EXTRA_INGREDIENTS_MODIFIER_GROUP_ID = "extra-ingredients";
 const LEGACY_EXTRA_INGREDIENTS_GROUP_ID = "extra-cheese";
@@ -676,7 +677,7 @@ export const normalizeOperationalState = (state: AppState): AppState => {
   ];
   const deletedUserIds = [
     ...new Set((state.deletedUserIds ?? []).map((userId) => userId.trim()).filter(Boolean))
-  ];
+  ].filter((userId) => !protectedSystemUserIds.has(userId));
   const deletedProductIds = [
     ...new Set((state.deletedProductIds ?? []).map((productId) => productId.trim()).filter(Boolean))
   ];

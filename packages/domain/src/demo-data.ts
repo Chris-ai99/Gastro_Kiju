@@ -102,19 +102,11 @@ export const demoTables: TableLayout[] = [
   { id: "table-4", name: "Tisch 4", seatCount: 5, active: true, plannedOnly: false, x: 46, y: 32, width: 16, height: 14, seats: createSeats("table-4", 5) },
   { id: "table-5", name: "Tisch 5", seatCount: 4, active: true, plannedOnly: false, x: 33, y: 27, width: 14, height: 13, seats: createSeats("table-5", 4) },
   { id: "table-6", name: "Tisch 6", seatCount: 5, active: true, plannedOnly: false, x: 18, y: 27, width: 14, height: 13, seats: createSeats("table-6", 5) },
-  {
-    id: "table-7",
-    name: "Sicherheitstisch 7",
-    seatCount: 2,
-    active: false,
-    plannedOnly: true,
-    x: 45,
-    y: 49,
-    width: 16,
-    height: 13,
-    note: "Nur über das Menü auswählbar",
-    seats: createSeats("table-7", 2)
-  }
+  { id: "table-7", name: "Biertisch 7", seatCount: 6, active: true, plannedOnly: false, x: 12, y: 76, width: 13, height: 8, seats: createSeats("table-7", 6) },
+  { id: "table-8", name: "Biertisch 8", seatCount: 6, active: true, plannedOnly: false, x: 29, y: 76, width: 13, height: 8, seats: createSeats("table-8", 6) },
+  { id: "table-9", name: "Biertisch 9", seatCount: 6, active: true, plannedOnly: false, x: 46, y: 76, width: 13, height: 8, seats: createSeats("table-9", 6) },
+  { id: "table-10", name: "Rundtisch 10", seatCount: 6, active: true, plannedOnly: false, x: 63, y: 72, width: 8, height: 8, seats: createSeats("table-10", 6) },
+  { id: "table-11", name: "Rundtisch 11", seatCount: 6, active: true, plannedOnly: false, x: 63, y: 86, width: 8, height: 8, seats: createSeats("table-11", 6) }
 ];
 
 export const demoProducts: Product[] = [

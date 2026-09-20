@@ -69,15 +69,21 @@ describe("domain workflow", () => {
     expect("seatId" in normalizedItem).toBe(false);
   });
 
-  it("does not rehydrate deleted seeded users during normalization", () => {
+  it("keeps the fixed kitchen and drinks accounts during normalization", () => {
     const state = structuredClone(demoAppState);
-    state.deletedUserIds = ["user-kitchen"];
-    state.users = state.users.filter((user) => user.id !== "user-kitchen");
+    state.deletedUserIds = ["user-kitchen", "user-bar"];
+    state.users = state.users.filter((user) => !["user-kitchen", "user-bar"].includes(user.id));
 
     const normalized = normalizeOperationalState(state);
 
-    expect(normalized.deletedUserIds).toContain("user-kitchen");
-    expect(normalized.users.some((user) => user.id === "user-kitchen")).toBe(false);
+    expect(normalized.deletedUserIds).not.toContain("user-kitchen");
+    expect(normalized.deletedUserIds).not.toContain("user-bar");
+    expect(normalized.users).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "user-kitchen", role: "kitchen" }),
+        expect.objectContaining({ id: "user-bar", role: "bar" })
+      ])
+    );
   });
 
   it("does not rehydrate deleted seeded products during normalization", () => {

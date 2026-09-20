@@ -1206,12 +1206,405 @@ button {
   flex: 0 0 auto;
 }
 
-.kiju-table-overview-panel {
+.kiju-waiter-room-map {
   display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
 }
 
-.kiju-table-overview-panel > .kiju-card {
+.kiju-waiter-room-map__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.kiju-waiter-room-map__header > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.kiju-waiter-room-map__header h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+}
+
+.kiju-waiter-room-map__header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.kiju-waiter-room-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.kiju-waiter-room-map__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.kiju-waiter-room-map__legend-item::before {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  content: "";
+  background: var(--deep-navy);
+}
+
+.kiju-waiter-room-map__legend-item--outside::before {
+  background: #5b8f55;
+}
+
+.kiju-waiter-room-map__legend-item--pickup::before {
+  background: #d99a23;
+}
+
+.kiju-waiter-room-map__canvas {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  isolation: isolate;
+}
+
+.kiju-waiter-room-map__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kiju-waiter-room-map__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.kiju-waiter-room-map__background,
+.kiju-waiter-room-map__building,
+.kiju-waiter-room-map__outside {
+  position: absolute;
+}
+
+.kiju-waiter-room-map__background {
+  inset: 0;
+  z-index: 0;
+}
+
+.kiju-waiter-room-map__building {
+  inset: 4% 4% 35% 4%;
+  border: 0.75rem solid #0b1220;
+  border-radius: 0.45rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(226, 237, 238, 0.92)),
+    repeating-linear-gradient(90deg, rgba(30, 41, 59, 0.06) 0 1px, transparent 1px 4rem);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0.7rem 1.8rem rgba(15, 23, 42, 0.16);
+}
+
+.kiju-waiter-room-map__building::after {
+  position: absolute;
+  inset: 2.2rem 0 0;
+  border-top: 2px solid rgba(11, 18, 32, 0.16);
+  content: "";
+}
+
+.kiju-waiter-room-map__building-label,
+.kiju-waiter-room-map__outside > span {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  z-index: 1;
+  color: rgba(11, 18, 32, 0.62);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kiju-waiter-room-map__outside {
+  inset: 65% 4% 4% 4%;
+  border: 2px dashed rgba(54, 92, 73, 0.55);
+  border-radius: 0.45rem;
+  background:
+    linear-gradient(135deg, rgba(210, 229, 211, 0.96), rgba(181, 211, 185, 0.9)),
+    repeating-linear-gradient(45deg, rgba(54, 92, 73, 0.08) 0 2px, transparent 2px 10px);
+}
+
+.kiju-waiter-room-map__outside > span {
+  color: rgba(38, 79, 52, 0.76);
+}
+
+.kiju-waiter-room-map__outside > small {
+  position: absolute;
+  top: 0.82rem;
+  right: 1rem;
+  color: rgba(38, 79, 52, 0.62);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.kiju-waiter-room-map__room {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(11, 18, 32, 0.42);
+  background: rgba(190, 204, 207, 0.54);
+  color: rgba(11, 18, 32, 0.7);
+  font-size: clamp(0.62rem, 1.1vw, 0.9rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kiju-waiter-room-map__room--office {
+  top: 10%;
+  right: 2%;
+  width: 15%;
+  height: 31%;
+}
+
+.kiju-waiter-room-map__room--wc-left {
+  bottom: 3%;
+  left: 17%;
+  width: 12%;
+  height: 25%;
+}
+
+.kiju-waiter-room-map__room--kitchen {
+  right: 2%;
+  bottom: 3%;
+  width: 20%;
+  height: 27%;
+}
+
+.kiju-waiter-room-map__room--wc-right {
+  right: 23%;
+  bottom: 3%;
+  width: 8%;
+  height: 27%;
+}
+
+.kiju-waiter-room-table {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.06rem;
+  min-width: 3.25rem;
+  padding: 0.3rem;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 0.45rem;
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 0.5rem 1rem rgba(15, 23, 42, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(15, 23, 42, 0.42);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.kiju-waiter-room-table:hover,
+.kiju-waiter-room-table:focus-visible {
+  z-index: 4;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 0.8rem 1.4rem rgba(15, 23, 42, 0.28), 0 0 0 3px rgba(255, 255, 255, 0.62);
+  filter: saturate(1.08);
+}
+
+.kiju-waiter-room-table.is-selected {
+  border-color: #ffd166;
+  box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.72), 0 0.8rem 1.4rem rgba(15, 23, 42, 0.24);
+}
+
+.kiju-waiter-room-table strong,
+.kiju-waiter-room-table__kind,
+.kiju-waiter-room-table small {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kiju-waiter-room-table strong {
+  font-size: clamp(1.1rem, 2.2vw, 2rem);
+  line-height: 1;
+}
+
+.kiju-waiter-room-table__kind {
+  font-size: clamp(0.48rem, 0.85vw, 0.72rem);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.kiju-waiter-room-table small {
+  font-size: clamp(0.42rem, 0.72vw, 0.62rem);
+  font-weight: 800;
+}
+
+.kiju-waiter-room-table--beer {
+  border-radius: 0.35rem;
+  background: rgba(38, 92, 52, 0.78);
+}
+
+.kiju-waiter-room-table--round {
+  border-radius: 50%;
+  background: rgba(38, 105, 59, 0.8);
+}
+
+.kiju-waiter-room-table--beer,
+.kiju-waiter-room-table--round {
+  padding: 0.18rem;
+}
+
+.kiju-waiter-room-table--beer .kiju-waiter-room-table__kind,
+.kiju-waiter-room-table--beer small,
+.kiju-waiter-room-table--round .kiju-waiter-room-table__kind,
+.kiju-waiter-room-table--round small {
+  display: none;
+}
+
+.kiju-waiter-room-table--pickup {
+  border-color: #634209;
+  border-radius: 0.2rem;
+  background: rgba(175, 111, 10, 0.88);
+}
+
+.kiju-waiter-room-number-picker {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.kiju-waiter-room-number-picker__button {
+  min-height: 2.8rem;
+  padding: 0.35rem 0.2rem;
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  border-radius: 0.45rem;
+  background: var(--surface-strong);
+  color: var(--deep-navy);
+  font-size: 1.05rem;
+  font-weight: 900;
+  box-shadow: 0 0.25rem 0.65rem rgba(15, 23, 42, 0.1);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.kiju-waiter-room-number-picker__button:hover,
+.kiju-waiter-room-number-picker__button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(30, 64, 175, 0.48);
+  box-shadow: 0 0.45rem 0.9rem rgba(15, 23, 42, 0.14);
+}
+
+.kiju-waiter-room-number-picker__button.is-selected {
+  border-color: #b7791f;
+  background: #fff7df;
+  box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.2);
+}
+
+.kiju-waiter-room-number-picker__button--pickup {
+  border-color: rgba(180, 115, 16, 0.72);
+  background: rgba(255, 247, 223, 0.96);
+}
+
+.kiju-waiter-room-number-picker__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.kiju-waiter-room-table__furniture {
+  position: absolute;
+  inset: -0.45rem;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.kiju-waiter-room-table__chair,
+.kiju-waiter-room-table__bench {
+  position: absolute;
+  display: block;
+  border: 1px solid rgba(23, 50, 75, 0.8);
+  background: #e8d1ae;
+  box-shadow: 0 2px 3px rgba(15, 23, 42, 0.2);
+}
+
+.kiju-waiter-room-table__chair {
+  width: 16%;
+  height: 13%;
+  border-radius: 0.18rem;
+}
+
+.kiju-waiter-room-table__chair--top {
+  top: -4%;
+  left: 42%;
+}
+
+.kiju-waiter-room-table__chair--bottom {
+  bottom: -4%;
+  left: 42%;
+}
+
+.kiju-waiter-room-table__chair--left {
+  top: 43%;
+  left: -4%;
+  transform: rotate(90deg);
+}
+
+.kiju-waiter-room-table__chair--right {
+  top: 43%;
+  right: -4%;
+  transform: rotate(90deg);
+}
+
+.kiju-waiter-room-table__bench {
+  left: 8%;
+  width: 84%;
+  height: 12%;
+  border-radius: 0.2rem;
+}
+
+.kiju-waiter-room-table__bench--top {
+  top: -9%;
+}
+
+.kiju-waiter-room-table__bench--bottom {
+  bottom: -9%;
+}
+
+.kiju-waiter-table-toolbar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.kiju-waiter-table-toolbar__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.kiju-waiter-table-toolbar__controls > .kiju-pill {
+  margin-bottom: 0.55rem;
 }
 
 .kiju-link-tables-panel {
@@ -5029,6 +5422,44 @@ button.kiju-admin-link-pill {
     border-radius: 8px;
   }
 
+  .kiju-waiter-room-map {
+    padding: 0.7rem;
+  }
+
+  .kiju-waiter-room-map__header {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .kiju-waiter-room-map__legend {
+    justify-content: flex-start;
+  }
+
+  .kiju-waiter-room-map__canvas {
+    aspect-ratio: 16 / 9;
+  }
+
+  .kiju-waiter-room-number-picker {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .kiju-waiter-room-table {
+    min-width: 2.3rem;
+    padding: 0.2rem;
+  }
+
+  .kiju-waiter-room-table strong {
+    font-size: 1.1rem;
+  }
+
+  .kiju-waiter-room-table__kind {
+    font-size: 0.42rem;
+  }
+
+  .kiju-waiter-room-table small {
+    font-size: 0.38rem;
+  }
+
   .kiju-floorplan-stage {
     display: none;
   }
@@ -5060,8 +5491,18 @@ button.kiju-admin-link-pill {
     padding: 0;
   }
 
-  .kiju-table-overview-panel > .kiju-card {
-    padding: 0.85rem;
+  .kiju-waiter-table-toolbar {
+    padding: 0.7rem;
+  }
+
+  .kiju-waiter-table-toolbar__controls {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .kiju-waiter-table-toolbar__controls > .kiju-pill {
+    justify-self: start;
+    margin-bottom: 0;
   }
 
   .kiju-link-tables-panel {
@@ -6348,6 +6789,8 @@ html[data-theme="dark"] .kiju-step,
 html[data-theme="dark"] .kiju-seat-chip,
 html[data-theme="dark"] .kiju-step-tab,
 html[data-theme="dark"] .kiju-table-menu__button,
+html[data-theme="dark"] .kiju-waiter-room-map,
+html[data-theme="dark"] .kiju-waiter-table-toolbar,
 html[data-theme="dark"] .kiju-link-tables-panel,
 html[data-theme="dark"] .kiju-mobile-service-summary,
 html[data-theme="dark"] .kiju-drink-group-tab,
@@ -6375,6 +6818,37 @@ html[data-theme="dark"] .kiju-service-drink-delivery__item {
   border-color: rgba(71, 85, 105, 0.72);
   background: rgba(15, 23, 42, 0.9);
   color: var(--slate);
+}
+
+html[data-theme="dark"] .kiju-waiter-room-map__canvas {
+  border-color: rgba(100, 116, 139, 0.72);
+  background: #172a3a;
+}
+
+html[data-theme="dark"] .kiju-waiter-room-map__building {
+  border-color: #020617;
+  background:
+    linear-gradient(135deg, rgba(51, 75, 91, 0.96), rgba(30, 52, 69, 0.96)),
+    repeating-linear-gradient(90deg, rgba(226, 232, 240, 0.06) 0 1px, transparent 1px 4rem);
+}
+
+html[data-theme="dark"] .kiju-waiter-room-map__building-label,
+html[data-theme="dark"] .kiju-waiter-room-map__outside > span,
+html[data-theme="dark"] .kiju-waiter-room-map__outside > small {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+html[data-theme="dark"] .kiju-waiter-room-map__outside {
+  border-color: rgba(134, 196, 139, 0.68);
+  background:
+    linear-gradient(135deg, rgba(48, 90, 62, 0.94), rgba(37, 70, 49, 0.9)),
+    repeating-linear-gradient(45deg, rgba(187, 247, 208, 0.08) 0 2px, transparent 2px 10px);
+}
+
+html[data-theme="dark"] .kiju-waiter-room-map__room {
+  border-color: rgba(226, 232, 240, 0.34);
+  background: rgba(15, 23, 42, 0.42);
+  color: rgba(226, 232, 240, 0.72);
 }
 
 html[data-theme="dark"] .kiju-product-card.is-added {
