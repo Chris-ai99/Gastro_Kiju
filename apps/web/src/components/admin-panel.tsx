@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.17-beta",
+    date: "2026-09-21",
+    time: "laufend",
+    type: "Fix",
+    title: "Küchen- und Bar-Status bleibt nach dem Senden synchron",
+    summary:
+      "Ein neuer Versand wird nicht mehr durch einen älteren gemeinsamen Gerätestand überschrieben.",
+    categories: ["Service", "Küche", "Bar", "Synchronisierung"],
+    changes: [
+      "Aufeinanderfolgende Änderungen werden beim gemeinsamen Speichern geordnet übertragen.",
+      "Während ein Versand noch gespeichert wird, kann ein älterer Poll-Stand die Statuskacheln nicht mehr zurücksetzen.",
+      "Die Anzeige bleibt nach dem Senden auf dem tatsächlichen Küchen- oder Bar-Status des aktuellen Auftrags."
+    ]
+  },
+  {
     version: "0.9.16-beta",
     date: "2026-09-21",
     time: "laufend",

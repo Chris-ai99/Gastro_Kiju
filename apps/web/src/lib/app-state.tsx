@@ -1664,6 +1664,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const stateRef = useRef(state);
   const currentUserIdRef = useRef(currentUserId);
   const localWriteRevisionRef = useRef(0);
+  const sharedWriteInFlightRef = useRef(false);
+  const pendingSharedWriteRef = useRef<{ state: AppState; revision: number } | null>(null);
   const dailyResetUndoRef = useRef<AppState | null>(null);
   const serviceHandoverUndoRef = useRef<{ state: AppState; currentUserId: string | null } | null>(null);
   const [canUndoServiceHandover, setCanUndoServiceHandover] = useState(false);
@@ -1680,6 +1682,61 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     });
   }, []);
 
+  const flushSharedWrite = useCallback(() => {
+    if (sharedWriteInFlightRef.current) return;
+
+    sharedWriteInFlightRef.current = true;
+    void (async () => {
+      try {
+        while (pendingSharedWriteRef.current) {
+          const pendingWrite = pendingSharedWriteRef.current;
+          pendingSharedWriteRef.current = null;
+          const snapshot = await replaceSharedSnapshot(pendingWrite.state);
+
+          if (!snapshot) {
+            if (!pendingSharedWriteRef.current) {
+              setSharedSync((currentSync) => ({
+                status: "offline",
+                usingSharedState: currentSync.usingSharedState,
+                lastSyncedAt: currentSync.lastSyncedAt
+              }));
+            }
+            continue;
+          }
+
+          if (
+            !pendingSharedWriteRef.current &&
+            pendingWrite.revision === localWriteRevisionRef.current
+          ) {
+            sharedSyncEnabledRef.current = true;
+            sharedVersionRef.current = snapshot.version;
+            setSharedSync({
+              status: "online",
+              usingSharedState: true,
+              lastSyncedAt: snapshot.updatedAt
+            });
+          }
+        }
+      } finally {
+        sharedWriteInFlightRef.current = false;
+        if (pendingSharedWriteRef.current) {
+          flushSharedWrite();
+        }
+      }
+    })();
+  }, []);
+
+  const scheduleSharedWrite = useCallback(
+    (nextState: AppState, revision: number) => {
+      pendingSharedWriteRef.current = {
+        state: nextState,
+        revision
+      };
+      flushSharedWrite();
+    },
+    [flushSharedWrite]
+  );
+
   const commit = useCallback(
     (nextState: AppState, nextUserId: string | null = currentUserId) => {
       const normalizedState = normalizeAppState(nextState);
@@ -1693,26 +1750,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       commitAuthStorage(nextUserId);
       broadcast(normalizedState);
 
-      void replaceSharedSnapshot(normalizedState).then((snapshot) => {
-        if (!snapshot) {
-          setSharedSync((currentSync) => ({
-            status: "offline",
-            usingSharedState: currentSync.usingSharedState,
-            lastSyncedAt: currentSync.lastSyncedAt
-          }));
-          return;
-        }
-
-        sharedSyncEnabledRef.current = true;
-        sharedVersionRef.current = snapshot.version;
-        setSharedSync({
-          status: "online",
-          usingSharedState: true,
-          lastSyncedAt: snapshot.updatedAt
-        });
-      });
+      scheduleSharedWrite(normalizedState, localWriteRevisionRef.current);
     },
-    [broadcast, currentUserId]
+    [broadcast, currentUserId, scheduleSharedWrite]
   );
 
   const rememberServiceHandoverUndo = useCallback(() => {
@@ -1777,6 +1817,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     if ("BroadcastChannel" in window) {
       channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
       channelRef.current.onmessage = (event) => {
+        if (sharedWriteInFlightRef.current || pendingSharedWriteRef.current) return;
+
         const payload = event.data as { state: AppState };
         const normalizedBroadcastState = normalizeAppState(payload.state);
         stateRef.current = normalizedBroadcastState;
@@ -1786,6 +1828,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
+        if (sharedWriteInFlightRef.current || pendingSharedWriteRef.current) return;
+
         try {
           const normalizedStoredState = normalizeAppState(JSON.parse(event.newValue) as AppState);
           stateRef.current = normalizedStoredState;
@@ -1828,30 +1872,16 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         });
 
         if (!hasLocalWritesSinceBoot && JSON.stringify(normalizedSnapshotState) !== JSON.stringify(snapshot.state)) {
-          void replaceSharedSnapshot(normalizedSnapshotState).then((normalizedSnapshot) => {
-            if (!normalizedSnapshot || !isActive) return;
-            sharedVersionRef.current = normalizedSnapshot.version;
-            setSharedSync({
-              status: "online",
-              usingSharedState: true,
-              lastSyncedAt: normalizedSnapshot.updatedAt
-            });
-          });
+          scheduleSharedWrite(normalizedSnapshotState, localWriteRevisionRef.current);
         }
 
         if (hasLocalWritesSinceBoot) {
-          void replaceSharedSnapshot(stateRef.current).then((latestSnapshot) => {
-            if (!latestSnapshot || !isActive) return;
-            sharedVersionRef.current = latestSnapshot.version;
-            setSharedSync({
-              status: "online",
-              usingSharedState: true,
-              lastSyncedAt: latestSnapshot.updatedAt
-            });
-          });
+          scheduleSharedWrite(stateRef.current, localWriteRevisionRef.current);
         }
 
         pollTimer = setInterval(async () => {
+          if (sharedWriteInFlightRef.current || pendingSharedWriteRef.current) return;
+
           const latestSnapshot = await fetchSharedSnapshot();
           if (!latestSnapshot || !isActive) return;
           if (
@@ -1892,7 +1922,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       window.removeEventListener("storage", handleStorage);
       channelRef.current?.close();
     };
-  }, []);
+  }, [scheduleSharedWrite]);
 
   useEffect(() => {
     if (!hydrated) return;
