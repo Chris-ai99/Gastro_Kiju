@@ -1522,7 +1522,7 @@ const resolveSharedStateUrl = () => {
 
   const deployedBasePath = normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"]);
   if (deployedBasePath) {
-    return `${window.location.origin}/api/kiju/state`;
+    return `${window.location.origin}${deployedBasePath}/api/state`;
   }
 
   return `${window.location.origin}/api/state`;

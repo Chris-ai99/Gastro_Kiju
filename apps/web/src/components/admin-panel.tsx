@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.15-beta",
+    date: "2026-09-21",
+    time: "laufend",
+    type: "Fix",
+    title: "Küchen- und Bar-Versand auf dem Gastro-Server synchronisiert",
+    summary:
+      "Bestellungen werden in der veröffentlichten Gastro-Ansicht wieder zuverlässig im gemeinsamen Serverstand gespeichert.",
+    categories: ["Service", "Küche", "Bar", "Synchronisierung"],
+    changes: [
+      "Der gemeinsame Status wird bei einem Unterpfad wie /gastro über die tatsächlich erreichbare API-Route geladen.",
+      "Gesendete Küchen- und Bar-Positionen erscheinen dadurch wieder auf den jeweiligen Arbeitsgeräten.",
+      "Die Anzeige Nur lokaler Stand erscheint nur noch, wenn der gemeinsame Status wirklich nicht erreichbar ist."
+    ]
+  },
+  {
     version: "0.9.14-beta",
     date: "2026-09-17",
     time: "laufend",
