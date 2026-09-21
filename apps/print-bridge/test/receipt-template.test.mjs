@@ -289,6 +289,6 @@ test("buildKitchenTicketPrintDocument druckt Vorspeisenbon mit Bedienungsnamen",
   const lines = document.lines.map((line) => line.text);
 
   assert.equal(document.title, "Vorspeise");
-  assert.ok(lines.includes("BED.  : Chris"));
+  assert.ok(lines.includes("BEDIENUNG: Chris"));
   assert.ok(lines.some((line) => line.includes("1x Bruschetta")));
 });

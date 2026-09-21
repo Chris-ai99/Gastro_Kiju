@@ -707,7 +707,7 @@ export const buildKitchenTicketPrintDocument = ({
       { text: SEPARATOR },
       { text: `TISCH : ${table.name}` },
       { text: `ZEIT  : ${formatDateTime(printedAt)}` },
-      { text: `BED.  : ${sanitizeReceiptValue(batch.bedienung ?? "Service")}` },
+      { text: `BEDIENUNG: ${sanitizeReceiptValue(batch.bedienung ?? "Service")}` },
       {
         text: `BON   : ${batch.sequence === 1 ? "Erstsendung" : `Nachbestellung ${batch.sequence}`}`
       },

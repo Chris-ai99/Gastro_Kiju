@@ -71,6 +71,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.16-beta",
+    date: "2026-09-21",
+    time: "laufend",
+    type: "Fix",
+    title: "Bedienungsname auf Küchenbons und Statuskacheln korrigiert",
+    summary:
+      "Der Name der Bedienung bleibt auch bei älteren Bestellungen erhalten und lange Statusmeldungen überdecken keine Kacheltexte mehr.",
+    categories: ["Service", "Küche", "Bar", "Druck", "Oberfläche"],
+    changes: [
+      "Küchenbons zeigen die Bedienung jetzt mit einem vollständigen, eindeutig lesbaren Label an.",
+      "Fehlende Bedienungsnamen in bestehenden Küchen- und Bar-Batches werden aus der zugehörigen Bedienung ergänzt.",
+      "Statusmeldungen in der Kategorieauswahl umbrechen innerhalb der Kachel und überlappen weder Kategorie noch Positionszahl."
+    ]
+  },
+  {
     version: "0.9.15-beta",
     date: "2026-09-21",
     time: "laufend",

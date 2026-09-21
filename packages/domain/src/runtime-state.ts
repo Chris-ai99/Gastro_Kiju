@@ -687,6 +687,26 @@ export const normalizeOperationalState = (state: AppState): AppState => {
   const normalizedSessions = normalizeSessions(
     state.sessions.filter((session) => !deletedTableIdSet.has(session.tableId))
   );
+  const normalizedUsers = mergeSeededUsers(state.users, deletedUserIdSet);
+  const waiterNamesById = new Map(
+    normalizedUsers.flatMap((user) => {
+      const name = user.name.trim();
+      return name ? ([[user.id, name] as const]) : [];
+    })
+  );
+  const normalizedSessionsWithServiceNames = normalizedSessions.map((session) => {
+    const fallbackBedienung = waiterNamesById.get(session.waiterId) || "Service";
+    const normalizeBatchBedienung = <T extends { bedienung?: string }>(batch: T): T => ({
+      ...batch,
+      bedienung: batch.bedienung?.trim() || fallbackBedienung
+    });
+
+    return {
+      ...session,
+      kitchenTicketBatches: session.kitchenTicketBatches.map(normalizeBatchBedienung),
+      barTicketBatches: session.barTicketBatches.map(normalizeBatchBedienung)
+    };
+  });
   const mergedProducts = mergeSeededProducts(
     state.products,
     normalizedSessions,
@@ -716,12 +736,12 @@ export const normalizeOperationalState = (state: AppState): AppState => {
     deletedUserIds,
     deletedProductIds,
     extraIngredients,
-    users: mergeSeededUsers(state.users, deletedUserIdSet),
+    users: normalizedUsers,
     tables: normalizeTables(mergeSeededTables(state.tables, deletedTableIdSet)),
     products: mergedProducts.map((product) =>
       normalizeProduct(product, extraIngredients, productIdsWithSelectedExtraIngredients)
     ),
-    sessions: normalizedSessions,
+    sessions: normalizedSessionsWithServiceNames,
     notifications: state.notifications.filter(
       (notification) => !notification.tableId || !deletedTableIdSet.has(notification.tableId)
     )
