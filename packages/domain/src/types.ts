@@ -98,6 +98,7 @@ export interface TableSeat {
 export interface TableLayout {
   id: string;
   name: string;
+  pickupName?: string;
   seatCount: number;
   active: boolean;
   plannedOnly: boolean;

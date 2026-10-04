@@ -79,6 +79,7 @@ export type BuildReceiptDocumentFromSessionsInput = {
 export type BuildPickupTicketDocumentInput = {
   tableLabel: string;
   pickupNumber: number;
+  pickupName?: string;
   createdAt?: string;
 };
 
@@ -609,6 +610,7 @@ export function buildReceiptPrintDocument(
 export const buildPickupTicketPrintDocument = ({
   tableLabel,
   pickupNumber,
+  pickupName,
   createdAt = new Date().toISOString()
 }: BuildPickupTicketDocumentInput): ThermalPrintDocument => {
   const safePickupNumber = Math.max(
@@ -616,6 +618,7 @@ export const buildPickupTicketPrintDocument = ({
     Math.floor(Number.isFinite(pickupNumber) ? pickupNumber : 1)
   );
   const safeTableLabel = normalizeText(tableLabel) || `Zum Abholen ${safePickupNumber}`;
+  const safePickupName = normalizeText(pickupName ?? "");
 
   return {
     title: "Abholbon",
@@ -626,6 +629,12 @@ export const buildPickupTicketPrintDocument = ({
       { text: STRONG_SEPARATOR },
       { text: centerLine(`NUMMER ${safePickupNumber}`), emphasis: true, align: "center" },
       { text: STRONG_SEPARATOR },
+      ...(safePickupName
+        ? [
+            { text: "ABHOLNAME:", emphasis: true },
+            ...wrapText(safePickupName, THERMAL_LINE_WIDTH - 2).map((text) => ({ text: `  ${text}` }))
+          ]
+        : []),
       { text: `BON   : ${safeTableLabel}` },
       { text: `ZEIT  : ${formatDateTime(createdAt)}` },
       { text: SEPARATOR },

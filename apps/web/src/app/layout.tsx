@@ -18,8 +18,7 @@ const themeInitScript = `
 (() => {
   try {
     const storedTheme = window.localStorage.getItem("kiju-theme-mode-v1");
-    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const theme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : systemTheme;
+    const theme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "light";
     document.documentElement.dataset.theme = theme;
 
     const storedState = window.localStorage.getItem("kiju-app-state-v2");

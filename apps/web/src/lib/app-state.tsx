@@ -178,7 +178,7 @@ type DemoActions = {
     active: boolean;
     note?: string;
   }) => { ok: boolean; message?: string };
-  createPickupTable: () => {
+  createPickupTable: (pickupName: string) => {
     ok: boolean;
     tableId?: string;
     tableName?: string;
@@ -427,13 +427,8 @@ const getNextTableNumber = (tables: TableLayout[]) =>
     const nextNumber = Number(idMatch?.[1] ?? nameMatch?.[1] ?? 0);
     return Math.max(maxNumber, nextNumber);
   }, 0) + 1;
-const getNextPickupNumber = (tables: TableLayout[]) =>
-  tables.reduce((maxNumber, table) => {
-    const pickupMatch = table.name.trim().match(/^Zum Abholen\s+(\d+)$/i);
-    const pickupNumber = Number(pickupMatch?.[1] ?? 0);
-    return Math.max(maxNumber, Number.isFinite(pickupNumber) ? pickupNumber : 0);
-  }, 0) + 1;
 const isPickupTable = (table: TableLayout) =>
+  Boolean(table.pickupName?.trim()) ||
   /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
   table.note?.trim().toLowerCase().startsWith("zum abholen") === true;
 const resolveTablePlacement = (index: number) => {
@@ -3534,10 +3529,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, currentUserId, state]
   );
 
-  const createPickupTable = useCallback(() => {
+  const createPickupTable = useCallback((pickupName: string) => {
+    const normalizedPickupName = pickupName.trim().slice(0, 60);
+    if (!normalizedPickupName) {
+      return { ok: false, message: "Bitte gib den Namen der abholenden Person an." };
+    }
+
     const next = structuredClone(state);
-    const nextNumber = getNextTableNumber(next.tables);
-    const pickupNumber = getNextPickupNumber(next.tables);
+    const nextNumber = Math.max(12, getNextTableNumber(next.tables));
+    const pickupNumber = nextNumber;
     const tableId = `table-${nextNumber}`;
     const tableName = `Zum Abholen ${pickupNumber}`;
     const createdAt = new Date().toISOString();
@@ -3548,6 +3548,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     next.tables.push({
       id: tableId,
       name: tableName,
+      pickupName: normalizedPickupName,
       seatCount,
       active: true,
       plannedOnly: false,

@@ -71,6 +71,38 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.9.21-beta",
+    date: "2026-09-27",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Mobiler Service mit klarer Tisch- und Abholauswahl",
+    summary:
+      "Tischwahl, Abholbons und Bestellschritte lassen sich auf dem Handy leichter bedienen und besser lesen.",
+    categories: ["Service", "Mobile", "Abholung", "Oberfläche"],
+    changes: [
+      "Tischflächen und Nummernauswahl sind für die Bedienung per Fingertipp ausgelegt; Abholbons erhalten fortlaufende Nummern ab 12.",
+      "Mobile Küchenhinweise bleiben im Seitenfluss und verdecken die Tischwahl nicht.",
+      "Vor dem Erstellen eines Abholbons wird der Name der abholenden Person erfasst, gespeichert und auf dem Kurzbon ausgegeben.",
+      "Tischaktionen, Kategorieauswahl und Unterkategorien nutzen den Handybildschirm kompakter; Schließen und Zurück führen zu unterschiedlichen Ansichten.",
+      "Das helle Design ist die Voreinstellung für Geräte ohne gespeicherte Theme-Wahl; vorhandene Einstellungen bleiben erhalten."
+    ]
+  },
+  {
+    version: "0.9.20-beta",
+    date: "2026-09-27",
+    time: "laufend",
+    type: "Verbesserung",
+    title: "Küchenansicht füllt den Bildschirm und Status ist klar lesbar",
+    summary:
+      "Die Küchenwand nutzt PC-, Tablet- und Handybildschirme besser aus und zeigt jeden Bonstatus nur einmal mit klarer Kennzeichnung.",
+    categories: ["Küche", "Mobile", "Oberfläche"],
+    changes: [
+      "Die Küchenansicht nutzt die volle Bildschirmbreite ohne feste Maximalbreite.",
+      "Der Bonstatus erscheint nur einmal und ist durch kontrastreiche Farben gut zu erkennen.",
+      "Die zusätzliche Arbeitsplatzbezeichnung KiJu Pass wurde aus den Bonkarten entfernt."
+    ]
+  },
+  {
     version: "0.9.17-beta",
     date: "2026-09-21",
     time: "laufend",

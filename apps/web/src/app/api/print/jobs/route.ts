@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
       if (
         typeof body.tableId !== "string" ||
         typeof body.tableLabel !== "string" ||
-        !Number.isFinite(body.pickupNumber)
+        !Number.isFinite(body.pickupNumber) ||
+        (body.pickupName !== undefined && typeof body.pickupName !== "string")
       ) {
         return NextResponse.json(
           {

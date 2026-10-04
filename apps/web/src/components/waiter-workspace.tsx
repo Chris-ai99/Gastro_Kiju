@@ -142,7 +142,7 @@ const statusLabel: Record<string, string> = {
   planned: "Geplant"
 };
 
-type WaiterRoomTableKind = "indoor" | "beer" | "round" | "pickup";
+type WaiterRoomTableKind = "indoor" | "beer" | "round";
 
 type WaiterRoomTableConfig = {
   id: string;
@@ -157,18 +157,17 @@ type WaiterRoomTableConfig = {
 };
 
 const waiterRoomTableConfigs: WaiterRoomTableConfig[] = [
-  { id: "room-table-1", tableId: "table-1", number: "1", title: "Tisch 1", kind: "indoor", left: 8.5, top: 24.5, width: 8.3, height: 9.5 },
+  { id: "room-table-1", tableId: "table-1", number: "1", title: "Tisch 1", kind: "indoor", left: 8.5, top: 25.5, width: 8.3, height: 9.5 },
   { id: "room-table-2", tableId: "table-2", number: "2", title: "Tisch 2", kind: "indoor", left: 8.5, top: 13.2, width: 8.3, height: 9.5 },
   { id: "room-table-3", tableId: "table-3", number: "3", title: "Tisch 3", kind: "indoor", left: 21, top: 10, width: 5.4, height: 12.2 },
   { id: "room-table-4", tableId: "table-4", number: "4", title: "Tisch 4", kind: "indoor", left: 33.3, top: 10, width: 5.4, height: 12.2 },
   { id: "room-table-5", tableId: "table-5", number: "5", title: "Tisch 5", kind: "indoor", left: 47, top: 9.6, width: 5.4, height: 10.8 },
-  { id: "room-table-6", tableId: "table-6", number: "6", title: "Tisch 6", kind: "indoor", left: 47, top: 21.5, width: 5.4, height: 11 },
+  { id: "room-table-6", tableId: "table-6", number: "6", title: "Tisch 6", kind: "indoor", left: 47, top: 23, width: 5.4, height: 11 },
   { id: "room-table-7", tableId: "table-7", number: "7", title: "Biertisch 7", kind: "beer", left: 35.5, top: 79, width: 6, height: 16 },
   { id: "room-table-8", tableId: "table-8", number: "8", title: "Biertisch 8", kind: "beer", left: 23.8, top: 79, width: 6, height: 16 },
   { id: "room-table-9", tableId: "table-9", number: "9", title: "Biertisch 9", kind: "beer", left: 12.5, top: 79, width: 6, height: 16 },
   { id: "room-table-10", tableId: "table-10", number: "10", title: "Rundtisch 10", kind: "round", left: 46.8, top: 69.5, width: 7.3, height: 13 },
-  { id: "room-table-11", tableId: "table-11", number: "11", title: "Rundtisch 11", kind: "round", left: 46.8, top: 83.4, width: 7.3, height: 13 },
-  { id: "room-pickup-12", number: "12", title: "Abholbereich 12", kind: "pickup", left: 9.5, top: 64, width: 15, height: 6.5 }
+  { id: "room-table-11", tableId: "table-11", number: "11", title: "Rundtisch 11", kind: "round", left: 46.8, top: 83.4, width: 7.3, height: 13 }
 ];
 
 const paymentMethodLabels: Record<"cash" | "card" | "voucher", string> = {
@@ -568,6 +567,8 @@ export const WaiterWorkspace = () => {
   const [currentStep, setCurrentStep] = useState<WaiterStep>("table");
   const [isTableActionDialogOpen, setIsTableActionDialogOpen] = useState(false);
   const [isOrderWizardOpen, setIsOrderWizardOpen] = useState(false);
+  const [isPickupNameDialogOpen, setIsPickupNameDialogOpen] = useState(false);
+  const [pickupNameDraft, setPickupNameDraft] = useState("");
   const [activeCategoryDialog, setActiveCategoryDialog] = useState<CourseKey | null>(null);
   const [categoryDialogStage, setCategoryDialogStage] = useState<CategoryDialogStage>("groups");
   const [activeCourseGroup, setActiveCourseGroup] = useState(fallbackCourseGroup);
@@ -619,6 +620,12 @@ export const WaiterWorkspace = () => {
   const activeCourse: CourseKey = isCourseStep(currentStep) ? currentStep : "drinks";
   const waiterMenuEntries = dashboard.filter(
     (entry) => entry.table.active || entry.table.plannedOnly || entry.table.id === selectedTableId
+  );
+  const pickupMenuEntries = waiterMenuEntries.filter(
+    (entry) =>
+      Boolean(entry.table.pickupName?.trim()) ||
+      /^Zum Abholen\s+\d+$/i.test(entry.table.name.trim()) ||
+      entry.table.note?.trim().toLowerCase().startsWith("zum abholen") === true
   );
   const selectedDashboardEntry =
     dashboard.find((entry) => entry.table.id === selectedTableId) ?? null;
@@ -1070,18 +1077,22 @@ export const WaiterWorkspace = () => {
   }, [selectedTableId]);
 
   useEffect(() => {
-    if (!isOrderWizardOpen && !isTableActionDialogOpen) return;
+    if (!isOrderWizardOpen && !isTableActionDialogOpen && !isPickupNameDialogOpen) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.requestAnimationFrame(() => {
-      orderWizardModalRef.current?.focus();
+      if (isPickupNameDialogOpen) {
+        document.getElementById("kiju-pickup-name")?.focus();
+      } else {
+        orderWizardModalRef.current?.focus();
+      }
     });
 
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOrderWizardOpen, isTableActionDialogOpen]);
+  }, [isOrderWizardOpen, isTableActionDialogOpen, isPickupNameDialogOpen]);
 
   useEffect(
     () => () => {
@@ -1145,6 +1156,7 @@ export const WaiterWorkspace = () => {
   };
 
   const openTableActionForSelection = () => {
+    flushPendingSentItemNotes();
     setCurrentStep("table");
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
@@ -1699,8 +1711,14 @@ export const WaiterWorkspace = () => {
         ? "Nachbestellung an Küche senden"
         : "Alles an Küche senden";
 
-  const handleCreatePickupTable = async () => {
-    const result = actions.createPickupTable();
+  const openPickupNameDialog = () => {
+    setPickupNameDraft("");
+    setIsPickupNameDialogOpen(true);
+  };
+
+  const handleCreatePickupTable = async (pickupName: string) => {
+    const normalizedPickupName = pickupName.trim();
+    const result = actions.createPickupTable(normalizedPickupName);
 
     if (!result.ok || !result.tableId || !result.tableName || !result.pickupNumber) {
       setServiceFeedback({
@@ -1712,6 +1730,7 @@ export const WaiterWorkspace = () => {
     }
 
     setSelectedTableId(result.tableId);
+    setIsPickupNameDialogOpen(false);
     setSelectedSeatId(usesSeatMode ? result.seatId ?? "" : "");
     setReceiptPreview(null);
     setSelectedPaymentQuantities({});
@@ -1723,6 +1742,7 @@ export const WaiterWorkspace = () => {
       tableId: result.tableId,
       tableLabel: result.tableName,
       pickupNumber: result.pickupNumber,
+      pickupName: normalizedPickupName,
       createdAt: result.createdAt
     });
 
@@ -2660,7 +2680,7 @@ export const WaiterWorkspace = () => {
             <button
               type="button"
               className="kiju-button kiju-button--secondary"
-              onClick={closeCategoryDialog}
+              onClick={openTableActionForSelection}
             >
               <X size={16} />
               Schließen
@@ -2965,9 +2985,6 @@ export const WaiterWorkspace = () => {
                 <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--outside">
                   Draußen
                 </span>
-                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--pickup">
-                  Abholung
-                </span>
               </div>
             </header>
 
@@ -2981,21 +2998,16 @@ export const WaiterWorkspace = () => {
               />
               <div className="kiju-waiter-room-map__overlay">
                 {waiterRoomTableConfigs.map((config) => {
-                const entry = config.tableId
-                  ? waiterMenuEntries.find((item) => item.table.id === config.tableId)
-                  : undefined;
+                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
                 if (config.tableId && !entry) return null;
 
-                const isPickup = config.kind === "pickup";
                 const isSelected = entry?.table.id === selectedTableId;
                 const tableTypeLabel =
                   config.kind === "beer"
                     ? "Biertisch"
                     : config.kind === "round"
                       ? "Rundtisch"
-                      : isPickup
-                        ? "Abholung"
-                        : "Tisch";
+                      : "Tisch";
 
                 return (
                   <button
@@ -3004,6 +3016,7 @@ export const WaiterWorkspace = () => {
                     className={`kiju-waiter-room-table kiju-waiter-room-table--${config.kind}${
                       isSelected ? " is-selected" : ""
                     }`}
+                    data-table-number={config.number}
                     style={{
                       left: `${config.left}%`,
                       top: `${config.top}%`,
@@ -3012,27 +3025,20 @@ export const WaiterWorkspace = () => {
                     }}
                     aria-label={`${config.title} auswählen`}
                     onClick={() => {
-                      if (isPickup) {
-                        void handleCreatePickupTable();
-                      } else if (entry) {
-                        selectTable(entry.table.id);
-                      }
+                      if (entry) selectTable(entry.table.id);
                     }}
                   >
                     <strong>{config.number}</strong>
                     <span className="kiju-waiter-room-table__kind">{tableTypeLabel}</span>
-                    <small>{entry ? statusLabel[entry.status] ?? "Status" : "Kurzbon erstellen"}</small>
+                    <small>{entry ? statusLabel[entry.status] ?? "Status" : "Status"}</small>
                   </button>
                 );
                 })}
               </div>
             </div>
-            <div className="kiju-waiter-room-number-picker" role="group" aria-label="Schnellauswahl der Tische 1 bis 12">
+            <div className="kiju-waiter-room-number-picker" role="group" aria-label="Schnellauswahl der Tische und Abholbons">
               {waiterRoomTableConfigs.map((config) => {
-                const entry = config.tableId
-                  ? waiterMenuEntries.find((item) => item.table.id === config.tableId)
-                  : undefined;
-                const isPickup = config.kind === "pickup";
+                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
                 const isSelected = entry?.table.id === selectedTableId;
 
                 return (
@@ -3044,16 +3050,30 @@ export const WaiterWorkspace = () => {
                     }`}
                     aria-label={`${config.title} auswählen`}
                     aria-pressed={isSelected}
-                    disabled={!isPickup && !entry}
-                    onClick={() => {
-                      if (isPickup) {
-                        void handleCreatePickupTable();
-                      } else if (entry) {
-                        selectTable(entry.table.id);
-                      }
-                    }}
+                    disabled={!entry}
+                    onClick={() => entry && selectTable(entry.table.id)}
                   >
                     {config.number}
+                  </button>
+                );
+              })}
+              {pickupMenuEntries.map((entry) => {
+                const rawNumber = entry.table.id.match(/table-(\d+)/i)?.[1] ?? entry.table.name.match(/(\d+)/)?.[1];
+                const number = rawNumber ? Number(rawNumber) : null;
+                const isSelected = entry.table.id === selectedTableId;
+
+                return (
+                  <button
+                    key={`quick-pickup-${entry.table.id}`}
+                    type="button"
+                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--pickup${
+                      isSelected ? " is-selected" : ""
+                    }`}
+                    aria-label={`Abholbon ${number ?? entry.table.name} für ${entry.table.pickupName?.trim() || "Abholung"} auswählen`}
+                    aria-pressed={isSelected}
+                    onClick={() => selectTable(entry.table.id)}
+                  >
+                    {number ?? entry.table.name}
                   </button>
                 );
               })}
@@ -3067,7 +3087,7 @@ export const WaiterWorkspace = () => {
                 <button
                   type="button"
                   className="kiju-button kiju-button--primary"
-                  onClick={() => void handleCreatePickupTable()}
+                  onClick={openPickupNameDialog}
                 >
                   <ShoppingBag size={18} />
                   Abholbon erstellen
@@ -3218,7 +3238,11 @@ export const WaiterWorkspace = () => {
             <div className="kiju-table-action-dialog" tabIndex={-1}>
               <div>
                 <span className="kiju-eyebrow">Tisch ausgewählt</span>
-                <h2 id="kiju-table-action-title">{selectedTable.name}</h2>
+                <h2 id="kiju-table-action-title">
+                  {selectedTable.pickupName?.trim()
+                    ? `${selectedTable.name} · ${selectedTable.pickupName.trim()}`
+                    : selectedTable.name}
+                </h2>
                 <p>
                   {linkedTableGroup
                     ? `Gekoppelt: ${linkedTableGroup.label}`
@@ -4123,6 +4147,58 @@ export const WaiterWorkspace = () => {
                 </button>
               </div>
             </div>
+          </section>
+        ) : null}
+
+        {isPickupNameDialogOpen ? (
+          <section
+            className="kiju-service-section kiju-order-wizard-overlay kiju-pickup-name-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kiju-pickup-name-title"
+          >
+            <form
+              className="kiju-pickup-name-dialog"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (pickupNameDraft.trim()) void handleCreatePickupTable(pickupNameDraft);
+              }}
+            >
+              <div>
+                <span className="kiju-eyebrow">Abholung</span>
+                <h2 id="kiju-pickup-name-title">Abholbon erstellen</h2>
+                <p>Wie heißt die Person, die die Bestellung abholt?</p>
+              </div>
+              <label className="kiju-pickup-name-field" htmlFor="kiju-pickup-name">
+                <span>Name der abholenden Person</span>
+                <input
+                  id="kiju-pickup-name"
+                  name="pickup-name"
+                  type="text"
+                  value={pickupNameDraft}
+                  maxLength={60}
+                  autoComplete="name"
+                  required
+                  onChange={(event) => setPickupNameDraft(event.target.value)}
+                />
+              </label>
+              <div className="kiju-pickup-name-dialog__actions">
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={() => setIsPickupNameDialogOpen(false)}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="submit"
+                  className="kiju-button kiju-button--primary"
+                  disabled={!pickupNameDraft.trim()}
+                >
+                  Abholbon erstellen
+                </button>
+              </div>
+            </form>
           </section>
         ) : null}
       </main>

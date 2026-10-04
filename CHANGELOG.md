@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.9.21-beta
+- Datum: 2026-09-27
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Tischwahl, Abholbons und Bestellschritte lassen sich auf dem Handy leichter bedienen und besser lesen.
+- Änderungen:
+  Tischflächen und Nummernauswahl sind für die Bedienung per Fingertipp ausgelegt. Abholbons erhalten dynamisch fortlaufende Nummern ab 12 statt einer festen Tischnummer.
+  Mobile Küchenhinweise verdecken die Tischflächen und Nummernauswahl nicht mehr.
+  Vor dem Erstellen eines Abholbons wird der Name der abholenden Person erfasst, am Abholtisch gespeichert und auf dem Kurzbon mitgedruckt.
+  Tischaktionen, Kategorieauswahl und Unterkategorien nutzen den Handybildschirm kompakter und scrollen ohne abgeschnittene Inhalte. Schließen führt zurück zu den Tischaktionen, Zurück geht eine Auswahlstufe zurück.
+  Das helle Design ist die Voreinstellung auf Geräten ohne gespeicherte Theme-Wahl; eine bewusst gespeicherte Dunkel-Einstellung bleibt bestehen. Umrandungen und Fokusmarkierungen sind kontrastreicher.
+
+## 0.9.20-beta
+- Datum: 2026-09-27
+- Uhrzeit: laufend
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die Küchenansicht nutzt die gesamte Bildschirmbreite und zeigt den Auftragsstatus klar und einmalig an.
+- Änderungen:
+  Die Küchenwand füllt PC-, Tablet- und Handybildschirme ohne feste Maximalbreite.
+  Der Status eines Bons wird nur einmal angezeigt und erhält gut lesbare, farblich eindeutige Kennzeichnungen.
+  Die Arbeitsplatzzeile mit der Bezeichnung „KiJu Pass“ wurde aus den Bons entfernt.
+
 ## 0.9.19-beta
 - Datum: 2026-09-18
 - Uhrzeit: laufend

@@ -41,13 +41,6 @@ const ticketStatusLabels = {
   completed: "Fertig"
 } as const;
 
-const ticketStatusShortLabels = {
-  blocked: "Gesperrt",
-  countdown: "Warten",
-  ready: "Frei",
-  completed: "Fertig"
-} as const;
-
 const ticketStatusRank: Record<keyof typeof ticketStatusLabels, number> = {
   ready: 0,
   countdown: 1,
@@ -110,7 +103,6 @@ type PassTicket = {
 
 type PassStationConfig = {
   allowedRoles: Role[];
-  workspaceLabel: string;
   adminSwitchHref: string;
   adminSwitchLabel: string;
   showWaitControls: boolean;
@@ -120,7 +112,6 @@ type PassStationConfig = {
 const passStationConfig: Record<PassStation, PassStationConfig> = {
   kitchen: {
     allowedRoles: ["kitchen", "admin"],
-    workspaceLabel: "KiJu Pass",
     adminSwitchHref: routeConfig.bar,
     adminSwitchLabel: "Zur Bar",
     showWaitControls: true,
@@ -128,7 +119,6 @@ const passStationConfig: Record<PassStation, PassStationConfig> = {
   },
   bar: {
     allowedRoles: ["bar", "admin"],
-    workspaceLabel: "KiJu Bar",
     adminSwitchHref: routeConfig.kitchen,
     adminSwitchLabel: "Zur Küche",
     showWaitControls: false,
@@ -484,8 +474,6 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
     const canMarkCompleted = ticket.status === "ready";
     const canReleaseWait = config.showWaitControls && ticket.status === "countdown";
     const canToggleKitchenUnits = station === "kitchen" && ticket.status === "ready";
-    const stateBadge = ticketStatusShortLabels[ticket.status];
-
     return (
       <article key={ticket.id} className={`kiju-pass-ticket is-${ticket.status}`}>
         <header className="kiju-pass-ticket__header">
@@ -507,8 +495,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             <small>Bedienung: {ticket.bedienung}</small>
           </div>
           <div className={`kiju-pass-ticket__state is-${ticket.status}`}>
-            <strong>{stateBadge}</strong>
-            <span>{ticketStatusLabels[ticket.status]}</span>
+            <strong>{ticketStatusLabels[ticket.status]}</strong>
           </div>
         </div>
 
@@ -601,8 +588,6 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
 
         <footer className="kiju-pass-ticket__footer">
           <div className="kiju-pass-ticket__footer-copy">
-            <span>Arbeitsplatz</span>
-            <strong>{config.workspaceLabel}</strong>
             <small>
               {ticket.tableName} ·{" "}
               {station === "kitchen" ? formatKitchenCount(ticket.itemCount) : `${ticket.itemCount} Posten`}

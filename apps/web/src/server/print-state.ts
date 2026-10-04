@@ -274,6 +274,7 @@ const createPickupTicketJob = (request: Extract<CreatePrintJobRequest, { type: "
   const document = buildPickupTicketPrintDocument({
     tableLabel,
     pickupNumber,
+    pickupName: request.pickupName,
     createdAt: request.createdAt
   });
 
@@ -282,7 +283,7 @@ const createPickupTicketJob = (request: Extract<CreatePrintJobRequest, { type: "
     type: "pickup-ticket" as const,
     status: "pending" as const,
     title: "Abholbon drucken",
-    subtitle: `${tableLabel} · Bon ${pickupNumber}`,
+    subtitle: `${tableLabel} · ${request.pickupName?.trim() ? `${request.pickupName.trim()} · ` : ""}Bon ${pickupNumber}`,
     tableId: request.tableId,
     tableLabel,
     sequence: pickupNumber,

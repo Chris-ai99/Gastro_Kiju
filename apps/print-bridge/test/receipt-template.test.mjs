@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildKitchenTicketPrintDocument,
+  buildPickupTicketPrintDocument,
   buildPipaReceiptDocument,
   buildPipaReceiptText,
   buildReceiptPrintDocument
@@ -49,6 +50,27 @@ test("buildPipaReceiptText erzeugt den erwarteten PiPa-Beispielbon", () => {
     "            Zionsgemeinde Haus Amos             ",
     "        Paracelsusweg 8, 33689 Bielefeld        "
   ]);
+});
+
+test("Abholbon druckt die fortlaufende Nummer und den Pflichtnamen", () => {
+  const document = buildPickupTicketPrintDocument({
+    tableLabel: "Zum Abholen 12",
+    pickupNumber: 12,
+    pickupName: "Mila Schuster",
+    createdAt: "2026-09-27T18:45:00.000Z"
+  });
+  const lines = document.lines.map((line) => line.text);
+
+  assert.ok(lines.some((line) => line.includes("NUMMER 12")));
+  assert.ok(lines.includes("ABHOLNAME:"));
+  assert.ok(lines.includes("  Mila Schuster"));
+  assert.ok(lines.includes("BON   : Zum Abholen 12"));
+
+  const legacyDocument = buildPickupTicketPrintDocument({
+    tableLabel: "Zum Abholen 11",
+    pickupNumber: 11
+  });
+  assert.ok(!legacyDocument.lines.some((line) => line.text === "ABHOLNAME:"));
 });
 
 test("BEDIENUNG wird sauber weggelassen, wenn kein Wert vorhanden ist", () => {

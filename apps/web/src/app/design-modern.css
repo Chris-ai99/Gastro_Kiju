@@ -7,7 +7,7 @@ html[data-design="modern"] {
   --ready-green: #167f5f;
   --slate: #172033;
   --muted: #5f6b7a;
-  --line: #d7dee8;
+  --line: #aebdcb;
   --surface: rgba(255, 255, 255, 0.94);
   --surface-strong: #ffffff;
   --shadow-card: 0 10px 28px rgba(23, 32, 51, 0.1);
@@ -51,6 +51,17 @@ html[data-design="modern"] .kiju-page {
   margin: 0 auto;
   padding: 4.9rem clamp(0.9rem, 2vw, 1.6rem) 1.4rem;
   gap: 1rem;
+}
+
+html[data-design="modern"] .kiju-kitchen-wallboard {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0.35rem;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.4rem;
 }
 
 html[data-design="modern"] .kiju-login-shell {
@@ -532,6 +543,36 @@ html[data-design="modern"] .kiju-kitchen-summary-table__row,
 html[data-design="modern"] .kiju-kitchen-archived-ticket,
 html[data-design="modern"] .kiju-kitchen-refresh-indicator {
   border-radius: 8px;
+}
+
+html[data-design="modern"]:not([data-theme="dark"]) :is(
+  .kiju-card,
+  .kiju-inline-panel,
+  .kiju-order-wizard-stat,
+  .kiju-course-choice,
+  .kiju-pill,
+  .kiju-category-group-choice,
+  .kiju-table-action-summary > div,
+  .kiju-table-action-choice,
+  .kiju-product-card,
+  .kiju-waiter-room-map__canvas,
+  .kiju-waiter-room-number-picker__button,
+  .kiju-button--secondary,
+  .kiju-pickup-name-field input
+) {
+  border-color: var(--line);
+}
+
+html[data-design="modern"]:not([data-theme="dark"]) :is(
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [tabindex]
+):focus-visible {
+  outline: 3px solid rgba(36, 82, 122, 0.72);
+  outline-offset: 2px;
 }
 
 @media (max-width: 1100px) {
