@@ -25,6 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Serverzugang sicher vorbereiten
         env:
           KIJU_DEPLOY_SSH_KEY: ${{ secrets.KIJU_DEPLOY_SSH_KEY }}

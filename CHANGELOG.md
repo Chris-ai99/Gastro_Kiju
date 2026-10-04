@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.09-beta
+- Datum: 2026-10-04
+- Uhrzeit: 19:25 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der manuelle GitHub-Actions-Deploy kann das Quellarchiv wieder aus dem Repository erstellen.
+- Änderungen:
+  Der Workflow checkt den ausgewählten Commit vor dem Erstellen des Quellarchivs aus.
+  Die Checkout-Aktion speichert keine GitHub-Zugangsdaten im Arbeitsverzeichnis.
+
 ## 0.12.08-beta
 - Datum: 2026-10-04
 - Uhrzeit: 18:49 +02:00
