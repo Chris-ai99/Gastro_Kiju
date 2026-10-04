@@ -1,0 +1,16 @@
+[Unit]
+Description=KiJu Gastro API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/Gastro_Kiju/Gastro_Kiju/Gastro_Kiju
+EnvironmentFile=/etc/gastro-kiju/api.env
+ExecStart=/usr/bin/node apps/api/dist/main.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

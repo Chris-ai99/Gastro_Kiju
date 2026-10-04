@@ -7,137 +7,83 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id          String         @id @default(cuid())
-  name        String
-  username    String         @unique
-  role        Role
-  password    String
-  pin         String?
-  active      Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  sessions    OrderSession[]
-  auditEvents AuditEvent[]
+model OperationalState {
+  id        String   @id
+  version   Int      @default(1)
+  state     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model DiningTable {
-  id           String         @id @default(cuid())
-  name         String
-  seatCount    Int
-  active       Boolean        @default(true)
-  plannedOnly  Boolean        @default(false)
-  x            Float
-  y            Float
-  width        Float
-  height       Float
-  note         String?
-  seats        Seat[]
-  sessions     OrderSession[]
+model TransactionRecord {
+  id             String   @id @default(cuid())
+  transactionId  String   @unique
+  deviceId       String
+  actorId        String?
+  kind           String
+  payloadHash    String
+  operation      Json
+  confirmation   Json
+  stateVersion   Int
+  savedAt        DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([deviceId, createdAt])
+  @@index([kind, createdAt])
 }
 
-model Seat {
-  id          String        @id @default(cuid())
-  label       String
-  tableId     String
-  table       DiningTable   @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
+model TransmissionAttempt {
+  id            String    @id @default(cuid())
+  transactionId String
+  deviceId      String
+  actorId       String?
+  kind          String
+  attemptNumber Int
+  status        String
+  response      Json?
+  error         String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  @@index([transactionId, createdAt])
+  @@index([status, createdAt])
 }
 
-model Product {
-  id               String          @id @default(cuid())
-  name             String
-  category         CourseKey
-  description      String
-  priceCents       Int
-  taxRate          Float
-  showInKitchen    Boolean         @default(true)
-  productionTarget ProductionTarget
-  allergens        String[]
-  orderItems       OrderItem[]
+model UndoCheckpoint {
+  id            String    @id @default(cuid())
+  kind          String
+  transactionId String    @unique
+  actorId       String?
+  state         Json
+  stateVersion  Int
+  createdAt     DateTime  @default(now())
+  usedAt        DateTime?
+
+  @@index([kind, createdAt])
 }
 
-model OrderSession {
-  id            String        @id @default(cuid())
-  tableId       String
-  waiterId      String
-  status        SessionStatus
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  receiptPrintedAt DateTime?
-  receiptClosedAt  DateTime?
-  table         DiningTable   @relation(fields: [tableId], references: [id])
-  waiter        User          @relation(fields: [waiterId], references: [id])
-  items         OrderItem[]
-  payments      Payment[]
+model PrinterConfig {
+  id        String   @id
+  version   Int      @default(1)
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model OrderItem {
-  id           String       @id @default(cuid())
-  sessionId    String
-  seatId       String
-  productId    String
-  category     CourseKey
-  quantity     Int
-  note         String?
-  sentAt       DateTime?
-  preparedAt   DateTime?
-  servedAt     DateTime?
-  session      OrderSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  seat         Seat         @relation(fields: [seatId], references: [id])
-  product      Product      @relation(fields: [productId], references: [id])
-}
+model PrintJob {
+  id            String    @id
+  transactionId String
+  requestHash   String
+  request       Json
+  status        String    @default("pending")
+  attemptCount  Int       @default(0)
+  lastAttemptAt DateTime?
+  printedAt     DateTime?
+  failedAt      DateTime?
+  error         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-model Payment {
-  id          String        @id @default(cuid())
-  sessionId   String
-  label       String
-  amountCents Int
-  method      PaymentMethod
-  createdAt   DateTime      @default(now())
-  session     OrderSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-}
-
-model AuditEvent {
-  id         String   @id @default(cuid())
-  actorId     String
-  message     String
-  tableRef    String?
-  createdAt   DateTime @default(now())
-  actor       User     @relation(fields: [actorId], references: [id])
-}
-
-enum Role {
-  admin
-  waiter
-  kitchen
-  bar
-}
-
-enum CourseKey {
-  drinks
-  starter
-  main
-  dessert
-}
-
-enum SessionStatus {
-  planned
-  idle
-  serving
-  waiting
-  ready_to_bill
-  closed
-}
-
-enum PaymentMethod {
-  cash
-  card
-  voucher
-}
-
-enum ProductionTarget {
-  service
-  bar
-  kitchen
+  @@unique([transactionId, requestHash])
+  @@index([status, createdAt])
 }

@@ -200,7 +200,10 @@ export const getOpenTotalForTables = (state: AppState, tableIds: string[]) =>
   }, 0);
 
 export const calculateGuestCount = (session?: OrderSession) =>
-  session ? new Set(session.items.map(getOrderTargetKey)).size : 0;
+  session
+    ? session.selfOrder?.guestCount ??
+      new Set(session.items.map(getOrderTargetKey)).size
+    : 0;
 
 export const buildKitchenSummary = (
   session: OrderSession | undefined,

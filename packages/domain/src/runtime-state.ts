@@ -10,11 +10,14 @@ import type {
   OrderSession,
   OrderTarget,
   Product,
+  SelfOrderSessionData,
   UserAccount
 } from "./types";
 import { demoProducts, demoTables } from "./demo-data";
 
-const SYSTEM_CATALOG_VERSION = 1;
+const SYSTEM_CATALOG_VERSION = 3;
+const PASTA_VARIANT_CATALOG_VERSION = 2;
+const migratedPastaProductIds = new Set(["main-pasta-pesto", "main-pasta-tomato"]);
 const protectedSystemUserIds = new Set(["user-kitchen", "user-bar"]);
 const drinkSubcategoryFallback = "Sonstiges";
 const EXTRA_INGREDIENTS_MODIFIER_GROUP_ID = "extra-ingredients";
@@ -217,6 +220,8 @@ const normalizeProduct = (
   extraIngredients: ExtraIngredient[],
   productIdsWithSelectedExtraIngredients: Set<string>
 ): Product => {
+  const isAlwaysServiceBooked =
+    product.category === "dessert" || product.id === "starter-greeting";
   const supportsExtraIngredients =
     product.supportsExtraIngredients === true ||
     supportsPizzaExtraIngredients(product) ||
@@ -252,6 +257,12 @@ const normalizeProduct = (
 
   return {
     ...normalizedBaseProduct,
+    ...(isAlwaysServiceBooked
+      ? {
+          showInKitchen: false,
+          productionTarget: "service" as const
+        }
+      : {}),
     modifierGroups: shouldAttachExtraIngredientsGroup
       ? [...modifierGroups, createExtraIngredientsModifierGroup(extraIngredients)]
       : modifierGroups,
@@ -421,6 +432,7 @@ const mergeSeededProducts = (
   products: AppState["products"],
   sessions: AppState["sessions"],
   forceCanonicalSeed: boolean,
+  migratePastaVariants: boolean,
   deletedProductIds: Set<string>
 ) => {
   const canonicalProductIds = new Set(demoProducts.map((product) => product.id));
@@ -433,14 +445,27 @@ const mergeSeededProducts = (
   return [
     ...demoProducts
       .filter((seededProduct) => !deletedProductIds.has(seededProduct.id))
-      .map((seededProduct) =>
-      forceCanonicalSeed
-        ? structuredClone(seededProduct)
-        : {
-            ...structuredClone(seededProduct),
-            ...structuredClone(existingById.get(seededProduct.id) ?? {})
-          }
-      ),
+      .map((seededProduct) => {
+        if (forceCanonicalSeed) {
+          return structuredClone(seededProduct);
+        }
+
+        const mergedProduct = {
+          ...structuredClone(seededProduct),
+          ...structuredClone(existingById.get(seededProduct.id) ?? {})
+        };
+
+        if (migratePastaVariants && migratedPastaProductIds.has(seededProduct.id)) {
+          return {
+            ...mergedProduct,
+            name: seededProduct.name,
+            description: seededProduct.description,
+            allergens: structuredClone(seededProduct.allergens)
+          };
+        }
+
+        return mergedProduct;
+      }),
     ...products
       .filter((product) => {
         if (deletedProductIds.has(product.id)) {
@@ -666,12 +691,25 @@ const normalizeSessions = (sessions: AppState["sessions"]) =>
       })),
       kitchenTicketBatches: createLegacyKitchenTicketBatches(legacySession, normalizedItems),
       barTicketBatches: barTicketBatches ?? [],
+      selfOrder: legacySession.selfOrder
+        ? {
+            ...legacySession.selfOrder,
+            guestCount: Math.max(1, Math.min(20, Math.round(legacySession.selfOrder.guestCount))),
+            paymentCallStatus:
+              legacySession.selfOrder.paymentCallStatus === "requested" ||
+              legacySession.selfOrder.paymentCallStatus === "accepted"
+                ? legacySession.selfOrder.paymentCallStatus
+                : ("idle" as SelfOrderSessionData["paymentCallStatus"])
+          }
+        : undefined,
       partyGroups: partyGroups ?? []
     };
   });
 
 export const normalizeOperationalState = (state: AppState): AppState => {
-  const forceCanonicalSeed = (state.catalogVersion ?? 0) < SYSTEM_CATALOG_VERSION;
+  const currentCatalogVersion = state.catalogVersion ?? 0;
+  const forceCanonicalSeed = currentCatalogVersion < 1;
+  const migratePastaVariants = currentCatalogVersion < PASTA_VARIANT_CATALOG_VERSION;
   const deletedTableIds = [
     ...new Set((state.deletedTableIds ?? []).map((tableId) => tableId.trim()).filter(Boolean))
   ];
@@ -711,6 +749,7 @@ export const normalizeOperationalState = (state: AppState): AppState => {
     state.products,
     normalizedSessions,
     forceCanonicalSeed,
+    migratePastaVariants,
     deletedProductIdSet
   );
   const extraIngredients = normalizeExtraIngredients(
@@ -726,6 +765,13 @@ export const normalizeOperationalState = (state: AppState): AppState => {
     catalogVersion: SYSTEM_CATALOG_VERSION,
     serviceOrderMode: state.serviceOrderMode === "seat" ? "seat" : "table",
     designMode: state.designMode === "classic" ? "classic" : "modern",
+    selfOrderLocations: (state.selfOrderLocations ?? [])
+      .map((location, index) => ({
+        ...location,
+        sortOrder: Number.isFinite(location.sortOrder) ? Math.round(location.sortOrder) : index,
+        active: location.active !== false
+      }))
+      .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "de")),
     linkedTableGroups: (state.linkedTableGroups ?? []).filter(
       (group) =>
         group.active &&
@@ -752,6 +798,7 @@ export const createDefaultOperationalState = (): AppState =>
   normalizeOperationalState({
     serviceOrderMode: "table",
     designMode: "modern",
+    selfOrderLocations: [],
     linkedTableGroups: [],
     deletedTableIds: [],
     deletedUserIds: [],

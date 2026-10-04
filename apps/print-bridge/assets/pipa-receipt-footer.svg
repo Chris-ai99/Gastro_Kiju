@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="72" viewBox="0 0 512 72">
+  <rect width="512" height="72" fill="white"/>
+  <g fill="black">
+    <path d="M28 8c-14 0-25 11-25 25 0 18 25 36 25 36s25-18 25-36C53 19 42 8 28 8zm0 16a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"/>
+    <text x="70" y="29" font-family="'Courier New', monospace" font-size="22">Zionsgemeinde Haus Amos</text>
+    <text x="70" y="56" font-family="'Courier New', monospace" font-size="22">Paracelsusweg 8, 33689 Bielefeld</text>
+  </g>
+</svg>

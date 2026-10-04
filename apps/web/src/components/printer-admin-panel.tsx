@@ -114,8 +114,10 @@ export const PrinterAdminPanel = () => {
     void refreshOverview();
 
     const timer = window.setInterval(() => {
-      void refreshOverview();
-    }, 5000);
+      if (document.visibilityState === "visible") {
+        void refreshOverview();
+      }
+    }, 30000);
 
     return () => window.clearInterval(timer);
   }, [isDraftDirty]);

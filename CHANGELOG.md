@@ -1,114 +1,384 @@
 # Changelog
 
-## 0.9.21-beta
-- Datum: 2026-09-27
-- Uhrzeit: laufend
+## 0.11.11-beta
+- Datum: 2026-10-04
+- Uhrzeit: 15:08 +02:00
 - Typ: Verbesserung
 - Zusammenfassung:
-  Tischwahl, Abholbons und Bestellschritte lassen sich auf dem Handy leichter bedienen und besser lesen.
+  Die Service-Bedienung und Küchenansicht sind auf Mobilgeräten klarer und leichter zu bedienen.
 - Änderungen:
-  Tischflächen und Nummernauswahl sind für die Bedienung per Fingertipp ausgelegt. Abholbons erhalten dynamisch fortlaufende Nummern ab 12 statt einer festen Tischnummer.
-  Mobile Küchenhinweise verdecken die Tischflächen und Nummernauswahl nicht mehr.
-  Vor dem Erstellen eines Abholbons wird der Name der abholenden Person erfasst, am Abholtisch gespeichert und auf dem Kurzbon mitgedruckt.
-  Tischaktionen, Kategorieauswahl und Unterkategorien nutzen den Handybildschirm kompakter und scrollen ohne abgeschnittene Inhalte. Schließen führt zurück zu den Tischaktionen, Zurück geht eine Auswahlstufe zurück.
-  Das helle Design ist die Voreinstellung auf Geräten ohne gespeicherte Theme-Wahl; eine bewusst gespeicherte Dunkel-Einstellung bleibt bestehen. Umrandungen und Fokusmarkierungen sind kontrastreicher.
+  Mobile Bestellfenster nutzen den verfügbaren Bildschirm und lassen sich bei Bedarf vollständig scrollen.
+  Die Küchenansicht nutzt die gesamte Bildschirmbreite und zeigt den Bonstatus nur einmal.
+  Küchenbons kennzeichnen die zuständige Bedienung eindeutig.
+  Ohne gespeicherte Theme-Wahl startet die Oberfläche im hellen Design; gespeicherte Einstellungen bleiben erhalten.
 
-## 0.9.20-beta
-- Datum: 2026-09-27
-- Uhrzeit: laufend
-- Typ: Verbesserung
-- Zusammenfassung:
-  Die Küchenansicht nutzt die gesamte Bildschirmbreite und zeigt den Auftragsstatus klar und einmalig an.
-- Änderungen:
-  Die Küchenwand füllt PC-, Tablet- und Handybildschirme ohne feste Maximalbreite.
-  Der Status eines Bons wird nur einmal angezeigt und erhält gut lesbare, farblich eindeutige Kennzeichnungen.
-  Die Arbeitsplatzzeile mit der Bezeichnung „KiJu Pass“ wurde aus den Bons entfernt.
-
-## 0.9.19-beta
-- Datum: 2026-09-18
-- Uhrzeit: laufend
-- Typ: Verbesserung
-- Zusammenfassung:
-  Die Tischauswahl verwendet jetzt ausschließlich feste Nummernkacheln nebeneinander.
-- Änderungen:
-  Das ausklappbare Tisch-Auswahlfeld und die doppelte Tischanzahl unter dem Grundriss wurden entfernt.
-  Die Nummernkacheln 1 bis 12 bleiben direkt unter der Grundrissansicht sichtbar; Abholbon und Tischkopplung bleiben als separate Aktionen verfügbar.
-
-## 0.9.18-beta
-- Datum: 2026-09-18
-- Uhrzeit: laufend
-- Typ: Verbesserung / Fix
-- Zusammenfassung:
-  Die Sitzplanansicht nutzt jetzt die volle 16:9-Fläche und bietet zusätzlich eine kompakte Nummernauswahl.
-- Änderungen:
-  Die weiße Außenfläche der Grundrissgrafik wurde auf einen schmalen technischen Rand reduziert.
-  Die Tischflächen wurden verkleinert und an die Ausrichtung des Sitzplans angepasst; die Rundtische 10 und 11 bleiben kreisförmig.
-  Tisch 5 und Tisch 6 haben jetzt einen klaren Abstand zueinander.
-  Unter dem Grundriss stehen die auswählbaren Nummern 1 bis 12 als schlanke Schnellansicht zur Verfügung.
-
-## 0.9.17-beta
-- Datum: 2026-09-18
-- Uhrzeit: laufend
+## 0.11.10-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:28 +02:00
 - Typ: Fix
 - Zusammenfassung:
-  Die Tischflächen sitzen jetzt direkt auf den entsprechenden Bereichen des neuen Grundrisses.
+  Der Service-Kopf zeigt alte wartende Login-Übertragungen nicht mehr als große Warnung oben rechts.
 - Änderungen:
-  Die Overlay-Größen und -Positionen wurden an die ODP-Koordinaten angepasst, damit sie keine benachbarten Raumlinien mehr überdecken.
-  Die Reihenfolge von Tisch 1 und Tisch 2 sowie die Anordnung der Tische 7 bis 9 entsprechen jetzt dem Sitzplan.
-  Die Trefferflächen der Biertische wurden zusätzlich voneinander und vom Rundtischbereich getrennt.
+  Die Status-Pille oben rechts wertet reine wartende Übertragungen nicht mehr als Warnung.
+  Bei aktivem gemeinsamen Zustand wird Geräte-Sync aktiv angezeigt, auch wenn harmlose lokale Einträge noch bereinigt werden.
+  Nur echte fehlgeschlagene Einträge bleiben als kleine Prüfungsmeldung sichtbar.
 
-## 0.9.16-beta
-- Datum: 2026-09-18
-- Uhrzeit: laufend
+## 0.11.09-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:21 +02:00
 - Typ: Fix
 - Zusammenfassung:
-  Die dynamischen Tischflächen sind wieder an der tatsächlichen ODP-Raumstruktur ausgerichtet.
+  Harmlose zuletzt-gesehen-Updates aus der lokalen Gerätewarteschlange werden automatisch entfernt, damit keine dauerhafte Übertragungsleiste auf allen Geräten stehen bleibt.
 - Änderungen:
-  Tisch 1 und Tisch 2 verwenden jetzt die korrekte vertikale Reihenfolge.
-  Die Positionen von Tischen 3 bis 12 wurden an die begradigte 16:9-Grundrissgrafik angepasst.
+  Fehlgeschlagene oder alte reine lastSeenAt-Updates aus dem Geräte-Login werden beim Laden der App verworfen.
+  Bestellungen, Zahlungen, Druckjobs und andere fachliche Transaktionen bleiben weiterhin in der sicheren Warteschlange geschützt.
+  Der Erneut-senden-Knopf räumt diese harmlosen Präsenz-Einträge ebenfalls auf, bevor echte offene Vorgänge erneut gesendet werden.
 
-## 0.9.15-beta
-- Datum: 2026-09-18
-- Uhrzeit: 19:05:13 +02:00
-- Typ: Verbesserung
-- Zusammenfassung:
-  Der Sitzplan verwendet jetzt eine klare 16:9-Grundrissgrafik ohne fest eingebrannte Tische.
-- Änderungen:
-  Die ODP-Raumstruktur wurde als schlichte, begradigte PNG-Grundlage für die Gastro-Software exportiert.
-  Die Kellner-Ansicht verwendet die neue Grafik; dynamische Tisch-Schaltflächen bleiben als interaktive Oberfläche erhalten.
-
-## 0.9.14-beta
-- Datum: 2026-09-17
-- Uhrzeit: laufend
-- Typ: Verbesserung
-- Zusammenfassung:
-  Der interaktive Raumplan orientiert sich jetzt stärker am tatsächlichen Gebäude und Außenbereich.
-- Änderungen:
-  Die Grundgrafik zeigt den gepflasterten Hof, die Begrünung, Eingänge und Treppen sowie die vorhandene Raumstruktur klarer.
-  Innen- und Außentische greifen die fotografisch erkennbare Holzoptik, rote Polster und rot-weiß karierten Tischdecken auf.
-  Die Grafik bleibt frei von eingebrannten Tischtexten; Nummern, Status und Klickflächen kommen weiterhin aktuell aus der Oberfläche.
-
-## 0.9.13-beta
-- Datum: 2026-09-17
-- Uhrzeit: laufend
-- Typ: Verbesserung
-- Zusammenfassung:
-  Die Kellner-Ansicht zeigt kein großes Raumplan-Bild und keine separate Tischübersicht mehr.
-- Änderungen:
-  Das große Raumplan-Bild wurde aus dem Kellner-Arbeitsbereich entfernt.
-  Die separate Tischübersicht wurde durch eine kompakte Tisch-Auswahl ersetzt.
-  Bestellen, Abrechnen, Abholbons und das Koppeln von Tischen bleiben erreichbar.
-
-## 0.9.12-beta
-- Datum: 2026-09-17
-- Uhrzeit: laufend
+## 0.11.08-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:12 +02:00
 - Typ: Fix
 - Zusammenfassung:
-  Der Tagesreset löscht die festen Küchen- und Getränke-Systemkonten nicht mehr.
+  Die lokale Nginx-Auslieferung verhindert jetzt gecachte App-Seiten, damit Geräte nach einem Neustart sofort den aktuellen Stand laden.
 - Änderungen:
-  Der Tagesreset entfernt weiterhin tagesabhängige Service-Konten, lässt das feste Küchen- und Getränke-Konto aber erhalten.
-  Bereits durch einen früheren Reset als gelöscht markierte Küchen- und Getränke-Konten werden automatisch wiederhergestellt.
-  Die Verwaltung verhindert zusätzlich das manuelle Löschen dieser beiden festen Systemkonten.
+  HTML-Seiten und API-Antworten werden am lokalen Server mit no-store ausgeliefert.
+  Next-Static-Dateien bleiben weiterhin langfristig cachebar, damit die App schnell lädt.
+  Alte Tabs können nach einem Deploy durch Schließen und erneutes Öffnen zuverlässig den neuen Stand laden.
+
+## 0.11.07-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Ein geschlossener Browser-Sync-Kanal wird beim Neuladen oder Bereichswechsel nicht mehr erneut angesprochen.
+- Änderungen:
+  Der lokale Broadcast-Kanal wird nach dem Schließen sauber zurückgesetzt.
+  Falls ein Gerät während eines Bereichswechsels noch einen Sync sendet, wird der Fehler abgefangen statt die Oberfläche zu stören.
+
+## 0.11.06-beta
+- Datum: 2026-06-14
+- Uhrzeit: 19:00 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die interne Oberfläche fragt Live-Daten seltener und kontrollierter ab, damit Handys und schwächere Geräte nicht mehr beim Laden einfrieren.
+- Änderungen:
+  Der Live-Sync läuft nicht mehr jede Sekunde, sondern in einem ruhigeren 5-Sekunden-Takt.
+  Überlappende State-Abfragen werden übersprungen, damit Geräte keine Anfrage-Stapel aufbauen.
+  Ausgeblendete Browser-Tabs pausieren den Live-Sync, bis sie wieder sichtbar sind.
+  Die Admin-Druckübersicht lädt deutlich seltener und liefert nur aktive sowie die letzten abgeschlossenen Druckjobs aus.
+
+## 0.11.05-beta
+- Datum: 2026-06-14
+- Uhrzeit: 18:09 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Hinweis auf wartende Übertragungen verdeckt die Arbeitsoberfläche nicht mehr und erscheint als sehr kleine Statusleiste am unteren Bildschirmrand.
+- Änderungen:
+  Der Übertragungshinweis wurde vom Bildschirmzentrum an den unteren Rand verschoben.
+  Schrift, Symbole, Abstände und Schaltfläche wurden deutlich verkleinert.
+  Der lange Erklärungstext entfällt; die Funktion Erneut senden bleibt direkt verfügbar.
+
+## 0.11.04-beta
+- Datum: 2026-06-14
+- Uhrzeit: 18:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die Anmeldung im lokalen WLAN wird nicht mehr von falschen Meldungen wie Server nicht erreichbar oder Übertragung fehlgeschlagen überlagert.
+- Änderungen:
+  Auf der Loginseite erscheint kein Verbindungsbanner mehr, solange niemand angemeldet ist.
+  Ein nicht erreichbarer Sync ohne offene Vorgänge wird nicht mehr als roter Fehler dargestellt.
+  Echte offene Übertragungen werden neutral als wartende Vorgänge angezeigt, während die Software weiter nutzbar bleibt.
+  Die Service-Statusanzeige verwendet Lokal verfügbar statt Server nicht erreichbar und vermeidet die Formulierung fehlgeschlagen.
+
+## 0.11.03-beta
+- Datum: 2026-06-14
+- Uhrzeit: 17:38 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Service muss beim manuellen Abholbon jetzt Kundenname und Ort angeben, bevor der Abholtisch und der Druckauftrag entstehen.
+- Änderungen:
+  Der Service-Bildschirm zeigt beim Abholbon-Erstellen ein Pflichtformular für Name und Ort.
+  Leere oder zu kurze Angaben verhindern das Anlegen des Abholtisches und zeigen eine verständliche Meldung.
+  Name und Ort werden im Tisch-Hinweis gespeichert, in der Service-Tischliste angezeigt und an den Abholbon-Druckauftrag übergeben.
+
+## 0.11.02-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:43 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der PiPa-Kassenbon druckt den Grafik-Kopf jetzt nicht mehr gedreht und nutzt druckrobuste Symbole für Pizza, Pilze und Besteck.
+- Änderungen:
+  Der Kassenbon deaktiviert den ESC/POS-Drehmodus, damit Logo-Text und Bontext richtig herum ausgegeben werden.
+  Pizza, Pilze und Besteck wurden als einfache, dicke Schwarz-Weiß-Formen neu gezeichnet.
+  Die Rastergrafik wird neu erzeugt und bleibt weiterhin exakt 512 Punkte breit.
+  Ein automatisierter Test stellt sicher, dass Kassenbons nicht mehr mit dem Drehkommando `ESC { 1` beginnen.
+  Andere Bonarten behalten ihren bisherigen Druckmodus unverändert.
+
+## 0.11.01-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:40 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  QR-Codes können jetzt fest auf eine öffentliche HTTPS-Bestelldomain für Cloudflare Tunnel zeigen, damit Gäste auch ohne Restaurant-WLAN bestellen können.
+- Änderungen:
+  Der Admin nutzt `NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL` für QR-Vorschau, SVG-Download und Druckvorlage.
+  Ohne konfigurierte öffentliche Adresse zeigt der Admin einen deutlichen Hinweis, dass sonst nur die aktuelle Browseradresse gedruckt wird.
+  Die öffentliche Bestelldomain ist per Middleware auf Gastbestellung, Self-Order-API und notwendige Assets begrenzt.
+  `.env.example`, README, Produktdokumentation und `infra/cloudflared/config.example.yml` beschreiben den Cloudflare-Tunnel-Betrieb ohne Portfreigabe.
+
+## 0.11.00-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:18 +02:00
+- Typ: Funktion
+- Zusammenfassung:
+  Gäste können über ortsgebundene QR-Codes selbst bestellen, nachbestellen, ihren Abholstatus verfolgen und den Service zum Bezahlen rufen.
+- Änderungen:
+  Der Admin kann Selbstbestell-Orte anlegen, benennen, sortieren, aktivieren, deaktivieren, löschen und mit erneuerbaren QR-Schlüsseln absichern.
+  Für jeden Ort stehen QR-Vorschau, SVG-Download und eine druckfertige A4-Vorlage bereit.
+  Die öffentliche mobile Bestellseite zeigt das vollständige Sortiment mit Preisen, Varianten, Extras, Mengen, Hinweisen und Warenkorb.
+  Erstbestellungen erzeugen sicher und idempotent eine Abholnummer, einen Abholtisch, Küchen- und Barbatches sowie einen Abholbon.
+  Nachbestellungen laufen unter derselben privaten Bestellung und werden als neue Küchen- beziehungsweise Barbatches gesendet.
+  Kunden sehen einen einfachen Gesamtstatus von „Bestellung eingegangen“ bis „Abgeschlossen“ und können den Service zum Bezahlen rufen.
+  Service, Küche, Bar und Abholbon zeigen Kundenname, Personenzahl und den festgelegten Ort.
+  Öffentliche Endpunkte liefern keine internen Benutzer- oder Betriebsdaten und schützen Schreibvorgänge durch Zugriffstoken, Idempotenz und IP-Begrenzung.
+  Automatisierte Tests sichern Modifierprüfung, Nachbestellungssequenzen, Status, Personenzählung, API-Schutz und Bonmetadaten ab.
+
+## 0.10.17-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:15 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Kassenbon bildet die gelieferte PiPa-Vorlage jetzt mit einem hochauflösenden Schwarz-Weiß-Grafikkopf, Herz und Standort-Pin ab.
+- Änderungen:
+  Der Kopf wird als 512-Punkt-Raster mit Pizza-, Besteck- und Pasta-Symbolen gedruckt.
+  BISTRO, PiPa, Pizza & Pasta und KASSENBON sind Bestandteil der Grafik und nicht mehr von Druckerschriften abhängig.
+  Das Herz sowie Standort-Pin und Anschrift werden ebenfalls als scharfe Rastergrafiken ausgegeben.
+  API, lokaler Druck und Browser-Vorschau verwenden dieselben gespeicherten Bilddaten.
+  Automatisierte Tests prüfen Bildmaße, Rasterbytezahl und das Epson-ESC/POS-Grafikkommando.
+
+## 0.10.16-beta
+- Datum: 2026-06-13
+- Uhrzeit: 23:01 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Kassenbon ist wieder exakt auf die 42 Zeichen des Epson-Druckers abgestimmt und folgt dem gewünschten PiPa-Aufbau.
+- Änderungen:
+  Die Druckbreite wurde von unpassenden 48 Zeichen auf die tatsächlichen 42 Zeichen zurückgestellt.
+  PiPa und KASSENBON werden als kurze, zentrierte Großschrift-Zeilen ohne Randüberlauf gedruckt.
+  Bonnummer, Datum, Bedienung und Tisch stehen übersichtlich mit rechtsbündigen Werten.
+  Die Spalten Artikel, Menge und Betrag sind für 80-mm-Papier neu ausgerichtet.
+  Die Summe wird groß gedruckt und nutzt exakt die verfügbare Breite der doppelten Schrift.
+  Hinweistext und Anschrift entsprechen dem Aufbau der gelieferten Bildvorlage.
+
+## 0.10.15-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:48 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Kassenbons nutzen wieder die passende Druckbreite und führen Stornos direkt beim zugehörigen Artikel auf.
+- Änderungen:
+  Der Kassenbon ist wieder auf die vorgesehene Breite von 48 Zeichen abgestimmt.
+  Jedes Storno wird direkt unter dem zugehörigen Artikel und vor dem nächsten Artikel gedruckt.
+  Die Gesamtsumme berücksichtigt stornierte Mengen korrekt.
+  Überschriften und Summen werden wieder sauber ausgerichtet.
+  Ein automatisierter Regressionstest sichert Reihenfolge, Breite und Summenbildung ab.
+
+## 0.10.14-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:35 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Mehrfach bestellte Speisen werden in der Abrechnung einzeln aufgeführt; Küchenpass und Auswahlleiste sind im Dunkelmodus wieder klar lesbar.
+- Änderungen:
+  Jede offene Portion erscheint als eigene Checkbox-Zeile mit ihrem Einzelpreis.
+  Drei gemeinsam bestellte Pizza Margherita werden als drei getrennte Abrechnungspositionen dargestellt.
+  Ausgewählte Einzelportionen werden für Zahlung und Rechnungsstorno weiterhin korrekt zur ursprünglichen Bestellung zusammengefasst.
+  Der Küchenpass erhält im Dunkelmodus einen dunklen amberfarbenen Hintergrund und kontrastreiche Texte.
+  Die Auswahlleiste der Abrechnung erhält im Dunkelmodus eine dunkle Fläche mit gut lesbaren Haupt- und Nebentexten.
+  Automatisierte Tests sichern die Aufteilung einer Mehrfachmenge in einzelne Abrechnungszeilen ab.
+
+## 0.10.13-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:29 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Abgeschlossene Bons laufender Bestellungen lassen sich aus „Alte Bons“ wieder in die aktive Küchenansicht zurückholen.
+- Änderungen:
+  Die Aktion heißt eindeutig „Zurückholen“ und wird auch bei bereits als serviert markierten Bons angeboten.
+  Nach dem Zurückholen schließt sich die Altbon-Liste und der Bon erscheint sofort wieder in der aktiven Übersicht.
+  Alle nicht stornierten Küchenportionen des Bons werden erneut auf „Offen“ gesetzt.
+  Vorherige Fertig- und Serviert-Markierungen sowie die zugehörigen Servicehinweise werden entfernt.
+  Bereits abgerechnete Bestellungen bleiben gesperrt und können nicht nachträglich verändert werden.
+  Ein automatisierter Test sichert das Zurücksetzen mehrerer Portionen und den Ausschluss von Serviceartikeln ab.
+
+## 0.10.12-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:26 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Beim Fertigstellen eines vollständigen Küchenbons mit dem grünen Doppelhaken werden jetzt alle noch offenen Portionen gedruckt.
+- Änderungen:
+  Für jede offene Portion wird ein eigener Tellerbon erzeugt.
+  Bereits einzeln fertiggestellte und gedruckte Portionen werden nicht doppelt gedruckt.
+  Stornierte Positionen sowie Nachtisch und „Gruß aus der Küche“ bleiben vom Druck ausgeschlossen.
+  Die Statusänderung und alle Tellerbon-Druckaufträge werden gemeinsam sicher übertragen.
+  Ein automatisierter Test prüft die Auswahl offener, fertiger und stornierter Portionen.
+
+## 0.10.11-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:22 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Nachtisch und „Gruß aus der Küche“ bleiben vollständig gebucht und abrechenbar, werden aber weder auf dem Küchenmonitor noch im Bondruck ausgegeben.
+- Änderungen:
+  Alle Nachtisch-Positionen werden unabhängig von einer älteren Produktkonfiguration direkt als Servicebuchung behandelt.
+  „Gruß aus der Küche“ wird ebenfalls fest dem Service zugeordnet.
+  Diese Positionen werden beim Senden nicht in Küchenbons übernommen und lösen beim Abhaken keinen Tellerbon aus.
+  Bereits vorhandene alte Küchenbon-Einträge dieser Artikel werden auf dem Küchenmonitor ausgeblendet.
+  In der Produktpflege ist das Produktionsziel für Nachtisch und „Gruß aus der Küche“ fest auf „Service“ gesetzt.
+  Automatisierte Tests sichern Versandfilter und Migration bestehender Produktdaten ab.
+
+## 0.10.10-beta
+- Datum: 2026-06-13
+- Uhrzeit: 22:14 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die Übertragungsanzeige bleibt im Normalbetrieb verborgen und erscheint nur noch bei echten Verbindungsfehlern.
+- Änderungen:
+  Der grüne Hinweis „Mit Server verbunden · vollständig bestätigt“ wird nicht mehr angezeigt.
+  Auch normale laufende oder wartende Übertragungen blenden kein dauerhaftes Banner mehr ein.
+  Bei einem Server- oder Übertragungsfehler erscheint die rote Meldung mittig im sichtbaren Bereich.
+  Die Fehleranzeige behält den erklärenden Text und die Schaltfläche „Erneut senden“.
+
+## 0.10.09-beta
+- Datum: 2026-06-12
+- Uhrzeit: 22:09 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Tellerbons und Küchenansicht zeigen Bedienung und Wartezeit jetzt deutlich und eskalieren lange Wartezeiten farblich.
+- Änderungen:
+  Der Abholbon enthält jetzt ebenfalls den Namen der Bedienung.
+  Der Tellerbon druckt Tisch, Bedienung und Speise in großer Schrift sowie die verstrichene Wartezeit seit dem Absenden.
+  Der Hinweis „Zum Teller kleben“ wurde vom Tellerbon entfernt.
+  Die Küchenansicht zeigt auf jedem aktiven Bon eine sekundengenaue Wartezeit.
+  Ab 15 Minuten wird der Bon gelb, ab 20 Minuten rot und ab 25 Minuten rot blinkend dargestellt.
+  Beide Netzwerkdruckpfade unterstützen echte ESC/POS-Schriftgrößen; die Bonvorschau bildet diese Größen ebenfalls ab.
+  Automatisierte Tests prüfen Bedienung, Wartezeit, entfernten Klebehinweis und die ESC/POS-Größenbefehle.
+
+## 0.10.08-beta
+- Datum: 2026-06-12
+- Uhrzeit: 22:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Speisen erzeugen beim Absenden an die Küche keinen Druckauftrag mehr.
+- Änderungen:
+  Der versehentlich wieder aktive Küchenbon-Druck beim Versand einer Bestellung wurde entfernt.
+  Das Absenden überträgt Speisen weiterhin vollständig an die Küchenansicht, ohne Papier auszugeben.
+  Ein Tellerbon wird ausschließlich gedruckt, wenn eine einzelne Portion in der Küche als fertig abgehakt wird.
+  Der bestehende Druckpfad `kitchen-label` beim Statuswechsel auf „Fertig“ bleibt unverändert erhalten.
+
+## 0.10.07-beta
+- Datum: 2026-06-12
+- Uhrzeit: 22:01 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Extras fallen auf Küchentickets jetzt durch eine eigene orange-rote Darstellung sofort auf.
+- Änderungen:
+  Extra-Zutaten werden als deutliches Badge mit der Kennzeichnung „Extra“ angezeigt.
+  Orangefarbener Hintergrund, roter Text und kräftige Umrandung trennen Extras klar von Produkt und Sitzplatz.
+  Der Dunkelmodus verwendet eine entsprechend kontrastreiche orange-rote Variante.
+  Normale Bestellhinweise behalten ihre separate grüne Darstellung.
+
+## 0.10.06-beta
+- Datum: 2026-06-12
+- Uhrzeit: 21:57 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Küchenansicht und Küchenbon zeigen den Namen der bestellenden Person jetzt eindeutig an.
+- Änderungen:
+  Jede Ticketkarte hebt die sendende Person gut sichtbar mit „Bestellt von“ hervor.
+  Erstbestellungen und Nachbestellungen verwenden weiterhin den jeweils beim Senden gespeicherten Namen.
+  Der Küchenbon druckt den Namen eindeutig in der Zeile `BESTELLT: Name`.
+  Ein automatisierter Test bestätigt, dass der Bestellername auf dem Küchenbon enthalten ist.
+
+## 0.10.05-beta
+- Datum: 2026-06-12
+- Uhrzeit: 21:49 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Netzwerkdrucker geben Bons jetzt um 180° gedreht aus.
+- Änderungen:
+  Der ESC/POS-Druck aktiviert vor jedem Dokument den vom Epson TM-T70II unterstützten Kopfübermodus.
+  Nach dem Dokument wird die Drehung vor Papiervorschub und Schnitt wieder deaktiviert.
+  Der bisherige Web-Druckpfad und die neue API verwenden dieselbe gedrehte Ausgabe.
+  Ein automatisierter Drucktest prüft die Befehle zum Aktivieren und Zurücksetzen der Drehung.
+
+## 0.10.04-beta
+- Datum: 2026-06-10
+- Uhrzeit: 22:20 +02:00
+- Typ: Sicherheit
+- Zusammenfassung:
+  Kritische Vorgänge werden Ende zu Ende bestätigt und dauerhaft in PostgreSQL gespeichert.
+- Änderungen:
+  Die NestJS-API verarbeitet typisierte Operationen idempotent in serialisierbaren Datenbanktransaktionen.
+  Zustand, Transaktionsprotokoll, Rückgängig-Punkte und Druckaufträge werden atomar gespeichert.
+  Eine IndexedDB-Warteschlange hält offene Vorgänge über Neustarts hinweg und wiederholt temporäre Fehler automatisch.
+  Versand, Zahlung, Storno, Abschluss und Druckdialoge melden Erfolg erst nach der passenden Serverbestätigung.
+  Eine zentrale grün-gelb-rote Anzeige zeigt bestätigte, wartende und fehlgeschlagene Übertragungen mit erneuter Sendemöglichkeit.
+  Das Legacy-Importskript sichert vorhandene JSON-Dateien und übernimmt sie ausschließlich in eine leere Datenbank.
+  PostgreSQL-Migrationen, separater API-Dienst und Produktivkonfiguration sind vorbereitet; ein Deployment wurde nicht ausgeführt.
+
+## 0.10.03-beta
+- Datum: 2026-06-10
+- Uhrzeit: 21:13 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Brot und Dessert werden direkt im Service gebucht und benötigen keine Bestätigung durch Küche oder Bar.
+- Änderungen:
+  Pizza Brot mit Aioli sowie alle vorhandenen Dessertartikel sind als Selbstentnahme durch den Service hinterlegt.
+  Artikel mit dem Produktionsziel Service werden von „Alles senden“, Küchenbons, Bar-Bons und Wartezeiten ausgeschlossen.
+  Die Bestellübersicht kennzeichnet diese Positionen eindeutig als „Im Service gebucht“.
+
+## 0.10.02-beta
+- Datum: 2026-06-10
+- Uhrzeit: 21:11 +02:00
+- Typ: Inhalt
+- Zusammenfassung:
+  Die Pasta-Auswahl umfasst jetzt vier direkt bestellbare Varianten mit Penne oder Tagliatelle.
+- Änderungen:
+  Penne mit grüner Pesto und Penne mit Tomatensauce ersetzen die beiden bisherigen allgemeinen Nudelgerichte.
+  Tagliatelle mit grüner Pesto und Tagliatelle mit Tomatensauce wurden neu ergänzt.
+  Alle vier Varianten werden im Service weiterhin in der Gruppe Pasta angezeigt.
+  Bereits gespeicherte Stammdaten werden einmalig aktualisiert, ohne bestehende Produkt-IDs oder Bestellungen zu verändern.
+
+## 0.10.01-beta
+- Datum: 2026-06-10
+- Uhrzeit: 20:29 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Service erhält eine zentrale Bestellübersicht mit gemeinsamer Versandfunktion für alle offenen Positionen eines Tisches.
+- Änderungen:
+  Getränke, Vorspeisen, Hauptspeisen und Nachtische werden mit Anzahl, Zwischensumme und Versandstatus fest gruppiert angezeigt.
+  Einzelne Positionen zeigen Menge, Produkt, Tisch oder Sitzplatz, Preis, Extras und Notizen.
+  Die Bearbeitung öffnet den vorhandenen Kategorieabschluss und führt anschließend zurück zur Bestellübersicht.
+  „Alles senden“ bestätigt die offenen Mengen je Gang und sendet Getränke an die Bar sowie Speisen in getrennten Gang-Batches an die Küche.
+  Wartezeiten bleiben wirksam; bereits gesendete und stornierte Positionen werden nicht erneut versendet.
+  Gesamtbetrag, Gesamtanzahl und offene Positionen sind auf Desktop und Mobilgeräten kompakt sichtbar.
+
+## 0.10.00-beta
+- Datum: 2026-06-10
+- Uhrzeit: 19:10:31 +02:00
+- Typ: Sicherheit
+- Zusammenfassung:
+  Betriebsdaten werden atomar gespeichert, automatisch gesichert und im Produktivbetrieb außerhalb des Programmordners abgelegt.
+- Änderungen:
+  Bestellungen und Einstellungen erhalten bis zu 50 rotierende serverseitige Sicherungen.
+  Beschädigte oder gelöschte Zustandsdateien werden automatisch aus der jüngsten gültigen Sicherung wiederhergestellt.
+  Sind Hauptdatei und Sicherungen ungültig, wird kein leerer Stand mehr über die vorhandenen Daten geschrieben.
+  Bei fehlenden Schreibrechten oder vollem Datenträger meldet der Server einen Speicherfehler und übernimmt keinen ungesicherten Stand.
+  Das Deployment migriert Live-Daten nach `/var/lib/gastroweb`, damit sie eine Neuinstallation des Programmordners überstehen.
+  Druckkonfiguration und Druckwarteschlange verwenden ebenfalls absturzsichere Schreibvorgänge.
+  Die Betriebs- und Wiederherstellungsanleitung steht in `docs/product/datensicherung.md`.
 
 ## 0.9.11-beta
 - Datum: 2026-05-14

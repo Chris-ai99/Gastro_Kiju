@@ -7,9 +7,23 @@ import { HealthController } from "./health.controller";
 import { KitchenModule } from "./kitchen/kitchen.module";
 import { EventsGateway } from "./realtime/events.gateway";
 import { SharedStateModule } from "./shared-state/shared-state.module";
+import { PrismaModule } from "./prisma/prisma.module";
+import { PrintModule } from "./print/print.module";
+import { TransactionsModule } from "./transactions/transactions.module";
+import { SelfOrderModule } from "./self-order/self-order.module";
 
 @Module({
-  imports: [AuthModule, DashboardModule, KitchenModule, AdminModule, SharedStateModule],
+  imports: [
+    PrismaModule,
+    PrintModule,
+    AuthModule,
+    DashboardModule,
+    KitchenModule,
+    AdminModule,
+    SharedStateModule,
+    TransactionsModule,
+    SelfOrderModule
+  ],
   controllers: [HealthController],
   providers: [EventsGateway]
 })

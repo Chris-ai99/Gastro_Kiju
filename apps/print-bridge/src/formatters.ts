@@ -1,6 +1,7 @@
 import {
   calculateItemTotal,
   calculateLineItemsTotal,
+  calculateCanceledItemQuantity,
   calculateOpenItemQuantity,
   calculateSessionBillableTotal,
   calculateSessionCanceledTotal,
@@ -18,11 +19,17 @@ import {
   type ThermalPrintLine
 } from "@kiju/domain";
 
+import {
+  PIPA_RECEIPT_FOOTER_BITMAP,
+  PIPA_RECEIPT_HEADER_BITMAP,
+  PIPA_RECEIPT_HEART_BITMAP
+} from "./generated/receipt-brand-raster";
+
 const THERMAL_LINE_WIDTH = 42;
-const RECEIPT_ARTICLE_WIDTH = 24;
-const RECEIPT_QUANTITY_WIDTH = 4;
+const LARGE_THERMAL_LINE_WIDTH = Math.floor(THERMAL_LINE_WIDTH / 2);
+const RECEIPT_ARTICLE_WIDTH = 23;
+const RECEIPT_QUANTITY_WIDTH = 5;
 const RECEIPT_AMOUNT_WIDTH = 12;
-const RECEIPT_SUMMARY_LABEL_WIDTH = 29;
 const SEPARATOR = "-".repeat(THERMAL_LINE_WIDTH);
 const STRONG_SEPARATOR = "=".repeat(THERMAL_LINE_WIDTH);
 const DEFAULT_CANCELLATION_LABEL = "Rechnungsstorno";
@@ -79,7 +86,10 @@ export type BuildReceiptDocumentFromSessionsInput = {
 export type BuildPickupTicketDocumentInput = {
   tableLabel: string;
   pickupNumber: number;
-  pickupName?: string;
+  bedienung?: string;
+  customerName?: string;
+  guestCount?: number;
+  locationName?: string;
   createdAt?: string;
 };
 
@@ -115,12 +125,6 @@ const courseLabels: Record<KitchenTicketBatch["course"], string> = {
   starter: "Vorspeise",
   main: "Hauptspeise",
   dessert: "Nachtisch"
-};
-
-const receiptModeLabels: Record<ReceiptDocumentMode, string> = {
-  full: "GESAMTBON",
-  table: "TISCH-BON",
-  partial: "TEIL-BON"
 };
 
 const receiptDocumentTitles: Record<ReceiptDocumentMode, string> = {
@@ -193,10 +197,18 @@ const wrapText = (value: string, width: number) => {
 const centerLine = (value: string) => {
   const normalized = normalizeText(value);
   if (!normalized) {
-    return "";
+    return " ".repeat(THERMAL_LINE_WIDTH);
   }
 
-  return normalized.length > THERMAL_LINE_WIDTH ? normalized.slice(0, THERMAL_LINE_WIDTH) : normalized;
+  const fitted =
+    normalized.length > THERMAL_LINE_WIDTH
+      ? normalized.slice(0, THERMAL_LINE_WIDTH)
+      : normalized;
+  const leftPadding = Math.floor((THERMAL_LINE_WIDTH - fitted.length) / 2);
+
+  return fitted
+    .padStart(fitted.length + leftPadding, " ")
+    .padEnd(THERMAL_LINE_WIDTH, " ");
 };
 
 const formatEuroCents = (valueCents: number) => {
@@ -333,22 +345,24 @@ const buildCancellationPositionName = (
 };
 
 const buildReceiptInfoLines = (input: ReceiptDocumentInput): ThermalPrintLine[] => {
-  const infoLabelWidth = 10;
+  const infoLabelWidth = 11;
+  const buildInfoLine = (label: string, value: string): ThermalPrintLine => ({
+    text: `${fitLeft(label, infoLabelWidth)}${fitRight(
+      sanitizeReceiptValue(value),
+      THERMAL_LINE_WIDTH - infoLabelWidth
+    )}`
+  });
   const lines: ThermalPrintLine[] = [
-    { text: `${fitLeft("BON NR.", infoLabelWidth)} ${sanitizeReceiptValue(input.bonNummer)}` },
-    { text: `${fitLeft("DATUM", infoLabelWidth)} ${sanitizeReceiptValue(input.datum)}` }
+    buildInfoLine("Bon Nr.:", input.bonNummer),
+    buildInfoLine("Datum:", input.datum)
   ];
 
-  if (normalizeText(input.tableLabel ?? "")) {
-    lines.push({
-      text: `${fitLeft("TISCH", infoLabelWidth)} ${sanitizeReceiptValue(input.tableLabel ?? "")}`
-    });
+  if (normalizeText(input.bedienung ?? "")) {
+    lines.push(buildInfoLine("Bedienung:", input.bedienung ?? ""));
   }
 
-  if (normalizeText(input.bedienung ?? "")) {
-    lines.push({
-      text: `${fitLeft("BEDIENUNG", infoLabelWidth)} ${sanitizeReceiptValue(input.bedienung ?? "")}`
-    });
+  if (normalizeText(input.tableLabel ?? "")) {
+    lines.push(buildInfoLine("Tisch:", input.tableLabel ?? ""));
   }
 
   return lines;
@@ -413,32 +427,39 @@ const buildReceiptDocumentFromInput = (input: ReceiptDocumentInput): ThermalPrin
   return {
     title: receiptDocumentTitles[input.mode],
     width: THERMAL_LINE_WIDTH,
+    upsideDown: false,
     lines: [
-      { text: centerLine("PiPa Bistro"), emphasis: true, align: "center" },
-      { text: centerLine("Pizza & Pasta"), align: "center" },
-      { text: SEPARATOR },
-      { text: centerLine("KASSENBON"), emphasis: true, align: "center" },
-      { text: centerLine(receiptModeLabels[input.mode]), align: "center" },
-      { text: SEPARATOR },
+      {
+        text: "",
+        align: "center",
+        bitmap: PIPA_RECEIPT_HEADER_BITMAP
+      },
       ...buildReceiptInfoLines(input),
       { text: SEPARATOR },
       {
-        text: `${fitLeft("ARTIKEL", RECEIPT_ARTICLE_WIDTH)} ${fitLeft("MNG", RECEIPT_QUANTITY_WIDTH)} ${fitRight("BETRAG", RECEIPT_AMOUNT_WIDTH)}`,
+        text: `${fitLeft("ARTIKEL", RECEIPT_ARTICLE_WIDTH)} ${fitLeft("MENGE", RECEIPT_QUANTITY_WIDTH)} ${fitRight("BETRAG", RECEIPT_AMOUNT_WIDTH)}`,
         emphasis: true
       },
       { text: SEPARATOR },
       ...sectionLines,
-      { text: STRONG_SEPARATOR },
+      { text: SEPARATOR },
       {
-        text: `${fitLeft("SUMME", RECEIPT_SUMMARY_LABEL_WIDTH)} ${fitRight(
+        text: `${fitLeft("SUMME", 10)}${fitRight(
           formatEuroCents(input.gesamt),
-          RECEIPT_AMOUNT_WIDTH
+          LARGE_THERMAL_LINE_WIDTH - 10
         )}`,
-        emphasis: true
+        emphasis: true,
+        size: "large"
       },
-      { text: STRONG_SEPARATOR },
+      { text: SEPARATOR },
       { text: "" },
       { text: centerLine("Vielen Dank für deinen Besuch!"), align: "center" },
+      {
+        text: "",
+        align: "center",
+        bitmap: PIPA_RECEIPT_HEART_BITMAP
+      },
+      { text: SEPARATOR },
       {
         text: centerLine("Dieser Beleg dient nur der Orientierung"),
         align: "center"
@@ -447,9 +468,13 @@ const buildReceiptDocumentFromInput = (input: ReceiptDocumentInput): ThermalPrin
         text: centerLine("und ist kein offizielles Dokument."),
         align: "center"
       },
-      { text: "" },
-      { text: centerLine("Zionsgemeinde Haus Amos"), align: "center" },
-      { text: centerLine("Paracelsusweg 8, 33689 Bielefeld"), align: "center" }
+      { text: centerLine("Keine steuerliche Absetzbarkeit."), align: "center" },
+      { text: SEPARATOR },
+      {
+        text: "",
+        align: "center",
+        bitmap: PIPA_RECEIPT_FOOTER_BITMAP
+      }
     ]
   };
 };
@@ -465,14 +490,51 @@ export const buildPipaReceiptDocument = (input: PipaReceiptInput): ThermalPrintD
   });
 
 export const buildPipaReceiptText = (input: PipaReceiptInput) =>
-  buildPipaReceiptDocument(input).lines.map((line) => line.text).join("\n");
+  buildPipaReceiptDocument(input)
+    .lines.map((line) => (line.bitmap ? `[Grafik: ${line.bitmap.alt}]` : line.text))
+    .join("\n");
 
 const buildFullSessionPositions = (session: OrderSession, products: Product[]) => {
-  return session.items.map((item) => ({
-    name: buildSessionPositionName(item, products),
-    menge: item.quantity,
-    betrag: calculateItemTotal(item, products)
-  }));
+  return session.items.flatMap((item) => {
+    const positions: PipaReceiptPosition[] = [
+      {
+        name: buildSessionPositionName(item, products),
+        menge: item.quantity,
+        betrag: calculateItemTotal(item, products)
+      }
+    ];
+    let remainingCanceledQuantity = calculateCanceledItemQuantity(session, item.id);
+    if (remainingCanceledQuantity <= 0 || item.quantity <= 0) {
+      return positions;
+    }
+
+    const unitAmount = Math.round(calculateItemTotal(item, products) / item.quantity);
+    session.cancellations.forEach((cancellation) => {
+      if (remainingCanceledQuantity <= 0) return;
+
+      const requestedQuantity = cancellation.lineItems
+        .filter((lineItem) => lineItem.itemId === item.id)
+        .reduce(
+          (sum, lineItem) =>
+            sum +
+            (Number.isFinite(lineItem.quantity)
+              ? Math.max(0, Math.floor(lineItem.quantity))
+              : 0),
+          0
+        );
+      const canceledQuantity = Math.min(remainingCanceledQuantity, requestedQuantity);
+      if (canceledQuantity <= 0) return;
+
+      positions.push({
+        name: buildCancellationPositionName(item, products, cancellation.label),
+        menge: canceledQuantity,
+        betrag: -(unitAmount * canceledQuantity)
+      });
+      remainingCanceledQuantity -= canceledQuantity;
+    });
+
+    return positions;
+  });
 };
 
 const aggregateSelectedLineItems = (lineItems: PaymentLineItem[] | undefined) => {
@@ -566,7 +628,7 @@ export const buildReceiptDocumentFromSessions = ({
           0
         )
       : activeSessions.reduce(
-          (sum, session) => sum + calculateSessionTotal(session, products),
+          (sum, session) => sum + calculateSessionBillableTotal(session, products),
           0
         );
   const singleSession = activeSessions.length === 1 ? activeSessions[0] : undefined;
@@ -610,7 +672,10 @@ export function buildReceiptPrintDocument(
 export const buildPickupTicketPrintDocument = ({
   tableLabel,
   pickupNumber,
-  pickupName,
+  bedienung,
+  customerName,
+  guestCount,
+  locationName,
   createdAt = new Date().toISOString()
 }: BuildPickupTicketDocumentInput): ThermalPrintDocument => {
   const safePickupNumber = Math.max(
@@ -618,7 +683,13 @@ export const buildPickupTicketPrintDocument = ({
     Math.floor(Number.isFinite(pickupNumber) ? pickupNumber : 1)
   );
   const safeTableLabel = normalizeText(tableLabel) || `Zum Abholen ${safePickupNumber}`;
-  const safePickupName = normalizeText(pickupName ?? "");
+  const safeBedienung = sanitizeReceiptValue(bedienung ?? "Service");
+  const safeCustomerName = sanitizeReceiptValue(customerName ?? "");
+  const safeLocationName = sanitizeReceiptValue(locationName ?? "");
+  const safeGuestCount =
+    typeof guestCount === "number" && Number.isFinite(guestCount)
+      ? Math.max(1, Math.min(20, Math.round(guestCount)))
+      : undefined;
 
   return {
     title: "Abholbon",
@@ -627,15 +698,13 @@ export const buildPickupTicketPrintDocument = ({
       { text: centerLine("ABHOLBON"), emphasis: true, align: "center" },
       { text: centerLine("Zum Abholen"), align: "center" },
       { text: STRONG_SEPARATOR },
-      { text: centerLine(`NUMMER ${safePickupNumber}`), emphasis: true, align: "center" },
+      { text: `NUMMER ${safePickupNumber}`, emphasis: true, align: "center", size: "large" },
       { text: STRONG_SEPARATOR },
-      ...(safePickupName
-        ? [
-            { text: "ABHOLNAME:", emphasis: true },
-            ...wrapText(safePickupName, THERMAL_LINE_WIDTH - 2).map((text) => ({ text: `  ${text}` }))
-          ]
-        : []),
       { text: `BON   : ${safeTableLabel}` },
+      ...(safeCustomerName ? [{ text: `NAME  : ${safeCustomerName}`, emphasis: true }] : []),
+      ...(safeGuestCount ? [{ text: `PERSONEN: ${safeGuestCount}` }] : []),
+      ...(safeLocationName ? [{ text: `ORT   : ${safeLocationName}` }] : []),
+      { text: `BEDIENUNG: ${safeBedienung}`, emphasis: true },
       { text: `ZEIT  : ${formatDateTime(createdAt)}` },
       { text: SEPARATOR },
       { text: centerLine("Für Abholung bereitlegen"), align: "center" }
@@ -757,6 +826,24 @@ export const buildKitchenPlateLabelPrintDocument = ({
     ? wrapText(`Hinweis: ${item.note.trim()}`, THERMAL_LINE_WIDTH).map((text) => ({ text }))
     : [];
   const courseLabel = courseLabels[batch.course];
+  const bedienung = sanitizeReceiptValue(batch.bedienung ?? "Service");
+  const tableLabel = sanitizeReceiptValue(table.name || "Tisch");
+  const sentAt = new Date(batch.sentAt).getTime();
+  const completedAtTime = new Date(completedAt).getTime();
+  const elapsedSeconds =
+    Number.isFinite(sentAt) && Number.isFinite(completedAtTime)
+      ? Math.max(0, Math.floor((completedAtTime - sentAt) / 1000))
+      : 0;
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  const elapsedRemainder = elapsedSeconds % 60;
+  const waitLabel = `${elapsedMinutes}:${String(elapsedRemainder).padStart(2, "0")} Min`;
+  const buildLargeCenteredLines = (value: string): ThermalPrintLine[] =>
+    wrapText(value, LARGE_THERMAL_LINE_WIDTH).map((text) => ({
+      text,
+      emphasis: true,
+      align: "center",
+      size: "large"
+    }));
 
   return {
     title: "Tellerbon",
@@ -765,21 +852,18 @@ export const buildKitchenPlateLabelPrintDocument = ({
       { text: centerLine("TELLERBON"), emphasis: true, align: "center" },
       { text: centerLine(courseLabel), align: "center" },
       { text: SEPARATOR },
-      { text: `TISCH : ${table.name}`, emphasis: true },
+      ...buildLargeCenteredLines(tableLabel),
+      ...buildLargeCenteredLines(`BEDIENUNG ${bedienung}`),
       { text: `PLATZ : ${item ? resolveSeatLabel(table, item) : "Tisch"}` },
-      { text: `ZEIT  : ${formatDateTime(completedAt)}` },
+      { text: `WARTEZEIT: ${waitLabel}`, emphasis: true },
+      { text: `FERTIG: ${formatDateTime(completedAt)}` },
       { text: `BON   : ${batch.sequence === 1 ? "Erstsendung" : `Nachbestellung ${batch.sequence}`}` },
       { text: `PORT. : ${portionLabel}` },
       { text: SEPARATOR },
-      { text: "GERICHT:", emphasis: true },
-      ...wrapText(`1x ${productName}`, THERMAL_LINE_WIDTH).map((text, index) => ({
-        text,
-        emphasis: index === 0
-      })),
+      ...buildLargeCenteredLines(`1x ${productName}`),
       ...modifierLines,
       ...noteLines,
-      { text: SEPARATOR },
-      { text: centerLine("Zum Teller kleben"), align: "center" }
+      { text: SEPARATOR }
     ]
   };
 };

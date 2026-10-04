@@ -13,6 +13,7 @@ import {
   MonitorUp,
   PlusCircle,
   Printer,
+  QrCode,
   ReceiptText,
   RotateCcw,
   Save,
@@ -21,7 +22,12 @@ import {
   X
 } from "lucide-react";
 
-import { routeConfig } from "@kiju/config";
+import {
+  resolveAppUrl,
+  resolveSelfOrderPublicUrl,
+  routeConfig,
+  selfOrderPublicConfig
+} from "@kiju/config";
 import {
   buildClosedSessions,
   calculateGuestCount,
@@ -44,7 +50,7 @@ import { buildReceiptDocumentFromSessions } from "@kiju/print-bridge";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
 import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
-import { createPrintJob } from "../lib/print-client";
+import { isAlwaysServiceBookedProduct } from "../lib/order-overview";
 import { PrinterAdminPanel } from "./printer-admin-panel";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
@@ -71,125 +77,492 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
-    version: "0.9.21-beta",
-    date: "2026-09-27",
-    time: "laufend",
+    version: "0.11.11-beta",
+    date: "2026-10-04",
+    time: "15:08 +02:00",
     type: "Verbesserung",
-    title: "Mobiler Service mit klarer Tisch- und Abholauswahl",
+    title: "Küchen- und Serviceansicht für Mobilgeräte verbessert",
     summary:
-      "Tischwahl, Abholbons und Bestellschritte lassen sich auf dem Handy leichter bedienen und besser lesen.",
-    categories: ["Service", "Mobile", "Abholung", "Oberfläche"],
+      "Mobile Bestellfenster nutzen den Bildschirm besser aus; die Küchenansicht zeigt Status und Bedienung klarer.",
+    categories: ["Service", "Küche", "Mobil", "Oberfläche"],
     changes: [
-      "Tischflächen und Nummernauswahl sind für die Bedienung per Fingertipp ausgelegt; Abholbons erhalten fortlaufende Nummern ab 12.",
-      "Mobile Küchenhinweise bleiben im Seitenfluss und verdecken die Tischwahl nicht.",
-      "Vor dem Erstellen eines Abholbons wird der Name der abholenden Person erfasst, gespeichert und auf dem Kurzbon ausgegeben.",
-      "Tischaktionen, Kategorieauswahl und Unterkategorien nutzen den Handybildschirm kompakter; Schließen und Zurück führen zu unterschiedlichen Ansichten.",
-      "Das helle Design ist die Voreinstellung für Geräte ohne gespeicherte Theme-Wahl; vorhandene Einstellungen bleiben erhalten."
+      "Mobile Bestellfenster nutzen den verfügbaren Bildschirm und lassen sich bei Bedarf vollständig scrollen.",
+      "Die Küchenansicht nutzt die gesamte Bildschirmbreite und zeigt den Bonstatus nur einmal.",
+      "Küchenbons kennzeichnen die zuständige Bedienung eindeutig.",
+      "Ohne gespeicherte Theme-Wahl startet die Oberfläche im hellen Design; gespeicherte Einstellungen bleiben erhalten."
     ]
   },
   {
-    version: "0.9.20-beta",
-    date: "2026-09-27",
-    time: "laufend",
+    version: "0.11.10-beta",
+    date: "2026-06-14",
+    time: "19:28 +02:00",
+    type: "Fix",
+    title: "Service-Sync-Status ohne alte Pending-Zähler",
+    summary:
+      "Der Service-Kopf zeigt alte wartende Login-Übertragungen nicht mehr als große Warnung oben rechts.",
+    categories: ["Service", "Sync", "Oberfläche"],
+    changes: [
+      "Die Status-Pille oben rechts wertet reine wartende Übertragungen nicht mehr als Warnung.",
+      "Bei aktivem gemeinsamen Zustand wird Geräte-Sync aktiv angezeigt, auch wenn harmlose lokale Einträge noch bereinigt werden.",
+      "Nur echte fehlgeschlagene Einträge bleiben als kleine Prüfungsmeldung sichtbar."
+    ]
+  },
+  {
+    version: "0.11.09-beta",
+    date: "2026-06-14",
+    time: "19:21 +02:00",
+    type: "Fix",
+    title: "Alte Login-Warteschlange automatisch bereinigt",
+    summary:
+      "Harmlose zuletzt-gesehen-Updates aus der lokalen Gerätewarteschlange werden automatisch entfernt, damit keine dauerhafte Übertragungsleiste auf allen Geräten stehen bleibt.",
+    categories: ["Sync", "Login", "Stabilität"],
+    changes: [
+      "Fehlgeschlagene oder alte reine lastSeenAt-Updates aus dem Geräte-Login werden beim Laden der App verworfen.",
+      "Bestellungen, Zahlungen, Druckjobs und andere fachliche Transaktionen bleiben weiterhin in der sicheren Warteschlange geschützt.",
+      "Der Erneut-senden-Knopf räumt diese harmlosen Präsenz-Einträge ebenfalls auf, bevor echte offene Vorgänge erneut gesendet werden."
+    ]
+  },
+  {
+    version: "0.11.08-beta",
+    date: "2026-06-14",
+    time: "19:12 +02:00",
+    type: "Fix",
+    title: "Frische App-Seiten nach Deploys",
+    summary:
+      "Die lokale Nginx-Auslieferung verhindert jetzt gecachte App-Seiten, damit Geräte nach einem Neustart sofort den aktuellen Stand laden.",
+    categories: ["Deployment", "Cache", "Stabilität"],
+    changes: [
+      "HTML-Seiten und API-Antworten werden am lokalen Server mit no-store ausgeliefert.",
+      "Next-Static-Dateien bleiben weiterhin langfristig cachebar, damit die App schnell lädt.",
+      "Alte Tabs können nach einem Deploy durch Schließen und erneutes Öffnen zuverlässig den neuen Stand laden."
+    ]
+  },
+  {
+    version: "0.11.07-beta",
+    date: "2026-06-14",
+    time: "19:04 +02:00",
+    type: "Fix",
+    title: "Geräte-Sync beim Neuladen stabilisiert",
+    summary:
+      "Ein geschlossener Browser-Sync-Kanal wird beim Neuladen oder Bereichswechsel nicht mehr erneut angesprochen.",
+    categories: ["Stabilität", "Login", "Sync"],
+    changes: [
+      "Der lokale Broadcast-Kanal wird nach dem Schließen sauber zurückgesetzt.",
+      "Falls ein Gerät während eines Bereichswechsels noch einen Sync sendet, wird der Fehler abgefangen statt die Oberfläche zu stören."
+    ]
+  },
+  {
+    version: "0.11.06-beta",
+    date: "2026-06-14",
+    time: "19:00 +02:00",
+    type: "Fix",
+    title: "Notfall-Entlastung für Geräte-Login",
+    summary:
+      "Die interne Oberfläche fragt Live-Daten seltener und kontrollierter ab, damit Handys und schwächere Geräte nicht mehr beim Laden einfrieren.",
+    categories: ["Performance", "Login", "Sync", "Druck"],
+    changes: [
+      "Der Live-Sync läuft nicht mehr jede Sekunde, sondern in einem ruhigeren 5-Sekunden-Takt.",
+      "Überlappende State-Abfragen werden übersprungen, damit Geräte keine Anfrage-Stapel aufbauen.",
+      "Ausgeblendete Browser-Tabs pausieren den Live-Sync, bis sie wieder sichtbar sind.",
+      "Die Admin-Druckübersicht lädt deutlich seltener und liefert nur aktive sowie die letzten abgeschlossenen Druckjobs aus."
+    ]
+  },
+  {
+    version: "0.11.05-beta",
+    date: "2026-06-14",
+    time: "18:09 +02:00",
     type: "Verbesserung",
-    title: "Küchenansicht füllt den Bildschirm und Status ist klar lesbar",
+    title: "Übertragungshinweis kompakt am unteren Rand",
     summary:
-      "Die Küchenwand nutzt PC-, Tablet- und Handybildschirme besser aus und zeigt jeden Bonstatus nur einmal mit klarer Kennzeichnung.",
-    categories: ["Küche", "Mobile", "Oberfläche"],
+      "Der Hinweis auf wartende Übertragungen verdeckt die Arbeitsoberfläche nicht mehr und erscheint als sehr kleine Statusleiste am unteren Bildschirmrand.",
+    categories: ["Oberfläche", "Übertragung", "Mobil"],
     changes: [
-      "Die Küchenansicht nutzt die volle Bildschirmbreite ohne feste Maximalbreite.",
-      "Der Bonstatus erscheint nur einmal und ist durch kontrastreiche Farben gut zu erkennen.",
-      "Die zusätzliche Arbeitsplatzbezeichnung KiJu Pass wurde aus den Bonkarten entfernt."
+      "Der Übertragungshinweis wurde vom Bildschirmzentrum an den unteren Rand verschoben.",
+      "Schrift, Symbole, Abstände und Schaltfläche wurden deutlich verkleinert.",
+      "Der lange Erklärungstext entfällt; die Funktion Erneut senden bleibt direkt verfügbar."
     ]
   },
   {
-    version: "0.9.17-beta",
-    date: "2026-09-21",
-    time: "laufend",
+    version: "0.11.04-beta",
+    date: "2026-06-14",
+    time: "18:04 +02:00",
     type: "Fix",
-    title: "Küchen- und Bar-Status bleibt nach dem Senden synchron",
+    title: "Mobile Anmeldung ohne falschen Offline-Alarm",
     summary:
-      "Ein neuer Versand wird nicht mehr durch einen älteren gemeinsamen Gerätestand überschrieben.",
-    categories: ["Service", "Küche", "Bar", "Synchronisierung"],
+      "Die Anmeldung im lokalen WLAN wird nicht mehr von falschen Meldungen wie Server nicht erreichbar oder Übertragung fehlgeschlagen überlagert.",
+    categories: ["Login", "WLAN", "Mobil", "Übertragung"],
     changes: [
-      "Aufeinanderfolgende Änderungen werden beim gemeinsamen Speichern geordnet übertragen.",
-      "Während ein Versand noch gespeichert wird, kann ein älterer Poll-Stand die Statuskacheln nicht mehr zurücksetzen.",
-      "Die Anzeige bleibt nach dem Senden auf dem tatsächlichen Küchen- oder Bar-Status des aktuellen Auftrags."
+      "Auf der Loginseite erscheint kein Verbindungsbanner mehr, solange niemand angemeldet ist.",
+      "Ein nicht erreichbarer Sync ohne offene Vorgänge wird nicht mehr als roter Fehler dargestellt.",
+      "Echte offene Übertragungen werden neutral als wartende Vorgänge angezeigt, während die Software weiter nutzbar bleibt.",
+      "Die Service-Statusanzeige verwendet Lokal verfügbar statt Server nicht erreichbar und vermeidet die Formulierung fehlgeschlagen."
     ]
   },
   {
-    version: "0.9.16-beta",
-    date: "2026-09-21",
-    time: "laufend",
+    version: "0.11.03-beta",
+    date: "2026-06-14",
+    time: "17:38 +02:00",
     type: "Fix",
-    title: "Bedienungsname auf Küchenbons und Statuskacheln korrigiert",
+    title: "Pflichtdaten für manuelle Abholbons",
     summary:
-      "Der Name der Bedienung bleibt auch bei älteren Bestellungen erhalten und lange Statusmeldungen überdecken keine Kacheltexte mehr.",
-    categories: ["Service", "Küche", "Bar", "Druck", "Oberfläche"],
+      "Der Service muss beim manuellen Abholbon jetzt Kundenname und Ort angeben, bevor der Abholtisch und der Druckauftrag entstehen.",
+    categories: ["Service", "Abholung", "Abholbon", "Druck"],
     changes: [
-      "Küchenbons zeigen die Bedienung jetzt mit einem vollständigen, eindeutig lesbaren Label an.",
-      "Fehlende Bedienungsnamen in bestehenden Küchen- und Bar-Batches werden aus der zugehörigen Bedienung ergänzt.",
-      "Statusmeldungen in der Kategorieauswahl umbrechen innerhalb der Kachel und überlappen weder Kategorie noch Positionszahl."
+      "Der Service-Bildschirm zeigt beim Abholbon-Erstellen ein Pflichtformular für Name und Ort.",
+      "Leere oder zu kurze Angaben verhindern das Anlegen des Abholtisches und zeigen eine verständliche Meldung.",
+      "Name und Ort werden im Tisch-Hinweis gespeichert, in der Service-Tischliste angezeigt und an den Abholbon-Druckauftrag übergeben."
     ]
   },
   {
-    version: "0.9.15-beta",
-    date: "2026-09-21",
-    time: "laufend",
+    version: "0.11.02-beta",
+    date: "2026-06-13",
+    time: "23:43 +02:00",
     type: "Fix",
-    title: "Küchen- und Bar-Versand auf dem Gastro-Server synchronisiert",
+    title: "Kassenbon-Grafik richtig ausgerichtet",
     summary:
-      "Bestellungen werden in der veröffentlichten Gastro-Ansicht wieder zuverlässig im gemeinsamen Serverstand gespeichert.",
-    categories: ["Service", "Küche", "Bar", "Synchronisierung"],
+      "Der PiPa-Kassenbon druckt den Grafik-Kopf jetzt nicht mehr gedreht und nutzt druckrobuste Symbole für Pizza, Pilze und Besteck.",
+    categories: ["Kassenbon", "Grafik", "Druck"],
     changes: [
-      "Der gemeinsame Status wird bei einem Unterpfad wie /gastro über die tatsächlich erreichbare API-Route geladen.",
-      "Gesendete Küchen- und Bar-Positionen erscheinen dadurch wieder auf den jeweiligen Arbeitsgeräten.",
-      "Die Anzeige Nur lokaler Stand erscheint nur noch, wenn der gemeinsame Status wirklich nicht erreichbar ist."
+      "Der Kassenbon deaktiviert den ESC/POS-Drehmodus, damit Logo-Text und Bontext richtig herum ausgegeben werden.",
+      "Pizza, Pilze und Besteck wurden als einfache, dicke Schwarz-Weiß-Formen neu gezeichnet.",
+      "Die Rastergrafik wird neu erzeugt und bleibt weiterhin exakt 512 Punkte breit.",
+      "Ein automatisierter Test stellt sicher, dass Kassenbons nicht mehr mit dem Drehkommando `ESC { 1` beginnen.",
+      "Andere Bonarten behalten ihren bisherigen Druckmodus unverändert."
     ]
   },
   {
-    version: "0.9.14-beta",
-    date: "2026-09-17",
-    time: "laufend",
+    version: "0.11.01-beta",
+    date: "2026-06-13",
+    time: "23:40 +02:00",
     type: "Verbesserung",
-    title: "Raumplan an Gebäude und Außenbereich angepasst",
+    title: "Öffentliche QR-Adresse für Cloudflare Tunnel",
     summary:
-      "Der interaktive Raumplan orientiert sich jetzt stärker am tatsächlichen Gebäude und Außenbereich.",
-    categories: ["Service", "Tische", "Raumplan", "Oberfläche"],
+      "QR-Codes können jetzt fest auf eine öffentliche HTTPS-Bestelldomain zeigen, damit Gäste auch ohne Restaurant-WLAN bestellen können.",
+    categories: ["Selbstbestellung", "QR-Code", "Cloudflare Tunnel", "Sicherheit"],
     changes: [
-      "Die Grundgrafik zeigt den gepflasterten Hof, die Begrünung, Eingänge und Treppen sowie die vorhandene Raumstruktur klarer.",
-      "Innen- und Außentische greifen die fotografisch erkennbare Holzoptik, rote Polster und rot-weiß karierten Tischdecken auf.",
-      "Die Grafik bleibt frei von eingebrannten Tischtexten; Nummern, Status und Klickflächen kommen weiterhin aktuell aus der Oberfläche."
+      "Die Admin-QRs verwenden NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL als feste öffentliche Bestelladresse.",
+      "QR-Vorschau, SVG-Download und Druckvorlage nutzen dieselbe öffentliche URL statt automatisch die lokale Browseradresse.",
+      "Die öffentliche Bestelldomain wird per Middleware auf Gastbestellung, Self-Order-API und notwendige Assets begrenzt.",
+      "Der Admin sieht direkt, ob eine öffentliche Bestelldomain konfiguriert ist oder ob noch eine lokale Adresse gedruckt würde.",
+      "README und Produktdokumentation erklären den Cloudflare-Tunnel-Betrieb ohne Portfreigabe."
     ]
   },
   {
-    version: "0.9.13-beta",
-    date: "2026-09-17",
-    time: "laufend",
+    version: "0.11.00-beta",
+    date: "2026-06-13",
+    time: "23:18 +02:00",
+    type: "Funktion",
+    title: "QR-Selbstbestellung für Abholbons",
+    summary:
+      "Gäste bestellen über ortsgebundene QR-Codes, können nachbestellen, ihre Abholnummer verfolgen und den Service zum Bezahlen rufen.",
+    categories: ["Selbstbestellung", "QR-Code", "Abholbon", "Service", "Küche", "Bar"],
+    changes: [
+      "Der Admin verwaltet feste Bestellorte mit eigenem QR-Code, Druckvorlage, SVG-Download und erneuerbarem Schlüssel.",
+      "Die mobile Gastansicht bietet das vollständige Sortiment mit Varianten, Extras, Mengen, Hinweisen und Warenkorb.",
+      "Erst- und Nachbestellungen werden sicher an Küche und Bar gesendet und unter derselben Abholnummer geführt.",
+      "Kunden sehen den Gesamtstatus und können den Service zum Bezahlen rufen.",
+      "Service, Küche, Bar und Abholbon zeigen Name, Personenzahl und Ort.",
+      "Öffentliche Endpunkte bleiben vom internen Betriebszustand getrennt und sind durch Token, Idempotenz und Begrenzungen geschützt."
+    ]
+  },
+  {
+    version: "0.10.17-beta",
+    date: "2026-06-13",
+    time: "23:15 +02:00",
     type: "Verbesserung",
-    title: "Kellner-Ansicht ohne Raumplan und Tischübersicht",
+    title: "PiPa-Kassenbon mit echtem Grafiklogo",
     summary:
-      "Die Kellner-Ansicht zeigt kein großes Raumplan-Bild und keine separate Tischübersicht mehr.",
-    categories: ["Service", "Tische", "Mobile", "Oberfläche"],
+      "Der Kassenbon bildet die gelieferte PiPa-Vorlage jetzt mit einem hochauflösenden Schwarz-Weiß-Grafikkopf, Herz und Standort-Pin ab.",
+    categories: ["Kassenbon", "Grafik", "Druck", "Vorschau"],
     changes: [
-      "Das große Raumplan-Bild wurde aus dem Kellner-Arbeitsbereich entfernt.",
-      "Die separate Tischübersicht wurde durch eine kompakte Tisch-Auswahl ersetzt.",
-      "Bestellen, Abrechnen, Abholbons und das Koppeln von Tischen bleiben erreichbar."
+      "Der Kopf wird als 512-Punkt-Raster mit Pizza-, Besteck- und Pasta-Symbolen gedruckt.",
+      "BISTRO, PiPa, Pizza & Pasta und KASSENBON sind Bestandteil der Grafik und nicht mehr von Druckerschriften abhängig.",
+      "Das Herz sowie Standort-Pin und Anschrift werden ebenfalls als scharfe Rastergrafiken ausgegeben.",
+      "API, lokaler Druck und Browser-Vorschau verwenden dieselben gespeicherten Bilddaten.",
+      "Automatisierte Tests prüfen Bildmaße, Rasterbytezahl und das Epson-ESC/POS-Grafikkommando."
     ]
   },
   {
-    version: "0.9.12-beta",
-    date: "2026-09-17",
-    time: "laufend",
+    version: "0.10.16-beta",
+    date: "2026-06-13",
+    time: "23:01 +02:00",
     type: "Fix",
-    title: "Tagesreset bewahrt Küchen- und Getränke-Konten",
+    title: "Kassenbon an echte Druckbreite angepasst",
     summary:
-      "Der Tagesreset löscht die festen Küchen- und Getränke-Systemkonten nicht mehr.",
-    categories: ["Admin", "Tagesreset", "Küche", "Getränke"],
+      "Der Kassenbon ist wieder exakt auf die 42 Zeichen des Epson-Druckers abgestimmt und folgt dem gewünschten PiPa-Aufbau.",
+    categories: ["Kassenbon", "Druck", "Layout"],
     changes: [
-      "Der Tagesreset lässt die festen Küchen- und Getränke-Systemkonten erhalten und entfernt nur tagesabhängige Mitarbeiterkonten.",
-      "Bereits als gelöscht markierte Küchen- und Getränke-Konten werden automatisch wiederhergestellt.",
-      "Das manuelle Löschen der beiden festen Systemkonten wird verhindert."
+      "Die Druckbreite wurde von unpassenden 48 Zeichen auf die tatsächlichen 42 Zeichen zurückgestellt.",
+      "PiPa und KASSENBON werden als kurze, zentrierte Großschrift-Zeilen ohne Randüberlauf gedruckt.",
+      "Bonnummer, Datum, Bedienung und Tisch stehen übersichtlich mit rechtsbündigen Werten.",
+      "Die Spalten Artikel, Menge und Betrag sind für 80-mm-Papier neu ausgerichtet.",
+      "Die Summe wird groß gedruckt und nutzt exakt die verfügbare Breite der doppelten Schrift.",
+      "Hinweistext und Anschrift entsprechen dem Aufbau der gelieferten Bildvorlage."
+    ]
+  },
+  {
+    version: "0.10.15-beta",
+    date: "2026-06-13",
+    time: "22:48 +02:00",
+    type: "Fix",
+    title: "Kassenbon-Reihenfolge korrigiert",
+    summary:
+      "Kassenbons nutzen wieder die passende Druckbreite und führen Stornos direkt beim zugehörigen Artikel auf.",
+    categories: ["Kassenbon", "Druck", "Abrechnung"],
+    changes: [
+      "Der Kassenbon ist wieder auf die vorgesehene Breite von 48 Zeichen abgestimmt.",
+      "Jedes Storno wird direkt unter dem zugehörigen Artikel und vor dem nächsten Artikel gedruckt.",
+      "Die Gesamtsumme berücksichtigt stornierte Mengen korrekt.",
+      "Überschriften und Summen werden wieder sauber ausgerichtet.",
+      "Ein automatisierter Regressionstest sichert Reihenfolge, Breite und Summenbildung ab."
+    ]
+  },
+  {
+    version: "0.10.14-beta",
+    date: "2026-06-13",
+    time: "22:35 +02:00",
+    type: "Fix",
+    title: "Abrechnung einzeln und Dunkelmodus lesbar",
+    summary:
+      "Mehrfach bestellte Speisen werden in der Abrechnung einzeln aufgeführt; Küchenpass und Auswahlleiste erhalten klare Dunkelmodusfarben.",
+    categories: ["Abrechnung", "Dunkelmodus", "Küchenpass", "Oberfläche"],
+    changes: [
+      "Jede offene Portion erscheint als eigene auswählbare Zeile mit ihrem Einzelpreis.",
+      "Drei gemeinsam bestellte Margherita werden dadurch als drei getrennte Positionen dargestellt.",
+      "Teilzahlung und Rechnungsstorno fassen ausgewählte Einzelportionen intern weiterhin korrekt zusammen.",
+      "Der Küchenpass verwendet im Dunkelmodus einen dunklen amberfarbenen Hintergrund mit gut lesbarer Schrift.",
+      "Die Auswahlleiste der Abrechnung verwendet im Dunkelmodus eine dunkle Fläche mit hohem Textkontrast."
+    ]
+  },
+  {
+    version: "0.10.13-beta",
+    date: "2026-06-13",
+    time: "22:29 +02:00",
+    type: "Verbesserung",
+    title: "Alte Küchenbons zurückholen",
+    summary:
+      "Abgeschlossene Bons laufender Bestellungen können aus Alte Bons wieder in die aktive Küchenansicht geholt werden.",
+    categories: ["Küche", "Alte Bons", "Status"],
+    changes: [
+      "Jeder abgeschlossene Bon einer laufenden Bestellung zeigt die Aktion Zurückholen.",
+      "Nach dem Zurückholen erscheint der Bon sofort wieder als aktiv und bereit.",
+      "Die enthaltenen Portionen werden erneut auf offen gesetzt, auch wenn sie bereits als serviert markiert waren.",
+      "Bereits abgerechnete Bestellungen bleiben vor nachträglichen Änderungen geschützt."
+    ]
+  },
+  {
+    version: "0.10.12-beta",
+    date: "2026-06-13",
+    time: "22:26 +02:00",
+    type: "Fix",
+    title: "Sammelhaken druckt alle offenen Tellerbons",
+    summary:
+      "Wird ein kompletter Küchenbon mit dem grünen Doppelhaken fertiggestellt, werden alle noch offenen Portionen einzeln gedruckt.",
+    categories: ["Küche", "Tellerbon", "Bondruck"],
+    changes: [
+      "Der grüne Doppelhaken erzeugt für jede noch offene Portion einen Tellerbon.",
+      "Bereits einzeln fertiggestellte und gedruckte Portionen werden nicht erneut gedruckt.",
+      "Stornierte Positionen und reine Serviceartikel bleiben vom Druck ausgeschlossen.",
+      "Statusänderung und alle Druckaufträge werden gemeinsam sicher übertragen."
+    ]
+  },
+  {
+    version: "0.10.11-beta",
+    date: "2026-06-13",
+    time: "22:22 +02:00",
+    type: "Verbesserung",
+    title: "Nachtisch und Küchengruß bleiben im Service",
+    summary:
+      "Nachtisch und Gruß aus der Küche werden weiterhin gebucht und berechnet, aber nicht mehr an Küche oder Bondruck übergeben.",
+    categories: ["Bestellung", "Küche", "Bondruck", "Admin"],
+    changes: [
+      "Alle Nachtisch-Positionen bleiben direkt unter Im Service gebucht gespeichert.",
+      "Gruß aus der Küche wird ebenfalls ausschließlich als Servicebuchung behandelt.",
+      "Beide Artikelarten erscheinen nicht mehr auf dem Küchenmonitor und erzeugen keinen Tellerbon.",
+      "Auch ältere, abweichend konfigurierte Produkte werden automatisch auf Service umgestellt.",
+      "Das Produktionsziel ist für diese Artikel in der Produktpflege fest auf Service gesetzt."
+    ]
+  },
+  {
+    version: "0.10.10-beta",
+    date: "2026-06-13",
+    time: "22:14 +02:00",
+    type: "Verbesserung",
+    title: "Übertragungsanzeige nur noch bei Fehlern",
+    summary:
+      "Der normale Verbindungsstatus bleibt unsichtbar; echte Übertragungsfehler erscheinen zentral und deutlich.",
+    categories: ["Übertragung", "Oberfläche", "Fehlermeldung"],
+    changes: [
+      "Der grüne Hinweis Mit Server verbunden · vollständig bestätigt wird nicht mehr eingeblendet.",
+      "Normale laufende oder wartende Übertragungen erzeugen kein dauerhaftes Banner.",
+      "Nur Server- und Übertragungsfehler öffnen die rote Anzeige.",
+      "Die Fehlermeldung wird mittig im sichtbaren Bereich dargestellt und bietet weiterhin Erneut senden an."
+    ]
+  },
+  {
+    version: "0.10.09-beta",
+    date: "2026-06-12",
+    time: "22:09 +02:00",
+    type: "Verbesserung",
+    title: "Wartezeiten und Tellerbons übersichtlicher",
+    summary:
+      "Küche und Tellerbon zeigen Bedienung und Wartezeit deutlich; lange Wartezeiten eskalieren gelb, rot und blinkend.",
+    categories: ["Küche", "Tellerbon", "Abholbon", "Wartezeit", "Druck"],
+    changes: [
+      "Der Abholbon nennt jetzt die zuständige Bedienung.",
+      "Tisch, Bedienung und Speise werden auf dem Tellerbon in großer Schrift gedruckt.",
+      "Der Tellerbon zeigt die Wartezeit seit dem Absenden; der Hinweis Zum Teller kleben entfällt.",
+      "Aktive Küchenbons zeigen ihre sekundengenaue Wartezeit direkt auf der Karte.",
+      "Ab 15 Minuten wird die Karte gelb, ab 20 Minuten rot und ab 25 Minuten rot blinkend.",
+      "Web-Druckpfad, API und Bonvorschau unterstützen die neuen Schriftgrößen."
+    ]
+  },
+  {
+    version: "0.10.08-beta",
+    date: "2026-06-12",
+    time: "22:04 +02:00",
+    type: "Fix",
+    title: "Bon-Druck beim Absenden entfernt",
+    summary:
+      "Speisen werden ohne Ausdruck an die Küche gesendet; Tellerbons entstehen erst beim Fertig-Abhaken.",
+    categories: ["Küche", "Druck", "Tellerbon", "Bestellung"],
+    changes: [
+      "Beim Absenden einer Speise wird kein Küchenbon-Druckauftrag mehr angelegt.",
+      "Die Bestellung erscheint weiterhin sofort und vollständig in der Küchenansicht.",
+      "Der Tellerbon bleibt an das Fertig-Abhaken einer einzelnen Portion gebunden.",
+      "Nur der vorhandene Druckauftrag kitchen-label wird beim Status Fertig erzeugt."
+    ]
+  },
+  {
+    version: "0.10.07-beta",
+    date: "2026-06-12",
+    time: "22:01 +02:00",
+    type: "Verbesserung",
+    title: "Extras auf Küchentickets farblich hervorgehoben",
+    summary:
+      "Extra-Zutaten sind jetzt durch ein orange-rotes Badge klar von normalen Hinweisen getrennt.",
+    categories: ["Küche", "Extras", "Oberfläche", "Dunkelmodus"],
+    changes: [
+      "Extras erhalten eine sichtbare Kennzeichnung mit dem Text Extra.",
+      "Orangefarbener Hintergrund, rote Schrift und Umrandung erhöhen die Aufmerksamkeit.",
+      "Im Dunkelmodus bleibt das Extra-Badge kontrastreich und eindeutig.",
+      "Normale Hinweise werden weiterhin separat in Grün dargestellt."
+    ]
+  },
+  {
+    version: "0.10.06-beta",
+    date: "2026-06-12",
+    time: "21:57 +02:00",
+    type: "Verbesserung",
+    title: "Bestellername in Küche und auf Bon hervorgehoben",
+    summary:
+      "Die Küche erkennt jetzt sofort, welche Person eine Erst- oder Nachbestellung gesendet hat.",
+    categories: ["Küche", "Service", "Küchenbon", "Bestellung"],
+    changes: [
+      "Ticketkarten zeigen den Namen deutlich als Bestellt von an.",
+      "Der Name wird für jede Erst- und Nachbestellung aus dem gespeicherten Küchenbatch übernommen.",
+      "Der Küchenbon enthält dieselbe Person in der Zeile BESTELLT: Name.",
+      "Ein automatisierter Test prüft die Ausgabe des Bestellernamens auf dem Küchenbon."
+    ]
+  },
+  {
+    version: "0.10.05-beta",
+    date: "2026-06-12",
+    time: "21:49 +02:00",
+    type: "Fix",
+    title: "Bonausgabe um 180° gedreht",
+    summary:
+      "Der Netzwerkdrucker gibt alle Bons jetzt in gedrehter Ausrichtung aus.",
+    categories: ["Drucker", "Bon", "ESC/POS"],
+    changes: [
+      "Vor jedem Dokument wird der Kopfübermodus des Epson TM-T70II aktiviert.",
+      "Vor Papiervorschub und Schnitt wird die Drehung wieder zurückgesetzt.",
+      "Web-Druckpfad und API erzeugen dieselbe gedrehte Bonausgabe.",
+      "Ein automatisierter Drucktest sichert die ESC/POS-Befehlsfolge ab."
+    ]
+  },
+  {
+    version: "0.10.04-beta",
+    date: "2026-06-10",
+    time: "22:20 +02:00",
+    type: "Sicherheit",
+    title: "Ende-zu-Ende-Übertragung mit Serverbestätigung",
+    summary:
+      "Kritische Vorgänge werden dauerhaft in PostgreSQL gespeichert und erst nach der passenden Serverbestätigung als erfolgreich angezeigt.",
+    categories: ["Server", "PostgreSQL", "Offlinebetrieb", "Druck", "Sicherheit"],
+    changes: [
+      "Typisierte Operationen werden idempotent in serialisierbaren Datenbanktransaktionen verarbeitet.",
+      "Zustand, Transaktionsprotokoll, Rückgängig-Punkte und Druckaufträge werden gemeinsam gespeichert.",
+      "Eine IndexedDB-Warteschlange übersteht Neustarts und wiederholt vorübergehende Übertragungsfehler automatisch.",
+      "Versand, Zahlung, Storno, Abschluss und Druck bleiben bis zur verbindlichen Bestätigung nachvollziehbar.",
+      "Die zentrale Statusanzeige unterscheidet bestätigte, wartende und fehlgeschlagene Vorgänge.",
+      "Ein gesicherter Legacy-Import und getrennte Dienstvorlagen bereiten die spätere Produktivumschaltung vor."
+    ]
+  },
+  {
+    version: "0.10.03-beta",
+    date: "2026-06-10",
+    time: "21:13 +02:00",
+    type: "Verbesserung",
+    title: "Brot und Dessert direkt im Service gebucht",
+    summary:
+      "Brot und Dessert benötigen keine Bestätigung durch Küche oder Bar und werden vom Service selbst entnommen.",
+    categories: ["Service", "Bestellung", "Brot", "Dessert"],
+    changes: [
+      "Pizza Brot mit Aioli sowie alle vorhandenen Dessertartikel sind als Selbstentnahme durch den Service hinterlegt.",
+      "Serviceartikel werden von Alles senden, Küchenbons, Bar-Bons und Wartezeiten ausgeschlossen.",
+      "Die Bestellübersicht zeigt diese Positionen eindeutig als Im Service gebucht."
+    ]
+  },
+  {
+    version: "0.10.02-beta",
+    date: "2026-06-10",
+    time: "21:11 +02:00",
+    type: "Inhalt",
+    title: "Vier Nudelvarianten ergänzt",
+    summary:
+      "Penne und Tagliatelle stehen jetzt jeweils mit grüner Pesto oder Tomatensauce zur Auswahl.",
+    categories: ["Service", "Speisekarte", "Pasta", "Stammdaten"],
+    changes: [
+      "Penne mit grüner Pesto und Penne mit Tomatensauce ersetzen die beiden bisherigen allgemeinen Nudelgerichte.",
+      "Tagliatelle mit grüner Pesto und Tagliatelle mit Tomatensauce wurden neu ergänzt.",
+      "Alle vier Gerichte erscheinen im Service in der Gruppe Pasta.",
+      "Die bestehenden Produkt-IDs bleiben erhalten und gespeicherte Stammdaten werden einmalig migriert."
+    ]
+  },
+  {
+    version: "0.10.01-beta",
+    date: "2026-06-10",
+    time: "20:29 +02:00",
+    type: "Verbesserung",
+    title: "Zentrale Bestellübersicht ergänzt",
+    summary:
+      "Der Service kann alle aktiven Positionen eines Tisches gemeinsam prüfen, bearbeiten und senden.",
+    categories: ["Service", "Bestellung", "Bar", "Küche", "Oberfläche"],
+    changes: [
+      "Getränke, Vorspeisen, Hauptspeisen und Nachtische werden mit Anzahl, Zwischensumme und Versandstatus fest gruppiert angezeigt.",
+      "Positionen zeigen Menge, Produkt, Tisch oder Sitzplatz, Preis sowie vorhandene Extras und Notizen.",
+      "Die Bearbeitung nutzt den vorhandenen Kategorieabschluss und führt danach zurück zur Bestellübersicht.",
+      "Alles senden bestätigt die offenen Mengen je Gang und verteilt Getränke an die Bar sowie Speisen gangweise an die Küche.",
+      "Wartezeiten bleiben wirksam; gesendete und stornierte Positionen werden nicht erneut versendet.",
+      "Die Übersicht bleibt nach dem Versand geöffnet und aktualisiert alle Statusanzeigen unmittelbar."
+    ]
+  },
+  {
+    version: "0.10.00-beta",
+    date: "2026-06-10",
+    time: "19:10 +02:00",
+    type: "Sicherheit",
+    title: "Serverdaten gegen Absturz und Neuinstallation abgesichert",
+    summary:
+      "Betriebsdaten werden atomar gespeichert, automatisch gesichert und außerhalb des Programmordners abgelegt.",
+    categories: ["Server", "Datensicherung", "Bestellungen", "Druck"],
+    changes: [
+      "Bestellungen und Einstellungen erhalten bis zu 50 rotierende serverseitige Sicherungen.",
+      "Beschädigte oder gelöschte Zustandsdateien werden automatisch aus der jüngsten gültigen Sicherung wiederhergestellt.",
+      "Das Deployment migriert Live-Daten nach /var/lib/gastroweb, damit sie eine Neuinstallation des Programmordners überstehen.",
+      "Bei einem Speicherfehler übernimmt der Server keinen Stand, der nicht sicher auf den Datenträger geschrieben wurde.",
+      "Druckkonfiguration und Druckwarteschlange verwenden ebenfalls absturzsichere Schreibvorgänge."
     ]
   },
   {
@@ -1004,6 +1377,30 @@ const formatAdminDateTime = (value: string) =>
     timeStyle: "short"
   });
 
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[character] ?? character
+  );
+
+const buildSelfOrderUrl = (
+  accessKey: string,
+  currentOrigin?: string,
+  publicBaseUrl?: string
+) =>
+  resolveSelfOrderPublicUrl(
+    `/bestellen/${encodeURIComponent(accessKey)}`,
+    currentOrigin,
+    publicBaseUrl
+  );
+
 const getTimestamp = (value?: string) => {
   if (!value) return null;
 
@@ -1194,7 +1591,16 @@ const playAdminReceiptAlarm = async () => {
   }
 };
 
-export const AdminPanel = () => {
+type AdminPanelProps = {
+  selfOrderPublicBaseUrl?: string;
+};
+
+export const AdminPanel = ({
+  selfOrderPublicBaseUrl = selfOrderPublicConfig.baseUrl
+}: AdminPanelProps) => {
+  const effectiveSelfOrderPublicBaseUrl =
+    selfOrderPublicBaseUrl || selfOrderPublicConfig.baseUrl;
+  const selfOrderPublicBaseConfigured = effectiveSelfOrderPublicBaseUrl.length > 0;
   const { state, actions, currentUser, unreadNotifications } = useDemoApp();
   const router = useRouter();
   const closedSessions = useMemo(() => buildClosedSessions(state), [state]);
@@ -1240,6 +1646,8 @@ export const AdminPanel = () => {
     active: true,
     note: ""
   });
+  const [selfOrderLocationName, setSelfOrderLocationName] = useState("");
+  const [selfOrderQrSvg, setSelfOrderQrSvg] = useState<Record<string, string>>({});
   const [dashboardProductByTable, setDashboardProductByTable] = useState<Record<string, string>>({});
   const [adminPrintMode, setAdminPrintMode] = useState<"staff-logins" | null>(null);
   const [isLiveDashboardOpen, setIsLiveDashboardOpen] = useState(false);
@@ -1600,6 +2008,37 @@ export const AdminPanel = () => {
   }, [activeReceiptAlarm]);
 
   useEffect(() => {
+    let active = true;
+    void import("qrcode").then(async (QRCode) => {
+      const entries = await Promise.all(
+        state.selfOrderLocations.map(async (location) => {
+          const url = buildSelfOrderUrl(
+            location.accessKey,
+            window.location.origin,
+            effectiveSelfOrderPublicBaseUrl
+          );
+          const svg = await QRCode.toString(url, {
+            type: "svg",
+            width: 280,
+            margin: 1,
+            errorCorrectionLevel: "M",
+            color: {
+              dark: "#102a5e",
+              light: "#ffffff"
+            }
+          });
+          return [location.id, svg] as const;
+        })
+      );
+      if (active) setSelfOrderQrSvg(Object.fromEntries(entries));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [effectiveSelfOrderPublicBaseUrl, state.selfOrderLocations]);
+
+  useEffect(() => {
     const handleAfterPrint = () => {
       setAdminPrintMode(null);
     };
@@ -1738,24 +2177,22 @@ export const AdminPanel = () => {
       bedienung
     });
 
-    if (mode === "reprint") {
-      actions.reprintReceipt(session.tableId, [session.id]);
-    } else {
-      actions.printReceipt(session.tableId, [session.id]);
-    }
-
-    const result = await createPrintJob({
+    const printRequest = {
       type: mode,
       receipt,
       tableId: session.tableId,
       tableLabel: tableName
-    });
+    } as const;
+    const result =
+      mode === "reprint"
+        ? await actions.reprintReceipt(session.tableId, [session.id], printRequest)
+        : await actions.printReceipt(session.tableId, [session.id], printRequest);
 
     setFeedback({
-      tone: result.ok ? "success" : "alert",
-      message: result.ok
-        ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
-        : result.message ?? "Bon konnte nicht an den Netzwerkdrucker gesendet werden."
+      tone: result?.ok ? "success" : "alert",
+      message: result?.ok
+        ? `Der Druckauftrag für ${tableName} wurde sicher auf dem Server gespeichert.`
+        : result?.message ?? "Der Druckauftrag konnte nicht sicher gespeichert werden."
     });
   };
 
@@ -1775,7 +2212,7 @@ export const AdminPanel = () => {
       return;
     }
 
-    const result = await createPrintJob({
+    const result = await actions.enqueuePrintJob({
       type: "daily-close",
       sessions,
       tables: state.tables,
@@ -1786,8 +2223,8 @@ export const AdminPanel = () => {
     setFeedback({
       tone: result.ok ? "success" : "alert",
       message: result.ok
-        ? "Statistik für Buchungen und Abrechnungen wurde an den Netzwerkdrucker gesendet."
-        : result.message ?? "Statistik konnte nicht an den Netzwerkdrucker gesendet werden."
+        ? "Die Statistik für Buchungen und Abrechnungen wurde sicher als Druckauftrag gespeichert."
+        : result.message ?? "Die Statistik konnte nicht sicher gespeichert werden."
     });
   };
 
@@ -1854,7 +2291,7 @@ export const AdminPanel = () => {
 
   const handleDailyReset = () => {
     const confirmed = window.confirm(
-      "Tagesstand wirklich zurücksetzen? Umsatz heute wird auf 0 gesetzt, offene Bestellungen werden geschlossen und Tageskonten werden bereinigt. Das feste Küchen- und Getränke-Konto bleibt erhalten."
+      "Tagesstand wirklich zurücksetzen? Umsatz heute wird auf 0 gesetzt und offene Bestellungen werden geschlossen."
     );
     if (!confirmed) return;
 
@@ -2029,6 +2466,124 @@ export const AdminPanel = () => {
     setFeedback({ tone: "success", message: "Tisch erfolgreich angelegt." });
   };
 
+  const getSelfOrderUrl = (accessKey: string) =>
+    buildSelfOrderUrl(
+      accessKey,
+      typeof window === "undefined" ? undefined : window.location.origin,
+      effectiveSelfOrderPublicBaseUrl
+    );
+
+  const handleCreateSelfOrderLocation = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const result = actions.createSelfOrderLocation(selfOrderLocationName);
+    if (!result.ok) {
+      setFeedback({
+        tone: "alert",
+        message: result.message ?? "Der Selbstbestell-Ort konnte nicht angelegt werden."
+      });
+      return;
+    }
+    setSelfOrderLocationName("");
+    setFeedback({
+      tone: "success",
+      message: "Der Ort und sein eigener Bestell-QR-Code wurden angelegt."
+    });
+  };
+
+  const handleRotateSelfOrderKey = (locationId: string) => {
+    if (
+      !window.confirm(
+        "QR-Schlüssel wirklich erneuern? Bereits gedruckte QR-Codes für diesen Ort werden dadurch ungültig."
+      )
+    ) {
+      return;
+    }
+    const result = actions.rotateSelfOrderLocationKey(locationId);
+    setFeedback({
+      tone: result.ok ? "success" : "alert",
+      message: result.ok
+        ? "Der QR-Schlüssel wurde erneuert. Alte Ausdrucke sind nicht mehr gültig."
+        : result.message ?? "Der QR-Schlüssel konnte nicht erneuert werden."
+    });
+  };
+
+  const handleDeleteSelfOrderLocation = (locationId: string) => {
+    if (!window.confirm("Diesen Selbstbestell-Ort und seinen QR-Code wirklich löschen?")) {
+      return;
+    }
+    const result = actions.deleteSelfOrderLocation(locationId);
+    setFeedback({
+      tone: result.ok ? "success" : "alert",
+      message: result.ok
+        ? "Der Selbstbestell-Ort wurde gelöscht."
+        : result.message ?? "Der Ort konnte nicht gelöscht werden."
+    });
+  };
+
+  const handleDownloadSelfOrderQr = (locationId: string, name: string) => {
+    const svg = selfOrderQrSvg[locationId];
+    if (!svg) return;
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kiju-selbstbestellung-${name
+      .toLocaleLowerCase("de-DE")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "ort"}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintSelfOrderQr = (locationId: string) => {
+    const location = state.selfOrderLocations.find((entry) => entry.id === locationId);
+    const svg = selfOrderQrSvg[locationId];
+    if (!location || !svg) return;
+
+    const orderUrl = getSelfOrderUrl(location.accessKey);
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      setFeedback({
+        tone: "alert",
+        message: "Das Druckfenster wurde vom Browser blockiert."
+      });
+      return;
+    }
+    printWindow.document.write(`<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>QR-Selbstbestellung ${escapeHtml(location.name)}</title>
+    <style>
+      @page { size: A4 portrait; margin: 18mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; color: #102a5e; }
+      main { min-height: 250mm; display: grid; place-content: center; text-align: center; }
+      .card { width: 150mm; padding: 14mm; border: 3px solid #102a5e; border-radius: 8mm; }
+      h1 { margin: 0 0 4mm; font-size: 28pt; }
+      p { margin: 0 0 7mm; color: #334155; font-size: 15pt; }
+      .qr { width: 90mm; margin: 0 auto 6mm; }
+      .qr svg { display: block; width: 100%; height: auto; }
+      strong { display: block; font-size: 18pt; }
+      small { display: block; margin-top: 5mm; color: #64748b; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h1>Selbst bestellen</h1>
+        <p>QR-Code scannen, Name und Personenzahl angeben und direkt bestellen.</p>
+        <div class="qr">${svg}</div>
+        <strong>Ort: ${escapeHtml(location.name)}</strong>
+        <small>${escapeHtml(orderUrl)}</small>
+      </section>
+    </main>
+    <script>window.addEventListener("load", () => window.print());</script>
+  </body>
+</html>`);
+    printWindow.document.close();
+  };
+
   const handleDeleteTable = (tableId: string) => {
     const result = actions.removeTableAndServices(tableId);
     if (!result.ok) {
@@ -2196,6 +2751,9 @@ export const AdminPanel = () => {
             </a>
             <a className="kiju-admin-link-pill" href="#drucker">
               Drucker
+            </a>
+            <a className="kiju-admin-link-pill" href="#selbstbestellung">
+              Selbstbestellung
             </a>
             <a className="kiju-admin-link-pill" href="#changelog">
               Changelog
@@ -2811,6 +3369,198 @@ export const AdminPanel = () => {
         </div>
 
         <div className="kiju-admin-stack">
+          <div id="selbstbestellung">
+            <AccordionSection
+              title="QR-Selbstbestellung"
+              eyebrow="Orte, Zugänge und Druckvorlagen"
+              defaultOpen={false}
+              className="kiju-admin-accordion"
+              action={
+                <StatusPill
+                  label={`${state.selfOrderLocations.length} Orte`}
+                  tone={state.selfOrderLocations.some((location) => location.active) ? "green" : "slate"}
+                />
+              }
+            >
+              <div className="kiju-admin-layout">
+                <form className="kiju-admin-panel" onSubmit={handleCreateSelfOrderLocation}>
+                  <div className="kiju-admin-heading-stack">
+                    <strong>Neuen Bestellort anlegen</strong>
+                    <span>
+                      Jeder Ort erhält einen eigenen QR-Code. Der Ort ist nach dem Scannen bereits
+                      fest ausgewählt.
+                    </span>
+                  </div>
+                  <label className="kiju-inline-field">
+                    <span>Ortsname</span>
+                    <input
+                      value={selfOrderLocationName}
+                      maxLength={80}
+                      placeholder="Zum Beispiel Saal oder Terrasse"
+                      onChange={(event) => setSelfOrderLocationName(event.target.value)}
+                    />
+                  </label>
+                  <button type="submit" className="kiju-button kiju-button--primary">
+                    <PlusCircle size={18} />
+                    Ort und QR-Code anlegen
+                  </button>
+                </form>
+
+                <article className="kiju-admin-panel">
+                  <div className="kiju-admin-heading-stack">
+                    <strong>So funktioniert es</strong>
+                    <span>
+                      Gäste scannen den QR-Code, geben Name und Personenzahl an und senden ihre
+                      Bestellung direkt an Küche und Bar.
+                    </span>
+                  </div>
+                  <div className="kiju-admin-meta">
+                    <span>Bezahlung erfolgt vor Ort.</span>
+                    <span>Nachbestellungen bleiben unter derselben Abholnummer.</span>
+                    <span>Der Service kann direkt zum Bezahlen gerufen werden.</span>
+                  </div>
+                  <div
+                    className={`kiju-self-order-public-url ${
+                      selfOrderPublicBaseConfigured ? "is-configured" : "is-warning"
+                    }`}
+                  >
+                    <strong>
+                      {selfOrderPublicBaseConfigured
+                        ? "Öffentliche Bestelldomain aktiv"
+                        : "Öffentliche Bestelldomain fehlt"}
+                    </strong>
+                    <span>
+                      {selfOrderPublicBaseConfigured
+                        ? "Gedruckte QR-Codes funktionieren auch über mobiles Internet."
+                        : "Ohne NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL druckt der QR-Code nur die aktuelle Browseradresse."}
+                    </span>
+                    <code>
+                      {selfOrderPublicBaseConfigured
+                        ? effectiveSelfOrderPublicBaseUrl
+                        : "NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL=https://bestellen.deine-domain.de"}
+                    </code>
+                  </div>
+                </article>
+              </div>
+
+              {state.selfOrderLocations.length > 0 ? (
+                <div className="kiju-self-order-admin-grid">
+                  {state.selfOrderLocations.map((location) => {
+                    const orderUrl = getSelfOrderUrl(location.accessKey);
+                    return (
+                      <article key={location.id} className="kiju-admin-panel kiju-self-order-admin-card">
+                        <div className="kiju-admin-row kiju-admin-row--top">
+                          <div className="kiju-admin-heading-stack">
+                            <strong>{location.name}</strong>
+                            <span>{location.active ? "QR-Code aktiv" : "QR-Code deaktiviert"}</span>
+                          </div>
+                          <StatusPill
+                            label={location.active ? "Aktiv" : "Inaktiv"}
+                            tone={location.active ? "green" : "slate"}
+                          />
+                        </div>
+
+                        <div
+                          className="kiju-self-order-admin-card__qr"
+                          aria-label={`QR-Code für ${location.name}`}
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              selfOrderQrSvg[location.id] ??
+                              "<span>QR-Code wird erzeugt …</span>"
+                          }}
+                        />
+
+                        <label className="kiju-inline-field">
+                          <span>Name</span>
+                          <input
+                            value={location.name}
+                            onChange={(event) =>
+                              actions.updateSelfOrderLocation(location.id, {
+                                name: event.target.value
+                              })
+                            }
+                          />
+                        </label>
+                        <div className="kiju-admin-row">
+                          <label className="kiju-inline-field">
+                            <span>Reihenfolge</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={location.sortOrder}
+                              onChange={(event) =>
+                                actions.updateSelfOrderLocation(location.id, {
+                                  sortOrder: Number(event.target.value || "0")
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="kiju-checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={location.active}
+                              onChange={(event) =>
+                                actions.updateSelfOrderLocation(location.id, {
+                                  active: event.target.checked
+                                })
+                              }
+                            />
+                            <span>QR-Bestellung aktiv</span>
+                          </label>
+                        </div>
+
+                        <div className="kiju-self-order-admin-card__url">{orderUrl}</div>
+
+                        <div className="kiju-admin-action-row">
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handlePrintSelfOrderQr(location.id)}
+                            disabled={!selfOrderQrSvg[location.id]}
+                          >
+                            <Printer size={16} />
+                            Drucken
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handleDownloadSelfOrderQr(location.id, location.name)}
+                            disabled={!selfOrderQrSvg[location.id]}
+                          >
+                            <FileDown size={16} />
+                            SVG herunterladen
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--secondary"
+                            onClick={() => handleRotateSelfOrderKey(location.id)}
+                          >
+                            <RotateCcw size={16} />
+                            Schlüssel erneuern
+                          </button>
+                          <button
+                            type="button"
+                            className="kiju-button kiju-button--danger"
+                            onClick={() => handleDeleteSelfOrderLocation(location.id)}
+                          >
+                            <Trash2 size={16} />
+                            Löschen
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="kiju-inline-panel">
+                  <QrCode size={20} />
+                  <span>Noch kein Selbstbestell-Ort angelegt.</span>
+                </div>
+              )}
+            </AccordionSection>
+          </div>
+
           <PrinterAdminPanel />
 
           <div id="changelog">
@@ -3009,12 +3759,16 @@ export const AdminPanel = () => {
                         <span>Kategorie</span>
                         <select
                           value={productForm.category}
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            const category = event.target.value as ProductCategory;
                             setProductForm((current) => ({
                               ...current,
-                              category: event.target.value as ProductCategory
-                            }))
-                          }
+                              category,
+                              ...(category === "dessert"
+                                ? { productionTarget: "service" as const }
+                                : {})
+                            }));
+                          }}
                         >
                           {productCategoryOrder.map((category) => (
                             <option key={category} value={category}>
@@ -3027,6 +3781,7 @@ export const AdminPanel = () => {
                         <span>Produktionsziel</span>
                         <select
                           value={productForm.productionTarget}
+                          disabled={productForm.category === "dessert"}
                           onChange={(event) =>
                             setProductForm((current) => ({
                               ...current,
@@ -3327,6 +4082,7 @@ export const AdminPanel = () => {
                                   <span>Produktionsziel</span>
                                   <select
                                     value={product.productionTarget}
+                                    disabled={isAlwaysServiceBookedProduct(product)}
                                     onChange={(event) =>
                                       actions.updateProduct(product.id, {
                                         productionTarget: event.target.value as ProductionTarget
@@ -3951,7 +4707,7 @@ export const AdminPanel = () => {
                     <p>
                       Setzt Umsatz heute, Tagesgäste und Tagesabschlüsse auf 0. Offene
                       Bestellungen werden geschlossen, damit ein neuer Tag ohne Altlasten starten
-                      kann. Tische, Leistungen, Admin-Konten sowie das feste Küchen- und Getränke-Konto bleiben erhalten.
+                      kann. Tische, Leistungen, Benutzer und Hinweise bleiben erhalten.
                     </p>
                     <small>
                       Vor dem Tagesreset wird ein Rückgängig-Snapshot für diese Admin-Sitzung

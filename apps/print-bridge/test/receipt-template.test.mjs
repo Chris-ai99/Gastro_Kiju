@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildKitchenPlateLabelPrintDocument,
   buildKitchenTicketPrintDocument,
-  buildPickupTicketPrintDocument,
   buildPipaReceiptDocument,
   buildPipaReceiptText,
+  buildPickupTicketPrintDocument,
   buildReceiptPrintDocument
 } from "../dist/index.js";
-import { buildEscPosReceiptBuffer } from "../dist/server.js";
+import { buildEscPosDocumentBuffer, buildEscPosReceiptBuffer } from "../dist/server.js";
 
 test("buildPipaReceiptText erzeugt den erwarteten PiPa-Beispielbon", () => {
   const receiptText = buildPipaReceiptText({
@@ -24,53 +25,53 @@ test("buildPipaReceiptText erzeugt den erwarteten PiPa-Beispielbon", () => {
   });
 
   assert.deepEqual(receiptText.split("\n"), [
-    "                  PiPa Bistro                   ",
-    "                 Pizza & Pasta                  ",
-    "------------------------------------------------",
-    "                   KASSENBON                    ",
-    "                   TISCH-BON                    ",
-    "------------------------------------------------",
-    "BON NR.    4711",
-    "DATUM      24.04.2026 18:30",
-    "BEDIENUNG  Service",
-    "------------------------------------------------",
-    "ARTIKEL                        MNG        BETRAG",
-    "------------------------------------------------",
-    "Pizza Salami                     1x       8,00 €",
-    "Pasta mit Pesto                  1x       7,00 €",
-    "Cola                             2x       5,00 €",
-    "================================================",
-    "SUMME                                    20,00 €",
-    "================================================",
+    "[Grafik: Bistro PiPa mit Pizza-, Besteck- und Pasta-Symbolen]",
+    "Bon Nr.:                              4711",
+    "Datum:                    24.04.2026 18:30",
+    "Bedienung:                         Service",
+    "------------------------------------------",
+    "ARTIKEL                 MENGE       BETRAG",
+    "------------------------------------------",
+    "Pizza Salami               1x       8,00 €",
+    "Pasta mit Pesto            1x       7,00 €",
+    "Cola                       2x       5,00 €",
+    "------------------------------------------",
+    "SUMME         20,00 €",
+    "------------------------------------------",
     "",
-    "         Vielen Dank für deinen Besuch!         ",
-    "    Dieser Beleg dient nur der Orientierung     ",
-    "       und ist kein offizielles Dokument.       ",
-    "",
-    "            Zionsgemeinde Haus Amos             ",
-    "        Paracelsusweg 8, 33689 Bielefeld        "
+    "      Vielen Dank für deinen Besuch!      ",
+    "[Grafik: Herz]",
+    "------------------------------------------",
+    " Dieser Beleg dient nur der Orientierung  ",
+    "    und ist kein offizielles Dokument.    ",
+    "     Keine steuerliche Absetzbarkeit.     ",
+    "------------------------------------------",
+    "[Grafik: Standort Zionsgemeinde Haus Amos]"
   ]);
-});
 
-test("Abholbon druckt die fortlaufende Nummer und den Pflichtnamen", () => {
-  const document = buildPickupTicketPrintDocument({
-    tableLabel: "Zum Abholen 12",
-    pickupNumber: 12,
-    pickupName: "Mila Schuster",
-    createdAt: "2026-09-27T18:45:00.000Z"
+  const document = buildPipaReceiptDocument({
+    bonNummer: "4711",
+    datum: "24.04.2026 18:30",
+    bedienung: "Service",
+    positionen: [{ name: "Pizza Salami", menge: 1, betrag: 800 }],
+    gesamt: 800
   });
-  const lines = document.lines.map((line) => line.text);
 
-  assert.ok(lines.some((line) => line.includes("NUMMER 12")));
-  assert.ok(lines.includes("ABHOLNAME:"));
-  assert.ok(lines.includes("  Mila Schuster"));
-  assert.ok(lines.includes("BON   : Zum Abholen 12"));
+  document.lines.forEach((line) => {
+    if (line.bitmap) {
+      assert.equal(
+        Buffer.from(line.bitmap.dataBase64, "base64").length,
+        Math.ceil(line.bitmap.width / 8) * line.bitmap.height
+      );
+      return;
+    }
 
-  const legacyDocument = buildPickupTicketPrintDocument({
-    tableLabel: "Zum Abholen 11",
-    pickupNumber: 11
+    const maximumWidth = line.size === "xlarge" ? 14 : line.size === "large" ? 21 : 42;
+    assert.ok(
+      line.text.length <= maximumWidth,
+      `"${line.text}" überschreitet mit ${line.text.length} Zeichen die Breite ${maximumWidth}`
+    );
   });
-  assert.ok(!legacyDocument.lines.some((line) => line.text === "ABHOLNAME:"));
 });
 
 test("BEDIENUNG wird sauber weggelassen, wenn kein Wert vorhanden ist", () => {
@@ -84,7 +85,7 @@ test("BEDIENUNG wird sauber weggelassen, wenn kein Wert vorhanden ist", () => {
   const lines = document.lines.map((line) => line.text);
 
   assert.ok(!lines.some((line) => line.startsWith("BEDIENUNG")));
-  assert.ok(lines.includes("SUMME                                     2,50 €"));
+  assert.ok(lines.includes("SUMME          2,50 €"));
 });
 
 test("lange Artikelnamen umbrechen ohne Preis- oder Mengenspalte zu verschieben", () => {
@@ -102,13 +103,13 @@ test("lange Artikelnamen umbrechen ohne Preis- oder Mengenspalte zu verschieben"
   });
 
   const lines = document.lines.map((line) => line.text);
-  const firstItemLine = lines[11];
-  const secondItemLine = lines[12];
-  const thirdItemLine = lines[13];
+  const firstItemLine = lines[6];
+  const secondItemLine = lines[7];
+  const thirdItemLine = lines[8];
 
-  assert.equal(firstItemLine, "Pizza Spezial mit extra langem   2x      18,90 €");
-  assert.equal(secondItemLine, "Namen ohne Umbau der          ");
-  assert.equal(thirdItemLine, "Preis-Spalte                  ");
+  assert.equal(firstItemLine, "Pizza Spezial mit extra    2x      18,90 €");
+  assert.equal(secondItemLine, "langem Namen ohne Umbau");
+  assert.equal(thirdItemLine, "der Preis-Spalte       ");
   assert.ok(!secondItemLine.includes("€"));
   assert.ok(!thirdItemLine.includes("€"));
 });
@@ -121,13 +122,98 @@ test("buildEscPosReceiptBuffer erzeugt Epson-kompatible Initialisierung und Cut"
     gesamt: 800
   });
 
-  assert.deepEqual([...buffer.slice(0, 9)], [0x1b, 0x40, 0x1b, 0x74, 16, 0x1b, 0x32, 0x1b, 0x61]);
+  assert.deepEqual(
+    [...buffer.slice(0, 12)],
+    [0x1b, 0x40, 0x1b, 0x7b, 0x00, 0x1b, 0x74, 16, 0x1b, 0x32, 0x1b, 0x61]
+  );
   assert.ok(buffer.includes(Buffer.from([0x80])), "Euro-Zeichen sollte als CP1252-Byte 0x80 kodiert sein");
   assert.ok(
-    buffer.includes(Buffer.from("                  PiPa Bistro                   \n", "latin1")),
-    "zentrierte Leerzeichen im Header sollten unverändert in den Druckdaten bleiben"
+    buffer.includes(Buffer.from([0x1d, 0x76, 0x30, 0x00, 0x40, 0x00, 0x54, 0x01])),
+    "der 512 x 340 Pixel große PiPa-Kopf sollte als ESC/POS-Rastergrafik enthalten sein"
   );
   assert.deepEqual([...buffer.slice(-8)], [0x00, 0x1b, 0x64, 0x04, 0x1d, 0x56, 0x42, 0x00]);
+});
+
+test("Kassenbon druckt den Grafik-Kopf nicht im Drehmodus", () => {
+  const buffer = buildEscPosReceiptBuffer({
+    bonNummer: "4711",
+    datum: "24.04.2026 18:30",
+    positionen: [{ name: "Pizza Salami", menge: 1, betrag: 800 }],
+    gesamt: 800
+  });
+
+  const rotationOff = buffer.indexOf(Buffer.from([0x1b, 0x7b, 0x00]));
+  const rotationOn = buffer.indexOf(Buffer.from([0x1b, 0x7b, 0x01]));
+  const firstRaster = buffer.indexOf(Buffer.from([0x1d, 0x76, 0x30, 0x00]));
+
+  assert.equal(rotationOff, 2);
+  assert.equal(rotationOn, -1);
+  assert.ok(firstRaster > rotationOff);
+});
+
+test("ESC/POS-Drehmodus umschließt den Boninhalt", () => {
+  const buffer = buildEscPosDocumentBuffer({
+    title: "Drehprüfung",
+    width: 42,
+    lines: [{ text: "Testbon" }]
+  });
+  const rotationOn = buffer.indexOf(Buffer.from([0x1b, 0x7b, 0x01]));
+  const content = buffer.indexOf(Buffer.from("Testbon\n", "latin1"));
+  const rotationOff = buffer.indexOf(Buffer.from([0x1b, 0x7b, 0x00]));
+  const paperFeed = buffer.indexOf(Buffer.from([0x1b, 0x64, 0x04]));
+
+  assert.equal(rotationOn, 2);
+  assert.ok(content > rotationOn);
+  assert.ok(rotationOff > content);
+  assert.ok(paperFeed > rotationOff);
+});
+
+test("ESC/POS-Druck setzt große Schrift und stellt danach Normalgröße wieder her", () => {
+  const buffer = buildEscPosDocumentBuffer({
+    title: "Größenprüfung",
+    width: 42,
+    lines: [
+      { text: "TISCH 7", size: "large", emphasis: true },
+      { text: "Normal" }
+    ]
+  });
+  const largeText = buffer.indexOf(Buffer.from("TISCH 7\n", "latin1"));
+  const largeCommand = buffer.lastIndexOf(Buffer.from([0x1d, 0x21, 0x11]), largeText);
+  const normalText = buffer.indexOf(Buffer.from("Normal\n", "latin1"));
+  const normalCommand = buffer.lastIndexOf(Buffer.from([0x1d, 0x21, 0x00]), normalText);
+
+  assert.ok(largeCommand >= 0 && largeCommand < largeText);
+  assert.ok(normalCommand > largeText && normalCommand < normalText);
+});
+
+test("Abholbon enthält die Bedienung", () => {
+  const document = buildPickupTicketPrintDocument({
+    tableLabel: "Zum Abholen 4",
+    pickupNumber: 4,
+    bedienung: "Chris",
+    createdAt: "2026-06-12T18:30:00.000Z"
+  });
+  const lines = document.lines.map((line) => line.text);
+
+  assert.ok(lines.includes("BEDIENUNG: Chris"));
+  assert.equal(document.lines.find((line) => line.text === "NUMMER 4")?.size, "large");
+});
+
+test("Abholbon enthält Gastdaten und Ort der Selbstbestellung", () => {
+  const document = buildPickupTicketPrintDocument({
+    tableLabel: "Zum Abholen 8",
+    pickupNumber: 8,
+    bedienung: "Selbstbestellung",
+    customerName: "Alex Beispiel",
+    guestCount: 4,
+    locationName: "Saal",
+    createdAt: "2026-06-13T20:00:00.000Z"
+  });
+  const lines = document.lines.map((line) => line.text);
+
+  assert.ok(lines.includes("NAME  : Alex Beispiel"));
+  assert.ok(lines.includes("PERSONEN: 4"));
+  assert.ok(lines.includes("ORT   : Saal"));
 });
 
 test("buildReceiptPrintDocument bleibt kompatibel und integriert Stornos in die PiPa-Vorlage", () => {
@@ -146,6 +232,18 @@ test("buildReceiptPrintDocument bleibt kompatibel und integriert Stornos in die 
         showInKitchen: true,
         productionTarget: "kitchen",
         modifierGroups: []
+      },
+      {
+        id: "mineralwasser",
+        name: "Mineralwasser",
+        category: "drinks",
+        description: "",
+        priceCents: 250,
+        taxRate: 0.19,
+        allergens: [],
+        showInKitchen: false,
+        productionTarget: "bar",
+        modifierGroups: []
       }
     ],
     session: {
@@ -160,6 +258,14 @@ test("buildReceiptPrintDocument bleibt kompatibel und integriert Stornos in die 
           productId: "pizza-salami",
           category: "main",
           quantity: 2,
+          modifiers: []
+        },
+        {
+          id: "item-2",
+          target: { type: "table" },
+          productId: "mineralwasser",
+          category: "drinks",
+          quantity: 1,
           modifiers: []
         }
       ],
@@ -209,11 +315,19 @@ test("buildReceiptPrintDocument bleibt kompatibel und integriert Stornos in die 
   const lines = document.lines.map((line) => line.text);
 
   assert.equal(document.title, "Tisch-Bon");
-  assert.equal(document.width, 48);
-  assert.ok(lines.includes("TISCH      Tisch 1"));
-  assert.ok(lines.some((line) => line.includes("Pizza Salami                     2x      16,00 €")));
-  assert.ok(lines.some((line) => line.includes("STORNO Pizza Salami              1x      -8,00 €")));
-  assert.ok(lines.some((line) => line.includes("SUMME                                     8,00 €")));
+  assert.equal(document.width, 42);
+  assert.ok(lines.includes("Tisch:                             Tisch 1"));
+  assert.ok(lines.some((line) => line.includes("Pizza Salami               2x      16,00 €")));
+  assert.ok(lines.some((line) => line.includes("STORNO Pizza Salami        1x      -8,00 €")));
+  assert.ok(lines.some((line) => line.includes("Mineralwasser              1x       2,50 €")));
+  assert.ok(lines.some((line) => line.includes("SUMME         10,50 €")));
+
+  const pizzaLineIndex = lines.findIndex((line) => line.startsWith("Pizza Salami"));
+  const cancellationLineIndex = lines.findIndex((line) => line.startsWith("STORNO Pizza Salami"));
+  const waterLineIndex = lines.findIndex((line) => line.startsWith("Mineralwasser"));
+
+  assert.ok(pizzaLineIndex < cancellationLineIndex);
+  assert.ok(cancellationLineIndex < waterLineIndex);
 });
 
 test("buildReceiptPrintDocument druckt den Bedienungsnamen", () => {
@@ -229,12 +343,12 @@ test("buildReceiptPrintDocument druckt den Bedienungsnamen", () => {
 
   const lines = document.lines.map((line) => line.text);
 
-  assert.ok(lines.includes("TISCH      Tisch 3"));
-  assert.ok(lines.includes("BEDIENUNG  Chris"));
+  assert.ok(lines.includes("Tisch:                             Tisch 3"));
+  assert.ok(lines.includes("Bedienung:                           Chris"));
 });
 
 test("buildKitchenTicketPrintDocument druckt Vorspeisenbon mit Bedienungsnamen", () => {
-  const document = buildKitchenTicketPrintDocument({
+  const input = {
     printedAt: "2026-04-24T18:30:00.000Z",
     table: {
       id: "table-1",
@@ -306,11 +420,32 @@ test("buildKitchenTicketPrintDocument druckt Vorspeisenbon mit Bedienungsnamen",
       countdownMinutes: 0,
       sequence: 1
     }
-  });
+  };
+  const document = buildKitchenTicketPrintDocument(input);
 
   const lines = document.lines.map((line) => line.text);
 
   assert.equal(document.title, "Vorspeise");
   assert.ok(lines.includes("BEDIENUNG: Chris"));
   assert.ok(lines.some((line) => line.includes("1x Bruschetta")));
+
+  const plateLabel = buildKitchenPlateLabelPrintDocument({
+    ...input,
+    itemId: "item-starter-1",
+    unitIndex: 0,
+    completedAt: "2026-04-24T18:45:30.000Z"
+  });
+  const plateLines = plateLabel.lines.map((line) => line.text);
+
+  assert.ok(plateLines.includes("BEDIENUNG Chris"));
+  assert.ok(plateLines.includes("WARTEZEIT: 16:30 Min"));
+  assert.ok(!plateLines.includes("Zum Teller kleben"));
+  assert.equal(
+    plateLabel.lines.find((line) => line.text === "Tisch 1")?.size,
+    "large"
+  );
+  assert.equal(
+    plateLabel.lines.find((line) => line.text === "1x Bruschetta")?.size,
+    "large"
+  );
 });

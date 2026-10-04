@@ -1618,6 +1618,39 @@ button {
   background: rgba(248, 250, 252, 0.78);
 }
 
+.kiju-pickup-create-panel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.82);
+}
+
+.kiju-pickup-create-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.kiju-pickup-create-panel__header > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.kiju-pickup-create-panel__header span {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.kiju-pickup-create-panel__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .kiju-link-tables-panel__header {
   display: flex;
   align-items: flex-start;
@@ -2193,6 +2226,190 @@ button {
   white-space: normal;
   line-height: 1.15;
   text-align: left;
+}
+
+.kiju-category-choice--overview {
+  grid-column: 1 / -1;
+  min-height: 5.5rem;
+  border-color: rgba(8, 145, 178, 0.48);
+  background:
+    linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(59, 130, 246, 0.06)),
+    var(--surface-strong);
+}
+
+.kiju-order-overview {
+  min-height: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-order-overview__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.kiju-order-overview__summary > div {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.kiju-order-overview__summary span,
+.kiju-order-overview__footer span,
+.kiju-order-overview-item span,
+.kiju-order-overview-item small,
+.kiju-order-overview-confirmation p,
+.kiju-order-overview-confirmation__courses span {
+  color: var(--muted);
+}
+
+.kiju-order-overview__summary strong {
+  color: var(--slate);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.kiju-order-overview__groups {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.kiju-order-overview-group {
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.kiju-order-overview-group__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.kiju-order-overview-group__header > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.kiju-order-overview-group__header strong,
+.kiju-order-overview-item strong,
+.kiju-order-overview__footer strong,
+.kiju-order-overview-confirmation h3,
+.kiju-order-overview-confirmation__courses strong {
+  color: var(--slate);
+}
+
+.kiju-order-overview-group__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.kiju-order-overview-group__items {
+  display: grid;
+}
+
+.kiju-order-overview-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.kiju-order-overview-item + .kiju-order-overview-item {
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.kiju-order-overview-item__main {
+  min-width: 0;
+  display: grid;
+  gap: 0.14rem;
+}
+
+.kiju-order-overview-item__main strong,
+.kiju-order-overview-item__main span,
+.kiju-order-overview-item__main small {
+  overflow-wrap: anywhere;
+}
+
+.kiju-order-overview-group__empty {
+  padding: 0.9rem;
+  color: var(--muted);
+}
+
+.kiju-order-overview__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(8, 145, 178, 0.36);
+  border-radius: 8px;
+  background: rgba(8, 145, 178, 0.08);
+}
+
+.kiju-order-overview__footer > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.kiju-order-overview-confirmation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.kiju-order-overview-confirmation {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(8, 145, 178, 0.4);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+}
+
+.kiju-order-overview-confirmation h3,
+.kiju-order-overview-confirmation p {
+  margin: 0;
+}
+
+.kiju-order-overview-confirmation__courses {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kiju-order-overview-confirmation__courses > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.kiju-order-overview-confirmation__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
 .kiju-category-group-stage,
@@ -3110,8 +3327,29 @@ button {
   white-space: pre;
 }
 
+.kiju-receipt-paper__bitmap {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
 .kiju-receipt-paper__line--emphasis {
   font-weight: 700;
+}
+
+.kiju-receipt-paper__line--large {
+  min-height: 2.15em;
+  font-size: 1.6em;
+  line-height: 1.2;
+  white-space: pre-wrap;
+}
+
+.kiju-receipt-paper__line--xlarge {
+  min-height: 2.6em;
+  font-size: 2em;
+  line-height: 1.15;
+  white-space: pre-wrap;
 }
 
 .kiju-print-root {
@@ -5646,12 +5884,18 @@ button.kiju-admin-link-pill {
     margin-bottom: 0;
   }
 
-  .kiju-link-tables-panel {
+  .kiju-link-tables-panel,
+  .kiju-pickup-create-panel {
     padding: 0.7rem;
   }
 
-  .kiju-link-tables-panel__header {
+  .kiju-link-tables-panel__header,
+  .kiju-pickup-create-panel__header {
     display: grid;
+  }
+
+  .kiju-pickup-create-panel__fields {
+    grid-template-columns: 1fr;
   }
 
   .kiju-linked-table-list .kiju-inline-panel {
@@ -5823,6 +6067,44 @@ button.kiju-admin-link-pill {
 
   .kiju-category-choice {
     min-height: 5.4rem;
+  }
+
+  .kiju-category-choice--overview {
+    grid-column: auto;
+  }
+
+  .kiju-order-overview__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-order-overview-group__header,
+  .kiju-order-overview__footer {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .kiju-order-overview-group__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .kiju-order-overview-item {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .kiju-order-overview-item > .kiju-pill {
+    justify-self: start;
+  }
+
+  .kiju-order-overview__footer .kiju-button,
+  .kiju-order-overview-confirmation__actions .kiju-button {
+    width: 100%;
+  }
+
+  .kiju-order-overview-confirmation__courses > div,
+  .kiju-order-overview-confirmation__actions {
+    display: grid;
   }
 
   .kiju-category-group-grid {
@@ -6342,6 +6624,36 @@ button.kiju-admin-link-pill {
   background: #fef2f2;
 }
 
+.kiju-pass-ticket.wait-warning {
+  border-color: #d97706;
+  background: #fef3c7;
+  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.24), 0 1px 4px rgba(146, 64, 14, 0.24);
+}
+
+.kiju-pass-ticket.wait-critical,
+.kiju-pass-ticket.wait-urgent {
+  border-color: #dc2626;
+  background: #fee2e2;
+  box-shadow: inset 0 0 0 2px rgba(220, 38, 38, 0.24), 0 1px 5px rgba(127, 29, 29, 0.3);
+}
+
+.kiju-pass-ticket.wait-urgent {
+  animation: kiju-pass-ticket-urgent 1s steps(2, end) infinite;
+}
+
+@keyframes kiju-pass-ticket-urgent {
+  0%,
+  100% {
+    border-color: #991b1b;
+    box-shadow: inset 0 0 0 3px rgba(220, 38, 38, 0.38), 0 0 0 rgba(220, 38, 38, 0);
+  }
+
+  50% {
+    border-color: #f87171;
+    box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.2), 0 0 18px rgba(220, 38, 38, 0.7);
+  }
+}
+
 .kiju-pass-ticket--empty {
   background: rgba(241, 245, 249, 0.45);
   border: 1px solid rgba(148, 163, 184, 0.35);
@@ -6415,6 +6727,77 @@ button.kiju-admin-link-pill {
   line-height: 1.2;
   color: #475569;
   overflow-wrap: anywhere;
+}
+
+.kiju-pass-ticket__ordered-by {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.28rem;
+  padding: 0.18rem 0.42rem;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.kiju-pass-ticket__ordered-by span {
+  font-weight: 700;
+}
+
+.kiju-pass-ticket__ordered-by strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 900;
+}
+
+.kiju-pass-ticket__elapsed {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.28rem;
+  padding: 0.2rem 0.42rem;
+  border: 1px solid rgba(71, 85, 105, 0.32);
+  background: rgba(248, 250, 252, 0.9);
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiju-pass-ticket__elapsed span {
+  font-weight: 700;
+}
+
+.kiju-pass-ticket__elapsed strong {
+  color: #0f172a;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.kiju-pass-ticket__elapsed.is-warning {
+  border-color: rgba(217, 119, 6, 0.5);
+  background: #fde68a;
+  color: #78350f;
+}
+
+.kiju-pass-ticket__elapsed.is-critical,
+.kiju-pass-ticket__elapsed.is-urgent {
+  border-color: rgba(220, 38, 38, 0.58);
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.kiju-pass-ticket__elapsed.is-warning strong,
+.kiju-pass-ticket__elapsed.is-critical strong,
+.kiju-pass-ticket__elapsed.is-urgent strong {
+  color: currentColor;
 }
 
 .kiju-pass-ticket__state {
@@ -6634,7 +7017,38 @@ button.kiju-admin-link-pill {
   color: #475569;
 }
 
-.kiju-pass-ticket__modifier,
+.kiju-pass-ticket__modifier {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.12rem;
+  padding: 0.18rem 0.38rem;
+  border: 1px solid #fb923c;
+  border-radius: 0.32rem;
+  background: #ffedd5;
+  color: #9a3412;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.28rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.kiju-pass-ticket__modifier strong {
+  color: #c2410c;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kiju-pass-ticket__modifier span {
+  min-width: 0;
+  font-weight: 800;
+}
+
 .kiju-pass-ticket__note {
   font-style: normal;
   font-size: 0.78rem;
@@ -7001,6 +7415,7 @@ html[data-theme="dark"] .kiju-table-menu__button,
 html[data-theme="dark"] .kiju-waiter-room-map,
 html[data-theme="dark"] .kiju-waiter-table-toolbar,
 html[data-theme="dark"] .kiju-link-tables-panel,
+html[data-theme="dark"] .kiju-pickup-create-panel,
 html[data-theme="dark"] .kiju-mobile-service-summary,
 html[data-theme="dark"] .kiju-drink-group-tab,
 html[data-theme="dark"] .kiju-floorplan-caption,
@@ -7068,8 +7483,33 @@ html[data-theme="dark"] .kiju-product-card.is-added {
     0 18px 34px rgba(34, 197, 94, 0.18);
 }
 
+html[data-theme="dark"] .kiju-order-wizard-alert {
+  border-color: rgba(245, 158, 11, 0.64);
+  background: rgba(120, 53, 15, 0.72);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .kiju-order-wizard-alert .kiju-eyebrow {
+  color: #fde68a;
+}
+
+html[data-theme="dark"] .kiju-order-wizard-alert small {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .kiju-checkout-selection-toolbar {
+  border-color: rgba(71, 85, 105, 0.86);
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .kiju-checkout-selection-toolbar span {
+  color: #cbd5e1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .kiju-product-card.is-added {
+  .kiju-product-card.is-added,
+  .kiju-pass-ticket.wait-urgent {
     animation: none;
   }
 }
@@ -7128,6 +7568,9 @@ html[data-theme="dark"] .kiju-order-wizard-stat,
 html[data-theme="dark"] .kiju-wizard-panel,
 html[data-theme="dark"] .kiju-party-group-card,
 html[data-theme="dark"] .kiju-category-choice,
+html[data-theme="dark"] .kiju-order-overview__summary > div,
+html[data-theme="dark"] .kiju-order-overview-group,
+html[data-theme="dark"] .kiju-order-overview-confirmation,
 html[data-theme="dark"] .kiju-fusion-choice,
 html[data-theme="dark"] .kiju-card > .kiju-wizard-footer {
   border-color: rgba(100, 116, 139, 0.72);
@@ -7135,11 +7578,29 @@ html[data-theme="dark"] .kiju-card > .kiju-wizard-footer {
   color: #f8fafc;
 }
 
+html[data-theme="dark"] .kiju-category-choice--overview,
+html[data-theme="dark"] .kiju-order-overview__footer {
+  border-color: rgba(34, 211, 238, 0.36);
+  background: rgba(8, 47, 73, 0.42);
+}
+
+html[data-theme="dark"] .kiju-order-overview-group__header,
+html[data-theme="dark"] .kiju-order-overview-confirmation__courses > div {
+  border-color: rgba(100, 116, 139, 0.48);
+  background: rgba(15, 23, 42, 0.52);
+}
+
 html[data-theme="dark"] .kiju-table-action-summary span,
 html[data-theme="dark"] .kiju-table-action-choice span,
 html[data-theme="dark"] .kiju-order-wizard-stat span,
 html[data-theme="dark"] .kiju-wizard-footer__status span,
 html[data-theme="dark"] .kiju-category-choice small,
+html[data-theme="dark"] .kiju-order-overview__summary span,
+html[data-theme="dark"] .kiju-order-overview__footer span,
+html[data-theme="dark"] .kiju-order-overview-item span,
+html[data-theme="dark"] .kiju-order-overview-item small,
+html[data-theme="dark"] .kiju-order-overview-confirmation p,
+html[data-theme="dark"] .kiju-order-overview-confirmation__courses span,
 html[data-theme="dark"] .kiju-category-group-choice strong,
 html[data-theme="dark"] .kiju-fusion-choice span,
 html[data-theme="dark"] .kiju-party-assignment small {
@@ -7152,6 +7613,12 @@ html[data-theme="dark"] .kiju-order-wizard-stat strong,
 html[data-theme="dark"] .kiju-category-start__header strong,
 html[data-theme="dark"] .kiju-category-order-header h2,
 html[data-theme="dark"] .kiju-category-group-choice span,
+html[data-theme="dark"] .kiju-order-overview__summary strong,
+html[data-theme="dark"] .kiju-order-overview-group__header strong,
+html[data-theme="dark"] .kiju-order-overview-item strong,
+html[data-theme="dark"] .kiju-order-overview__footer strong,
+html[data-theme="dark"] .kiju-order-overview-confirmation h3,
+html[data-theme="dark"] .kiju-order-overview-confirmation__courses strong,
 html[data-theme="dark"] .kiju-wizard-footer__status strong {
   color: #ffffff;
 }
@@ -7307,6 +7774,21 @@ html[data-theme="dark"] .kiju-pass-ticket.is-blocked {
     linear-gradient(180deg, rgba(248, 113, 113, 0.1), rgba(15, 23, 42, 0));
 }
 
+html[data-theme="dark"] .kiju-pass-ticket.wait-warning {
+  border-color: rgba(245, 158, 11, 0.8);
+  background:
+    linear-gradient(180deg, rgba(120, 53, 15, 0.92), rgba(30, 41, 59, 0.98)),
+    linear-gradient(180deg, rgba(245, 158, 11, 0.14), rgba(15, 23, 42, 0));
+}
+
+html[data-theme="dark"] .kiju-pass-ticket.wait-critical,
+html[data-theme="dark"] .kiju-pass-ticket.wait-urgent {
+  border-color: rgba(248, 113, 113, 0.88);
+  background:
+    linear-gradient(180deg, rgba(127, 29, 29, 0.94), rgba(30, 41, 59, 0.98)),
+    linear-gradient(180deg, rgba(248, 113, 113, 0.16), rgba(15, 23, 42, 0));
+}
+
 html[data-theme="dark"] .kiju-pass-ticket--empty {
   border-color: rgba(100, 116, 139, 0.5);
   background: rgba(15, 23, 42, 0.42);
@@ -7336,10 +7818,48 @@ html[data-theme="dark"] .kiju-kitchen-wallboard__refresh {
   color: #f8fafc;
 }
 
+html[data-theme="dark"] .kiju-pass-ticket__ordered-by {
+  border-color: rgba(96, 165, 250, 0.44);
+  background: rgba(30, 64, 175, 0.28);
+  color: #dbeafe;
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__elapsed {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(15, 23, 42, 0.62);
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__elapsed strong {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__elapsed.is-warning {
+  border-color: rgba(251, 191, 36, 0.7);
+  background: rgba(120, 53, 15, 0.72);
+  color: #fde68a;
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__elapsed.is-critical,
+html[data-theme="dark"] .kiju-pass-ticket__elapsed.is-urgent {
+  border-color: rgba(248, 113, 113, 0.72);
+  background: rgba(127, 29, 29, 0.76);
+  color: #fecaca;
+}
+
 html[data-theme="dark"] .kiju-pass-ticket__state.is-ready strong,
-html[data-theme="dark"] .kiju-pass-ticket__modifier,
 html[data-theme="dark"] .kiju-pass-ticket__note {
   color: #86efac;
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__modifier {
+  border-color: #f97316;
+  background: rgba(154, 52, 18, 0.58);
+  color: #ffedd5;
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__modifier strong {
+  color: #fdba74;
 }
 
 html[data-theme="dark"] .kiju-pass-ticket__line.is-in-progress .kiju-pass-ticket__line-button,
@@ -7493,4 +8013,591 @@ html[data-theme="dark"] .kiju-service-drink-popup__dismiss:hover {
   border-color: rgba(248, 113, 113, 0.42);
   background: rgba(127, 29, 29, 0.28);
   color: #fecaca;
+}
+.kiju-transmission-status {
+  position: fixed;
+  bottom: 0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: min(24rem, calc(100vw - 1rem));
+  padding: 0.28rem 0.4rem;
+  border: 1px solid;
+  border-radius: 999px;
+  box-shadow: 0 0.25rem 0.8rem rgb(15 23 42 / 18%);
+  color: #f8fafc;
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.kiju-transmission-status.is-error {
+  background: #991b1b;
+  border-color: #ef4444;
+}
+
+.kiju-transmission-status.is-warning {
+  background: #92400e;
+  border-color: #f59e0b;
+}
+
+.kiju-transmission-status strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kiju-transmission-status button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex: none;
+  padding: 0.2rem 0.32rem;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .kiju-transmission-status {
+    bottom: 0.3rem;
+    max-width: calc(100vw - 0.6rem);
+    font-size: 0.62rem;
+  }
+}
+/* Öffentliche QR-Selbstbestellung */
+.kiju-self-order-shell {
+  --self-navy: #12306b;
+  --self-blue: #1d4ed8;
+  --self-soft: #eff6ff;
+  --self-line: #dbe4f0;
+  --self-green: #15803d;
+  min-height: 100vh;
+  padding: 18px 14px 48px;
+  color: #172033;
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 36%),
+    #f6f8fc;
+}
+
+.kiju-self-order-shell > * {
+  width: min(760px, 100%);
+  margin-inline: auto;
+}
+
+.kiju-self-order-loading,
+.kiju-self-order-error {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 28px;
+  text-align: center;
+  color: #172033;
+  background: #f6f8fc;
+}
+
+.kiju-self-order-error h1,
+.kiju-self-order-error p {
+  margin: 0;
+}
+
+.kiju-self-order-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 26px;
+  color: #fff;
+  background: linear-gradient(135deg, #102a5e, #1d4ed8);
+  box-shadow: 0 20px 50px rgba(30, 64, 175, 0.22);
+}
+
+.kiju-self-order-hero span,
+.kiju-self-order-hero p {
+  color: #dbeafe;
+}
+
+.kiju-self-order-hero h1,
+.kiju-self-order-hero p {
+  margin: 4px 0 0;
+}
+
+.kiju-self-order-customer,
+.kiju-self-order-status,
+.kiju-self-order-cart,
+.kiju-self-order-summary {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--self-line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+}
+
+.kiju-self-order-customer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 12px;
+}
+
+.kiju-self-order-customer label,
+.kiju-self-order-note {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+
+.kiju-self-order-customer input,
+.kiju-self-order-note textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: #172033;
+  background: #fff;
+  font: inherit;
+}
+
+.kiju-self-order-status {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 14px;
+  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff, #fff);
+}
+
+.kiju-self-order-status > div {
+  display: grid;
+  gap: 3px;
+}
+
+.kiju-self-order-status > div:first-child strong {
+  font-size: 34px;
+  color: var(--self-blue);
+}
+
+.kiju-self-order-status > div:nth-child(2) strong {
+  font-size: 19px;
+}
+
+.kiju-self-order-status > small {
+  grid-column: 1 / -1;
+  color: #526176;
+}
+
+.kiju-self-order-status.is-ready {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #dcfce7, #fff);
+}
+
+.kiju-self-order-status.is-ready > div:first-child strong {
+  color: var(--self-green);
+}
+
+.kiju-self-order-categories {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 4px 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kiju-self-order-categories button {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: #334155;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+}
+
+.kiju-self-order-categories button.is-active {
+  border-color: var(--self-blue);
+  color: #fff;
+  background: var(--self-blue);
+}
+
+.kiju-self-order-categories small {
+  opacity: 0.78;
+}
+
+.kiju-self-order-products {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kiju-self-order-products > article {
+  display: grid;
+  align-content: space-between;
+  min-height: 210px;
+  padding: 17px;
+  border: 1px solid var(--self-line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 9px 28px rgba(15, 23, 42, 0.06);
+}
+
+.kiju-self-order-products span {
+  color: var(--self-blue);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kiju-self-order-products h2 {
+  margin: 7px 0 5px;
+  font-size: 19px;
+}
+
+.kiju-self-order-products p,
+.kiju-self-order-products small {
+  color: #64748b;
+}
+
+.kiju-self-order-products p {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.kiju-self-order-products footer,
+.kiju-self-order-cart header,
+.kiju-self-order-summary header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kiju-self-order-products footer {
+  margin-top: 16px;
+}
+
+.kiju-self-order-products button,
+.kiju-self-order-submit,
+.kiju-self-order-service-call,
+.kiju-self-order-dialog-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 13px;
+  padding: 11px 14px;
+  color: #fff;
+  background: var(--self-blue);
+  font: inherit;
+  font-weight: 900;
+}
+
+.kiju-self-order-product-dialog {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.kiju-self-order-product-dialog__card {
+  width: min(680px, 100%);
+  max-height: 90vh;
+  margin-inline: auto;
+  padding: 20px;
+  overflow-y: auto;
+  border-radius: 25px 25px 18px 18px;
+  color: #172033;
+  background: #fff;
+}
+
+.kiju-self-order-product-dialog__card > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.kiju-self-order-product-dialog__card h2 {
+  margin: 4px 0 0;
+}
+
+.kiju-self-order-product-dialog fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 13px;
+  border: 1px solid var(--self-line);
+  border-radius: 16px;
+}
+
+.kiju-self-order-product-dialog legend {
+  display: grid;
+  gap: 2px;
+  padding: 0 5px;
+  font-weight: 900;
+}
+
+.kiju-self-order-product-dialog legend small {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.kiju-self-order-product-dialog fieldset label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.kiju-self-order-note {
+  margin-top: 14px;
+}
+
+.kiju-self-order-note textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.kiju-self-order-note small {
+  justify-self: end;
+  color: #64748b;
+}
+
+.kiju-self-order-quantity,
+.kiju-self-order-cart__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kiju-self-order-quantity {
+  justify-content: center;
+  margin: 18px 0;
+}
+
+.kiju-self-order-quantity button,
+.kiju-self-order-cart__actions button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  color: #172033;
+  background: #fff;
+}
+
+.kiju-self-order-quantity strong {
+  min-width: 42px;
+  text-align: center;
+  font-size: 22px;
+}
+
+.kiju-self-order-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+}
+
+.kiju-self-order-dialog-actions button {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.kiju-self-order-dialog-actions button.is-primary {
+  color: #fff;
+  background: var(--self-blue);
+}
+
+.kiju-self-order-cart header h2 {
+  margin: 3px 0 0;
+}
+
+.kiju-self-order-cart > div > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.kiju-self-order-cart > div > article > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.kiju-self-order-cart small,
+.kiju-self-order-summary small {
+  color: #64748b;
+}
+
+.kiju-self-order-feedback {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  color: #1e3a8a;
+  background: #dbeafe;
+  font-weight: 700;
+}
+
+.kiju-self-order-submit,
+.kiju-self-order-service-call {
+  width: 100%;
+  margin-top: 14px;
+  padding: 15px;
+  font-size: 16px;
+}
+
+.kiju-self-order-submit:disabled,
+.kiju-self-order-service-call:disabled {
+  opacity: 0.55;
+}
+
+.kiju-self-order-cart > small {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.kiju-self-order-summary > div > article {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.kiju-self-order-service-call {
+  background: #0f766e;
+}
+
+.kiju-self-order-closed {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  color: #166534;
+  background: #dcfce7;
+  font-weight: 800;
+}
+
+.kiju-self-order-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kiju-self-order-admin-card {
+  align-content: start;
+}
+
+.kiju-self-order-admin-card__qr {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  margin: 10px 0;
+  padding: 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.kiju-self-order-admin-card__qr svg {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+}
+
+.kiju-self-order-admin-card__url {
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.kiju-self-order-public-url {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.kiju-self-order-public-url.is-warning {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.kiju-self-order-public-url code {
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .kiju-self-order-shell {
+    padding: 10px 10px 34px;
+  }
+
+  .kiju-self-order-hero {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .kiju-self-order-customer,
+  .kiju-self-order-status {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-self-order-status > small {
+    grid-column: auto;
+  }
+
+  .kiju-self-order-products {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-self-order-products > article {
+    min-height: 0;
+  }
+
+  .kiju-self-order-cart > div > article {
+    align-items: flex-start;
+  }
+
+  .kiju-self-order-admin-grid {
+    grid-template-columns: 1fr;
+  }
 }

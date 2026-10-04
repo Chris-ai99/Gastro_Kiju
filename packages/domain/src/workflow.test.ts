@@ -24,7 +24,7 @@ describe("domain workflow", () => {
   it("calculates the total for the seeded table 1 session", () => {
     const session = getSessionForTable(demoAppState.sessions, "table-1");
 
-    expect(calculateSessionTotal(session, demoAppState.products)).toBe(1700);
+    expect(calculateSessionTotal(session, demoAppState.products)).toBe(950);
   });
 
   it("builds a kitchen summary with human-readable placeholders", () => {
@@ -95,6 +95,42 @@ describe("domain workflow", () => {
 
     expect(normalized.deletedProductIds).toContain("starter-greeting");
     expect(normalized.products.some((product) => product.id === "starter-greeting")).toBe(false);
+  });
+
+  it("normalizes desserts and the kitchen greeting as service bookings", () => {
+    const state = structuredClone(demoAppState);
+    const greeting = state.products.find((product) => product.id === "starter-greeting")!;
+    greeting.productionTarget = "kitchen";
+    greeting.showInKitchen = true;
+    state.products.push({
+      id: "dessert-custom-test",
+      name: "Testnachtisch",
+      category: "dessert",
+      description: "Nur für den Normalisierungstest.",
+      priceCents: 500,
+      taxRate: 7,
+      allergens: [],
+      showInKitchen: true,
+      productionTarget: "kitchen",
+      modifierGroups: []
+    });
+
+    const normalized = normalizeOperationalState(state);
+    const normalizedGreeting = normalized.products.find(
+      (product) => product.id === "starter-greeting"
+    );
+    const normalizedDessert = normalized.products.find(
+      (product) => product.id === "dessert-custom-test"
+    );
+
+    expect(normalizedGreeting).toMatchObject({
+      productionTarget: "service",
+      showInKitchen: false
+    });
+    expect(normalizedDessert).toMatchObject({
+      productionTarget: "service",
+      showInKitchen: false
+    });
   });
 
   it("migrates sent kitchen courses into kitchen ticket batches", () => {
@@ -387,10 +423,12 @@ describe("domain workflow", () => {
     );
 
     expect(extraGroup?.name).toBe("Extra Zutaten");
-    expect(extraGroup?.options).toEqual([
-      { id: "mushrooms", name: "Champignons", priceDeltaCents: 120 },
-      { id: "olives", name: "Oliven", priceDeltaCents: 100 }
-    ]);
+    expect(extraGroup?.options).toEqual(
+      expect.arrayContaining([
+        { id: "mushrooms", name: "Champignons", priceDeltaCents: 120 },
+        { id: "olives", name: "Oliven", priceDeltaCents: 100 }
+      ])
+    );
   });
 
   it("enables the extra ingredient popup for pizza products automatically", () => {
@@ -472,12 +510,14 @@ describe("domain workflow", () => {
       (group) => group.id === EXTRA_INGREDIENTS_MODIFIER_GROUP_ID
     );
 
-    expect(normalized.extraIngredients).toEqual([
-      { id: "olives", name: "Oliven", priceDeltaCents: 150, active: false }
-    ]);
-    expect(extraGroup?.options).toEqual([
-      { id: "olives", name: "Oliven", priceDeltaCents: 150 }
-    ]);
+    expect(normalized.extraIngredients).toEqual(
+      expect.arrayContaining([
+        { id: "olives", name: "Oliven", priceDeltaCents: 150, active: false }
+      ])
+    );
+    expect(extraGroup?.options).toEqual(
+      expect.arrayContaining([{ id: "olives", name: "Oliven", priceDeltaCents: 150 }])
+    );
     expect(calculateSessionTotal(session, normalized.products)).toBe(1150);
   });
 

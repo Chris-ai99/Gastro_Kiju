@@ -38,7 +38,10 @@ export type CreatePrintJobRequest =
       tableId: string;
       tableLabel: string;
       pickupNumber: number;
-      pickupName?: string;
+      bedienung?: string;
+      customerName?: string;
+      guestCount?: number;
+      locationName?: string;
       createdAt?: string;
     }
   | {

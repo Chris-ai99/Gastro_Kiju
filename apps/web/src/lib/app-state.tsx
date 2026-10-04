@@ -2,6 +2,7 @@
 
 import {
   EXTRA_INGREDIENTS_MODIFIER_GROUP_ID,
+  applyCriticalOperation,
   calculatePaidItemQuantity,
   calculateGuestCount,
   calculateLineItemsTotal,
@@ -9,6 +10,7 @@ import {
   calculateSessionOpenTotal,
   calculateSessionTotal,
   courseLabels,
+  createCriticalOperation,
   createDefaultOperationalState as createSeedOperationalState,
   euro,
   getCheckoutTableIds,
@@ -20,6 +22,9 @@ import {
   normalizeOperationalState,
   type AppNotification,
   type AppState,
+  type CriticalOperationKind,
+  type CriticalPrintJob,
+  type CriticalTransactionConfirmation,
   type CourseKey,
   type CourseTicket,
   type DesignMode,
@@ -38,6 +43,7 @@ import {
   type ProductionTarget,
   type Role,
   type ServiceOrderMode,
+  type SelfOrderLocation,
   type TableLayout,
   type UserAccount
 } from "@kiju/domain";
@@ -53,27 +59,73 @@ import {
   type PropsWithChildren
 } from "react";
 
-import { createPrintJob } from "./print-client";
+import type { CreatePrintJobRequest } from "./print-contract";
+import {
+  buildPendingOrderSendSummary,
+  getOpenKitchenLabelUnits,
+  isAlwaysServiceBookedProduct,
+  isServiceBookedItem,
+  resetKitchenItemsForReopen,
+  type OrderSendTarget
+} from "./order-overview";
+import {
+  createPendingTransaction,
+  getRetryDelayMs,
+  hasAutomaticRetryRemaining,
+  listPendingTransactions,
+  removePendingTransaction,
+  savePendingTransaction,
+  sendPendingTransaction,
+  type PendingTransaction
+} from "./transaction-queue";
 
 const STORAGE_KEY = "kiju-app-state-v2";
+const CONFIRMED_STORAGE_KEY = "kiju-confirmed-app-state-v1";
 const AUTH_KEY = "kiju-auth-session-v1";
 const LEGACY_AUTH_KEY = "kiju-auth-v2";
 const NOTIFICATION_READS_KEY = "kiju-notification-reads-v1";
 const NOTIFICATION_DEVICE_KEY = "kiju-notification-device-v1";
-const SHARED_SYNC_POLL_MS = 1000;
+const TRANSACTION_DEVICE_KEY = "kiju-transaction-device-v1";
+const SHARED_SYNC_POLL_MS = 5000;
 const SHARED_SYNC_REQUEST_TIMEOUT_MS = 2500;
 
 type SharedSyncState = {
-  status: "connecting" | "online" | "offline";
+  status: "connecting" | "online" | "pending" | "offline" | "error";
   lastSyncedAt?: string;
   usingSharedState: boolean;
+  pendingCount: number;
+  failedCount: number;
+  message?: string;
 };
+
+type CommitResult =
+  | {
+      ok: true;
+      transactionId?: string;
+      confirmation?: CriticalTransactionConfirmation;
+    }
+  | {
+      ok: false;
+      transactionId: string;
+      message: string;
+    };
 
 type KitchenUnitCycleResult = {
   ok: boolean;
   nextStatus?: KitchenUnitStatus;
   changedAt?: string;
   message?: string;
+  confirmation?: Promise<CommitResult>;
+};
+
+type SendPendingItemsResult = {
+  ok: boolean;
+  message?: string;
+  sentItemCount: number;
+  affectedCourses: CourseKey[];
+  targets: OrderSendTarget[];
+  ticketStatus?: CourseTicket["status"] | "ready";
+  confirmation?: Promise<CommitResult>;
 };
 
 type WorkspaceRole = Role;
@@ -102,11 +154,12 @@ type DemoActions = {
     tableId: string,
     course: CourseKey,
     minutes: number
-  ) => { ok: boolean; message?: string };
+  ) => { ok: boolean; message?: string; confirmation?: Promise<CommitResult> };
   sendCourseToKitchen: (
     tableId: string,
     course: CourseKey
-  ) => { ok: boolean; message?: string; ticketStatus?: CourseTicket["status"] | "ready" };
+  ) => SendPendingItemsResult;
+  sendAllPendingItems: (tableId: string) => SendPendingItemsResult;
   cycleKitchenItemUnitStatus: (
     tableId: string,
     batchId: string,
@@ -116,21 +169,35 @@ type DemoActions = {
   reopenKitchenBatch: (tableId: string, batchId: string) => void;
   releaseCourse: (tableId: string, course: CourseKey, batchId?: string) => void;
   markCourseCompleted: (tableId: string, course: CourseKey, batchId?: string) => void;
-  printReceipt: (tableId: string, sessionIds?: string[]) => void;
-  reprintReceipt: (tableId: string, sessionIdOrIds?: string | string[]) => void;
+  printReceipt: (
+    tableId: string,
+    sessionIds?: string[],
+    printRequest?: CreatePrintJobRequest
+  ) => Promise<CommitResult> | undefined;
+  reprintReceipt: (
+    tableId: string,
+    sessionIdOrIds?: string | string[],
+    printRequest?: CreatePrintJobRequest
+  ) => Promise<CommitResult> | undefined;
+  enqueuePrintJob: (request: CreatePrintJobRequest) => Promise<CommitResult>;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
-  closePaidOrder: (tableId: string) => { ok: boolean; message?: string; archivedTableIds?: string[] };
+  closePaidOrder: (tableId: string) => {
+    ok: boolean;
+    message?: string;
+    archivedTableIds?: string[];
+    confirmation?: Promise<CommitResult>;
+  };
   recordPartialPayment: (
     tableIds: string[],
     selectedLineItems: PaymentLineItem[],
     method: PaymentMethod,
     label?: string
-  ) => { ok: boolean; message?: string };
+  ) => { ok: boolean; message?: string; confirmation?: Promise<CommitResult> };
   recordInvoiceCancellation: (
     tableIds: string[],
     selectedLineItems: PaymentLineItem[],
     label?: string
-  ) => { ok: boolean; message?: string };
+  ) => { ok: boolean; message?: string; confirmation?: Promise<CommitResult> };
   createPartyGroup: (tableId: string, label: string) => { ok: boolean; message?: string };
   updatePartyGroup: (tableId: string, groupId: string, label: string) => { ok: boolean; message?: string };
   deletePartyGroup: (tableId: string, groupId: string) => { ok: boolean; message?: string };
@@ -178,13 +245,29 @@ type DemoActions = {
     active: boolean;
     note?: string;
   }) => { ok: boolean; message?: string };
-  createPickupTable: (pickupName: string) => {
+  createPickupTable: (input: { customerName: string; locationName: string }) => {
     ok: boolean;
     tableId?: string;
     tableName?: string;
     seatId?: string;
     pickupNumber?: number;
     createdAt?: string;
+    message?: string;
+    confirmation?: Promise<CommitResult>;
+  };
+  createSelfOrderLocation: (name: string) => {
+    ok: boolean;
+    location?: SelfOrderLocation;
+    message?: string;
+  };
+  updateSelfOrderLocation: (
+    locationId: string,
+    patch: Partial<Pick<SelfOrderLocation, "name" | "sortOrder" | "active">>
+  ) => { ok: boolean; message?: string };
+  deleteSelfOrderLocation: (locationId: string) => { ok: boolean; message?: string };
+  rotateSelfOrderLocationKey: (locationId: string) => {
+    ok: boolean;
+    accessKey?: string;
     message?: string;
   };
   updateTable: (
@@ -208,6 +291,8 @@ type DemoActions = {
     scope?: "local" | "shared" | "shared-dismiss"
   ) => void;
   markNotificationsRead: (notificationIds: string[], scope?: "local") => void;
+  retryPendingTransactions: () => void;
+  cancelFailedTransaction: (transactionId: string) => void;
 };
 
 type DemoContextValue = {
@@ -298,6 +383,17 @@ const createClientId = (prefix: string) => {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 };
 
+const createSelfOrderAccessKey = () => {
+  const nativeCrypto = globalThis.crypto;
+  if (nativeCrypto?.getRandomValues) {
+    const bytes = new Uint8Array(18);
+    nativeCrypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return createClientId("qr").replace(/[^a-zA-Z0-9]/g, "");
+};
+
 const normalizeLookupText = (value: string) => value.trim().toLocaleLowerCase("de-DE");
 
 const createUsernameFromName = (value: string) => {
@@ -320,41 +416,6 @@ const floorplanSeatOverrides: Partial<Record<TableLayout["id"], number>> = {
   "table-5": 4,
   "table-6": 5
 };
-const waiterRoomTableMigrations: Record<
-  string,
-  { name: string; active: boolean; plannedOnly: boolean; legacyNames?: string[]; legacyPrefix?: string }
-> = {
-  "table-7": {
-    name: "Biertisch 7",
-    active: true,
-    plannedOnly: false,
-    legacyNames: ["Sicherheitstisch 7"]
-  },
-  "table-8": {
-    name: "Biertisch 8",
-    active: true,
-    plannedOnly: false,
-    legacyPrefix: "Tisch 8 "
-  },
-  "table-9": {
-    name: "Biertisch 9",
-    active: true,
-    plannedOnly: false,
-    legacyPrefix: "Tisch 9 "
-  },
-  "table-10": {
-    name: "Rundtisch 10",
-    active: true,
-    plannedOnly: false,
-    legacyPrefix: "Tisch 10 "
-  },
-  "table-11": {
-    name: "Rundtisch 11",
-    active: true,
-    plannedOnly: false,
-    legacyNames: ["Zum Abholen 1"]
-  }
-};
 const normalizeSeatList = (
   tableId: string,
   seatCount: number,
@@ -374,32 +435,30 @@ const normalizeFloorplanTables = (appState: AppState) => {
   let hasChanges = false;
   const tables = appState.tables.map((table) => {
     const requiredSeatCount = floorplanSeatOverrides[table.id];
-    const roomMigration = waiterRoomTableMigrations[table.id];
-    const hasOpenSession = appState.sessions.some(
-      (session) => session.tableId === table.id && session.status !== "closed"
-    );
-    const matchesLegacyRoomTable =
-      roomMigration !== undefined &&
-      !hasOpenSession &&
-      (roomMigration.legacyNames?.includes(table.name) === true ||
-        roomMigration.legacyPrefix !== undefined && table.name.startsWith(roomMigration.legacyPrefix));
+    const isMenuOnlySafetyTable = table.id === "table-7";
 
     const shouldNormalizeSeatCount =
       requiredSeatCount !== undefined &&
       (table.seatCount < requiredSeatCount || table.seats.length < requiredSeatCount);
 
-    if (!shouldNormalizeSeatCount && !matchesLegacyRoomTable) {
+    const shouldNormalizeSafetyTable =
+      isMenuOnlySafetyTable &&
+      (table.name !== "Sicherheitstisch 7" ||
+        table.note !== "Nur über das Menü auswählbar" ||
+        table.active ||
+        !table.plannedOnly);
+
+    if (!shouldNormalizeSeatCount && !shouldNormalizeSafetyTable) {
       return table;
     }
 
     hasChanges = true;
     return {
       ...table,
-      name: matchesLegacyRoomTable && roomMigration ? roomMigration.name : table.name,
-      note: matchesLegacyRoomTable ? undefined : table.note,
-      active: matchesLegacyRoomTable && roomMigration ? roomMigration.active : table.active,
-      plannedOnly:
-        matchesLegacyRoomTable && roomMigration ? roomMigration.plannedOnly : table.plannedOnly,
+      name: isMenuOnlySafetyTable ? "Sicherheitstisch 7" : table.name,
+      note: isMenuOnlySafetyTable ? "Nur über das Menü auswählbar" : table.note,
+      active: isMenuOnlySafetyTable ? false : table.active,
+      plannedOnly: isMenuOnlySafetyTable ? true : table.plannedOnly,
       seatCount: shouldNormalizeSeatCount && requiredSeatCount ? requiredSeatCount : table.seatCount,
       seats:
         shouldNormalizeSeatCount && requiredSeatCount
@@ -427,8 +486,13 @@ const getNextTableNumber = (tables: TableLayout[]) =>
     const nextNumber = Number(idMatch?.[1] ?? nameMatch?.[1] ?? 0);
     return Math.max(maxNumber, nextNumber);
   }, 0) + 1;
+const getNextPickupNumber = (tables: TableLayout[]) =>
+  tables.reduce((maxNumber, table) => {
+    const pickupMatch = table.name.trim().match(/^Zum Abholen\s+(\d+)$/i);
+    const pickupNumber = Number(pickupMatch?.[1] ?? 0);
+    return Math.max(maxNumber, Number.isFinite(pickupNumber) ? pickupNumber : 0);
+  }, 0) + 1;
 const isPickupTable = (table: TableLayout) =>
-  Boolean(table.pickupName?.trim()) ||
   /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
   table.note?.trim().toLowerCase().startsWith("zum abholen") === true;
 const resolveTablePlacement = (index: number) => {
@@ -834,15 +898,14 @@ const setSessionServiceUserIds = (session: OrderSession, userIds: string[]) => {
 
 const employeeRoles: Role[] = ["waiter", "kitchen", "bar"];
 const isEmployeeAccount = (user: UserAccount) => employeeRoles.includes(user.role);
-const protectedSystemUserIds = new Set(["user-kitchen", "user-bar"]);
-const isResettableEmployeeAccount = (user: UserAccount) =>
-  isEmployeeAccount(user) && !protectedSystemUserIds.has(user.id);
 
 const serviceNotificationKinds: AppNotification["kind"][] = [
   "service-drinks",
   "service-drinks-accepted",
   "service-course-ready",
-  "service-course-ready-accepted"
+  "service-course-ready-accepted",
+  "self-order-payment",
+  "self-order-payment-accepted"
 ];
 
 const isServiceNotification = (notification: AppNotification) =>
@@ -1444,18 +1507,13 @@ const reopenCompletedKitchenBatch = (
   batch: KitchenTicketBatch
 ) => {
   const batchItems = getBatchItems(session, batch);
-  if (batchItems.length === 0) return false;
-  if (batchItems.some((item) => item.servedAt)) return false;
+  const reopenedItemIds = resetKitchenItemsForReopen(batchItems, next.products);
+  if (reopenedItemIds.length === 0) return false;
 
+  batch.itemIds = reopenedItemIds;
   batch.status = "ready";
   batch.completedAt = undefined;
   batch.readyAt = new Date().toISOString();
-
-  batchItems.forEach((item) => {
-    const unitCount = getKitchenUnitCount(item);
-    item.kitchenUnitStates = createKitchenUnitStates(unitCount, "pending");
-    delete item.preparedAt;
-  });
 
   removeKitchenReadyNotifications(next, tableId, batch.course, batch.itemIds);
   session.status = "waiting";
@@ -1467,6 +1525,12 @@ const commitStorage = (state: AppState) => {
   if (typeof window === "undefined") return;
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+};
+
+const commitConfirmedStorage = (state: AppState) => {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(CONFIRMED_STORAGE_KEY, JSON.stringify(state));
 };
 
 const commitAuthStorage = (currentUserId: string | null) => {
@@ -1494,6 +1558,33 @@ const readStoredState = () => {
   }
 };
 
+const readStoredConfirmedState = () => {
+  if (typeof window === "undefined") return null;
+
+  const rawState = localStorage.getItem(CONFIRMED_STORAGE_KEY);
+  if (!rawState) return null;
+
+  try {
+    return JSON.parse(rawState) as AppState;
+  } catch {
+    return null;
+  }
+};
+
+const getTransactionDeviceId = () => {
+  if (typeof window === "undefined") return "device-server";
+
+  const existing = localStorage.getItem(TRANSACTION_DEVICE_KEY);
+  if (existing) return existing;
+
+  const id =
+    typeof window.crypto?.randomUUID === "function"
+      ? `device-${window.crypto.randomUUID()}`
+      : `device-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+  localStorage.setItem(TRANSACTION_DEVICE_KEY, id);
+  return id;
+};
+
 const readStoredAuth = () => {
   if (typeof window === "undefined") return null;
 
@@ -1517,7 +1608,7 @@ const resolveSharedStateUrl = () => {
 
   const deployedBasePath = normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"]);
   if (deployedBasePath) {
-    return `${window.location.origin}${deployedBasePath}/api/state`;
+    return `${window.location.origin}/api/kiju/state`;
   }
 
   return `${window.location.origin}/api/state`;
@@ -1628,19 +1719,6 @@ const fetchSharedSnapshot = async () => {
   return requestSharedSnapshot(sharedStateUrl);
 };
 
-const replaceSharedSnapshot = async (state: AppState) => {
-  const sharedStateUrl = resolveSharedStateUrl();
-  if (!sharedStateUrl) return null;
-
-  return requestSharedSnapshot(sharedStateUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(state)
-    });
-};
-
 export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const [state, setState] = useState<AppState>(() => createFreshOperationalState());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -1651,16 +1729,23 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const [hydrated, setHydrated] = useState(false);
   const [sharedSync, setSharedSync] = useState<SharedSyncState>({
     status: "connecting",
-    usingSharedState: false
+    usingSharedState: false,
+    pendingCount: 0,
+    failedCount: 0
   });
   const channelRef = useRef<BroadcastChannel | null>(null);
   const sharedSyncEnabledRef = useRef(false);
   const sharedVersionRef = useRef<number | null>(null);
   const stateRef = useRef(state);
+  const confirmedStateRef = useRef(state);
   const currentUserIdRef = useRef(currentUserId);
   const localWriteRevisionRef = useRef(0);
-  const sharedWriteInFlightRef = useRef(false);
-  const pendingSharedWriteRef = useRef<{ state: AppState; revision: number } | null>(null);
+  const queueProcessingRef = useRef(false);
+  const queueRetryTimerRef = useRef<number | null>(null);
+  const drainQueueRef = useRef<() => void>(() => undefined);
+  const transactionWaitersRef = useRef(
+    new Map<string, (result: CommitResult) => void>()
+  );
   const dailyResetUndoRef = useRef<AppState | null>(null);
   const serviceHandoverUndoRef = useRef<{ state: AppState; currentUserId: string | null } | null>(null);
   const [canUndoServiceHandover, setCanUndoServiceHandover] = useState(false);
@@ -1672,69 +1757,280 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const broadcast = useCallback((nextState: AppState) => {
-    channelRef.current?.postMessage({
-      state: nextState
-    });
+    try {
+      channelRef.current?.postMessage({
+        state: nextState
+      });
+    } catch {
+      channelRef.current = null;
+    }
   }, []);
 
-  const flushSharedWrite = useCallback(() => {
-    if (sharedWriteInFlightRef.current) return;
+  const applyPendingQueue = useCallback(
+    (baseState: AppState, transactions: PendingTransaction[]) => {
+      let visibleState = normalizeAppState(baseState);
 
-    sharedWriteInFlightRef.current = true;
-    void (async () => {
-      try {
-        while (pendingSharedWriteRef.current) {
-          const pendingWrite = pendingSharedWriteRef.current;
-          pendingSharedWriteRef.current = null;
-          const snapshot = await replaceSharedSnapshot(pendingWrite.state);
-
-          if (!snapshot) {
-            if (!pendingSharedWriteRef.current) {
-              setSharedSync((currentSync) => ({
-                status: "offline",
-                usingSharedState: currentSync.usingSharedState,
-                lastSyncedAt: currentSync.lastSyncedAt
-              }));
-            }
-            continue;
-          }
-
-          if (
-            !pendingSharedWriteRef.current &&
-            pendingWrite.revision === localWriteRevisionRef.current
-          ) {
-            sharedSyncEnabledRef.current = true;
-            sharedVersionRef.current = snapshot.version;
-            setSharedSync({
-              status: "online",
-              usingSharedState: true,
-              lastSyncedAt: snapshot.updatedAt
-            });
-          }
-        }
-      } finally {
-        sharedWriteInFlightRef.current = false;
-        if (pendingSharedWriteRef.current) {
-          flushSharedWrite();
+      for (const transaction of transactions) {
+        try {
+          visibleState = applyCriticalOperation(
+            visibleState,
+            transaction.request.operation
+          );
+        } catch {
+          // The server will report the concrete conflict and keep the entry visible.
         }
       }
-    })();
-  }, []);
 
-  const scheduleSharedWrite = useCallback(
-    (nextState: AppState, revision: number) => {
-      pendingSharedWriteRef.current = {
-        state: nextState,
-        revision
-      };
-      flushSharedWrite();
+      stateRef.current = visibleState;
+      setState(visibleState);
+      commitStorage(visibleState);
+      broadcast(visibleState);
+      return visibleState;
     },
-    [flushSharedWrite]
+    [broadcast]
   );
 
+  const isDisposablePresenceTransaction = (transaction: PendingTransaction) => {
+    if (transaction.request.operation.kind !== "staff.update") return false;
+    if (transaction.request.printJobs?.length) return false;
+
+    const patches = transaction.request.operation.patches;
+    return (
+      patches.length > 0 &&
+      patches.every((patch) => {
+        const userSegment = patch.path[1];
+        return (
+          patch.op === "set" &&
+          patch.path.length === 3 &&
+          patch.path[0] === "users" &&
+          typeof userSegment === "object" &&
+          userSegment !== null &&
+          !Array.isArray(userSegment) &&
+          typeof (userSegment as { id?: unknown }).id === "string" &&
+          patch.path[2] === "lastSeenAt"
+        );
+      })
+    );
+  };
+
+  const discardDisposablePresenceTransactions = useCallback(
+    async (transactions: PendingTransaction[]) => {
+      const disposableTransactions = transactions.filter(isDisposablePresenceTransaction);
+      if (disposableTransactions.length === 0) return transactions;
+
+      const disposableIds = new Set(
+        disposableTransactions.map((transaction) => transaction.transactionId)
+      );
+      await Promise.all(
+        disposableTransactions.map((transaction) =>
+          removePendingTransaction(transaction.transactionId)
+        )
+      );
+
+      return transactions.filter(
+        (transaction) => !disposableIds.has(transaction.transactionId)
+      );
+    },
+    []
+  );
+
+  const updateSyncFromQueue = useCallback(
+    (
+      transactions: PendingTransaction[],
+      statusOverride?: SharedSyncState["status"],
+      message?: string
+    ) => {
+      const failedCount = transactions.filter(
+        (transaction) => transaction.status === "failed"
+      ).length;
+      const pendingCount = transactions.length;
+      const status =
+        statusOverride ??
+        (failedCount > 0
+          ? "error"
+          : pendingCount > 0
+            ? "pending"
+            : "online");
+
+      setSharedSync((current) => ({
+        status,
+        usingSharedState: current.usingSharedState || status === "online",
+        lastSyncedAt: current.lastSyncedAt,
+        pendingCount,
+        failedCount,
+        message
+      }));
+    },
+    []
+  );
+
+  const drainQueue = useCallback(async () => {
+    if (queueProcessingRef.current || typeof window === "undefined") return;
+    queueProcessingRef.current = true;
+
+    if (queueRetryTimerRef.current !== null) {
+      window.clearTimeout(queueRetryTimerRef.current);
+      queueRetryTimerRef.current = null;
+    }
+
+    try {
+      while (true) {
+        const transactions = await discardDisposablePresenceTransactions(
+          await listPendingTransactions()
+        );
+        if (transactions.length === 0) {
+          setSharedSync((current) => ({
+            status: "online",
+            usingSharedState: true,
+            lastSyncedAt: current.lastSyncedAt,
+            pendingCount: 0,
+            failedCount: 0
+          }));
+          return;
+        }
+
+        const failed = transactions.find(
+          (transaction) => transaction.status === "failed"
+        );
+        if (failed) {
+          updateSyncFromQueue(
+            transactions,
+            "error",
+            failed.lastError ??
+              "Mindestens ein Vorgang wartet auf manuelles erneutes Senden."
+          );
+          return;
+        }
+
+        const transaction = transactions[0]!;
+        const waitTime = Math.max(0, transaction.nextAttemptAt - Date.now());
+        if (waitTime > 0) {
+          updateSyncFromQueue(
+            transactions,
+            "pending",
+            "Offene Vorgänge warten auf die nächste Serverübertragung."
+          );
+          queueRetryTimerRef.current = window.setTimeout(
+            () => drainQueueRef.current(),
+            waitTime
+          );
+          return;
+        }
+
+        const sendingTransaction: PendingTransaction = {
+          ...transaction,
+          status: "sending",
+          lastAttemptAt: new Date().toISOString()
+        };
+        await savePendingTransaction(sendingTransaction);
+        updateSyncFromQueue(
+          [
+            sendingTransaction,
+            ...transactions.slice(1)
+          ],
+          "pending",
+          "Wird sicher an den Server übertragen …"
+        );
+
+        const result = await sendPendingTransaction(sendingTransaction);
+        if (result.ok) {
+          await removePendingTransaction(transaction.transactionId);
+          const confirmedState = normalizeAppState(result.confirmation.state);
+          confirmedStateRef.current = confirmedState;
+          sharedVersionRef.current = result.confirmation.stateVersion;
+          sharedSyncEnabledRef.current = true;
+          commitConfirmedStorage(confirmedState);
+
+          const remainingTransactions = await discardDisposablePresenceTransactions(
+            await listPendingTransactions()
+          );
+          applyPendingQueue(confirmedState, remainingTransactions);
+          setSharedSync({
+            status:
+              remainingTransactions.length > 0 ? "pending" : "online",
+            usingSharedState: true,
+            lastSyncedAt: result.confirmation.savedAt,
+            pendingCount: remainingTransactions.length,
+            failedCount: remainingTransactions.filter(
+              (entry) => entry.status === "failed"
+            ).length
+          });
+          transactionWaitersRef.current
+            .get(transaction.transactionId)?.({
+              ok: true,
+              transactionId: transaction.transactionId,
+              confirmation: result.confirmation
+            });
+          transactionWaitersRef.current.delete(transaction.transactionId);
+          continue;
+        }
+
+        const attemptCount = transaction.attemptCount + 1;
+        const shouldRetry =
+          result.transient && hasAutomaticRetryRemaining(attemptCount);
+        const nextTransaction: PendingTransaction = {
+          ...transaction,
+          status: shouldRetry ? "pending" : "failed",
+          attemptCount,
+          nextAttemptAt: shouldRetry
+            ? Date.now() + getRetryDelayMs(attemptCount)
+            : transaction.nextAttemptAt,
+          lastAttemptAt: new Date().toISOString(),
+          lastError: result.message,
+          lastStatusCode: result.statusCode
+        };
+        await savePendingTransaction(nextTransaction);
+        const nextTransactions = [
+          nextTransaction,
+          ...transactions.slice(1)
+        ];
+
+        if (!shouldRetry) {
+          updateSyncFromQueue(nextTransactions, "error", result.message);
+          transactionWaitersRef.current
+            .get(transaction.transactionId)?.({
+              ok: false,
+              transactionId: transaction.transactionId,
+              message: result.message
+            });
+          transactionWaitersRef.current.delete(transaction.transactionId);
+          return;
+        }
+
+        updateSyncFromQueue(
+          nextTransactions,
+          "offline",
+          `${result.message} Automatischer erneuter Versuch folgt.`
+        );
+        queueRetryTimerRef.current = window.setTimeout(
+          () => drainQueueRef.current(),
+          getRetryDelayMs(attemptCount)
+        );
+        return;
+      }
+    } finally {
+      queueProcessingRef.current = false;
+    }
+  }, [applyPendingQueue, discardDisposablePresenceTransactions, updateSyncFromQueue]);
+
+  drainQueueRef.current = () => {
+    void drainQueue();
+  };
+
   const commit = useCallback(
-    (nextState: AppState, nextUserId: string | null = currentUserId) => {
+    (
+      nextState: AppState,
+      nextUserId: string | null = currentUserId,
+      kind: CriticalOperationKind = "state.update",
+      printRequests: unknown[] = []
+    ): Promise<CommitResult> => {
       const normalizedState = normalizeAppState(nextState);
+      const previousState = stateRef.current;
+      const operation = createCriticalOperation(
+        previousState,
+        normalizedState,
+        kind
+      );
       localWriteRevisionRef.current += 1;
       stateRef.current = normalizedState;
       currentUserIdRef.current = nextUserId;
@@ -1745,9 +2041,44 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       commitAuthStorage(nextUserId);
       broadcast(normalizedState);
 
-      scheduleSharedWrite(normalizedState, localWriteRevisionRef.current);
+      if (operation.patches.length === 0 && printRequests.length === 0) {
+        return Promise.resolve({ ok: true });
+      }
+
+      const transactionId = createClientId("transaction");
+      const printJobs: CriticalPrintJob[] = printRequests.map(
+        (request, index) => ({
+          transactionId: `${transactionId}-print-${index + 1}`,
+          request
+        })
+      );
+      const request = {
+        transactionId,
+        deviceId: getTransactionDeviceId(),
+        actorId: nextUserId ?? undefined,
+        createdAt: new Date().toISOString(),
+        operation,
+        ...(printJobs.length > 0 ? { printJobs } : {})
+      };
+      const pendingTransaction = createPendingTransaction(request);
+
+      setSharedSync((current) => ({
+        status: "pending",
+        usingSharedState: current.usingSharedState,
+        lastSyncedAt: current.lastSyncedAt,
+        pendingCount: current.pendingCount + 1,
+        failedCount: current.failedCount,
+        message: "Wird sicher an den Server übertragen …"
+      }));
+
+      return new Promise<CommitResult>((resolve) => {
+        transactionWaitersRef.current.set(transactionId, resolve);
+        void savePendingTransaction(pendingTransaction).then(() => {
+          drainQueueRef.current();
+        });
+      });
     },
-    [broadcast, currentUserId, scheduleSharedWrite]
+    [broadcast, currentUserId]
   );
 
   const rememberServiceHandoverUndo = useCallback(() => {
@@ -1793,14 +2124,17 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     if (typeof window === "undefined") return;
 
     const storedState = readStoredState();
+    const storedConfirmedState =
+      readStoredConfirmedState() ?? storedState ?? createFreshOperationalState();
     const storedAuth = readStoredAuth();
     const storedNotificationReads = readStoredNotificationReads();
+    const normalizedConfirmedState = normalizeAppState(storedConfirmedState);
 
-    if (storedState) {
-      const normalizedStoredState = normalizeAppState(storedState);
-      stateRef.current = normalizedStoredState;
-      setState(normalizedStoredState);
-    }
+    confirmedStateRef.current = normalizedConfirmedState;
+    stateRef.current = storedState
+      ? normalizeAppState(storedState)
+      : normalizedConfirmedState;
+    setState(stateRef.current);
 
     if (storedAuth) {
       currentUserIdRef.current = storedAuth.currentUserId;
@@ -1812,8 +2146,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     if ("BroadcastChannel" in window) {
       channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
       channelRef.current.onmessage = (event) => {
-        if (sharedWriteInFlightRef.current || pendingSharedWriteRef.current) return;
-
         const payload = event.data as { state: AppState };
         const normalizedBroadcastState = normalizeAppState(payload.state);
         stateRef.current = normalizedBroadcastState;
@@ -1823,8 +2155,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
-        if (sharedWriteInFlightRef.current || pendingSharedWriteRef.current) return;
-
         try {
           const normalizedStoredState = normalizeAppState(JSON.parse(event.newValue) as AppState);
           stateRef.current = normalizedStoredState;
@@ -1842,72 +2172,124 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     window.addEventListener("storage", handleStorage);
     let isActive = true;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
-    const bootWriteRevision = localWriteRevisionRef.current;
-    setHydrated(true);
+    let isPollingSharedState = false;
 
-    const hydrateSharedState = async () => {
+    const synchronizeFromServer = async () => {
       const snapshot = await fetchSharedSnapshot();
+      const transactions = await discardDisposablePresenceTransactions(
+        await listPendingTransactions()
+      );
 
       if (snapshot && isActive) {
         sharedSyncEnabledRef.current = true;
         sharedVersionRef.current = snapshot.version;
         const normalizedSnapshotState = normalizeAppState(snapshot.state);
-        const hasLocalWritesSinceBoot = localWriteRevisionRef.current !== bootWriteRevision;
-
-        if (!hasLocalWritesSinceBoot) {
-          stateRef.current = normalizedSnapshotState;
-          setState(normalizedSnapshotState);
-          commitStorage(normalizedSnapshotState);
-        }
-
+        confirmedStateRef.current = normalizedSnapshotState;
+        commitConfirmedStorage(normalizedSnapshotState);
+        applyPendingQueue(normalizedSnapshotState, transactions);
+        const failedCount = transactions.filter(
+          (transaction) => transaction.status === "failed"
+        ).length;
         setSharedSync({
-          status: "online",
+          status:
+            failedCount > 0
+              ? "error"
+              : transactions.length > 0
+                ? "pending"
+                : "online",
           usingSharedState: true,
-          lastSyncedAt: snapshot.updatedAt
+          lastSyncedAt: snapshot.updatedAt,
+          pendingCount: transactions.length,
+          failedCount
         });
-
-        if (!hasLocalWritesSinceBoot && JSON.stringify(normalizedSnapshotState) !== JSON.stringify(snapshot.state)) {
-          scheduleSharedWrite(normalizedSnapshotState, localWriteRevisionRef.current);
-        }
-
-        if (hasLocalWritesSinceBoot) {
-          scheduleSharedWrite(stateRef.current, localWriteRevisionRef.current);
-        }
-
-        pollTimer = setInterval(async () => {
-          if (sharedWriteInFlightRef.current || pendingSharedWriteRef.current) return;
-
-          const latestSnapshot = await fetchSharedSnapshot();
-          if (!latestSnapshot || !isActive) return;
-          if (
-            sharedVersionRef.current !== null &&
-            latestSnapshot.version <= sharedVersionRef.current
-          ) {
-            return;
-          }
-
-          sharedVersionRef.current = latestSnapshot.version;
-          const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
-          stateRef.current = normalizedSnapshotState;
-          setState(normalizedSnapshotState);
-          commitStorage(normalizedSnapshotState);
-          setSharedSync({
-            status: "online",
-            usingSharedState: true,
-            lastSyncedAt: latestSnapshot.updatedAt
-          });
-        }, SHARED_SYNC_POLL_MS);
       }
 
       if (!snapshot && isActive) {
+        applyPendingQueue(normalizedConfirmedState, transactions);
+        const failedCount = transactions.filter(
+          (transaction) => transaction.status === "failed"
+        ).length;
         setSharedSync({
-          status: "offline",
-          usingSharedState: false
+          status: failedCount > 0 ? "error" : "offline",
+          usingSharedState: false,
+          pendingCount: transactions.length,
+          failedCount,
+          message:
+            "Server nicht erreichbar. Offene Vorgänge bleiben lokal gespeichert."
         });
+      }
+
+      if (isActive) {
+        setHydrated(true);
+        drainQueueRef.current();
       }
     };
 
-    void hydrateSharedState();
+    const pollSharedState = async () => {
+      if (isPollingSharedState) return;
+      isPollingSharedState = true;
+
+      try {
+        const latestSnapshot = await fetchSharedSnapshot();
+        if (!latestSnapshot || !isActive) {
+          const transactions = await discardDisposablePresenceTransactions(
+            await listPendingTransactions()
+          );
+          updateSyncFromQueue(
+            transactions,
+            transactions.some((entry) => entry.status === "failed")
+              ? "error"
+              : "offline",
+            "Server nicht erreichbar. Offene Vorgänge bleiben lokal gespeichert."
+          );
+          return;
+        }
+
+        if (
+          sharedVersionRef.current !== null &&
+          latestSnapshot.version <= sharedVersionRef.current
+        ) {
+          return;
+        }
+
+        sharedVersionRef.current = latestSnapshot.version;
+        sharedSyncEnabledRef.current = true;
+        const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
+        confirmedStateRef.current = normalizedSnapshotState;
+        commitConfirmedStorage(normalizedSnapshotState);
+        const transactions = await discardDisposablePresenceTransactions(
+          await listPendingTransactions()
+        );
+        applyPendingQueue(normalizedSnapshotState, transactions);
+        updateSyncFromQueue(transactions);
+        setSharedSync((current) => ({
+          ...current,
+          usingSharedState: true,
+          lastSyncedAt: latestSnapshot.updatedAt
+        }));
+      } finally {
+        isPollingSharedState = false;
+      }
+    };
+
+    const pollSharedStateIfVisible = async () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      await pollSharedState();
+    };
+
+    const handleOnline = () => {
+      drainQueueRef.current();
+      void pollSharedState();
+    };
+
+    window.addEventListener("online", handleOnline);
+    void synchronizeFromServer();
+    pollTimer = setInterval(() => {
+      void pollSharedStateIfVisible();
+    }, SHARED_SYNC_POLL_MS);
 
     return () => {
       isActive = false;
@@ -1915,9 +2297,15 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         clearInterval(pollTimer);
       }
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("online", handleOnline);
+      if (queueRetryTimerRef.current !== null) {
+        window.clearTimeout(queueRetryTimerRef.current);
+        queueRetryTimerRef.current = null;
+      }
       channelRef.current?.close();
+      channelRef.current = null;
     };
-  }, [scheduleSharedWrite]);
+  }, [applyPendingQueue, discardDisposablePresenceTransactions, updateSyncFromQueue]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1925,7 +2313,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const normalizedState = normalizeAppState(state);
     if (JSON.stringify(normalizedState) === JSON.stringify(state)) return;
 
-    commit(normalizedState, currentUserId);
+    void commit(normalizedState, currentUserId, "state.update");
   }, [commit, currentUserId, hydrated, state]);
 
   const login = useCallback(
@@ -1964,7 +2352,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         };
       }
 
-      commit(state, user.id);
+      void commit(state, user.id, "staff.update");
       return { ok: true, user };
     },
     [commit, state]
@@ -2016,7 +2404,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         const matchedUser = usernameMatch ?? exactNameMatches[0];
         if (matchedUser) {
           matchedUser.lastSeenAt = new Date().toISOString();
-          commit(next, matchedUser.id);
+          void commit(next, matchedUser.id, "staff.update");
           return { ok: true, user: matchedUser };
         }
 
@@ -2042,7 +2430,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           lastSeenAt: new Date().toISOString()
         };
         next.users.unshift(user);
-        commit(next, user.id);
+        void commit(next, user.id, "staff.create");
         return { ok: true, user };
       }
 
@@ -2060,14 +2448,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       user.lastSeenAt = new Date().toISOString();
-      commit(next, user.id);
+      void commit(next, user.id, "staff.update");
       return { ok: true, user };
     },
     [commit, state]
   );
 
   const logout = useCallback(() => {
-    commit(state, null);
+    void commit(state, null);
   }, [commit, state]);
 
   const addItem = useCallback(
@@ -2105,7 +2493,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         modifiers: []
       });
 
-      commit(next);
+      void commit(next, undefined, "order.item.add");
     },
     [commit, currentUserId, state]
   );
@@ -2161,7 +2549,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         notifySentItemCorrection(next, tableId, item, previousItem, "updated", currentUserId);
       }
 
-      commit(next);
+      void commit(next, undefined, "order.item.update");
     },
     [commit, currentUserId, state]
   );
@@ -2213,7 +2601,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         notifySentItemCorrection(next, tableId, item, previousItem, "updated", currentUserId);
       }
 
-      commit(next);
+      void commit(next, undefined, "order.item.update");
     },
     [commit, currentUserId, state]
   );
@@ -2256,7 +2644,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         next.sessions = next.sessions.filter((entry) => entry.id !== session.id);
       }
 
-      commit(next);
+      void commit(next, undefined, "order.item.remove");
     },
     [commit, currentUserId, state]
   );
@@ -2279,7 +2667,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       session.courseTickets[course].status = "skipped";
       session.courseTickets[course].completedAt = new Date().toISOString();
 
-      commit(next);
+      void commit(next, undefined, "order.course.skip");
     },
     [commit, state]
   );
@@ -2303,7 +2691,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       const pendingCourseItems = session.items.filter(
-        (item) => item.category === course && !item.sentAt
+        (item) =>
+          item.category === course &&
+          !item.sentAt &&
+          !isServiceBookedItem(item, next.products)
       );
       if (pendingCourseItems.length === 0) {
         return {
@@ -2329,33 +2720,35 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       session.status = "waiting";
 
-      commit(next);
+      const confirmation = commit(next, undefined, "order.course.wait");
       return {
         ok: true,
-        message: `${courseLabels[course]} wartet ${normalizedMinutes} Minuten.`
+        message: `${courseLabels[course]} wartet ${normalizedMinutes} Minuten.`,
+        confirmation
       };
     },
     [commit, state]
   );
 
-  const sendCourseToKitchen = useCallback(
-    (tableId: string, course: CourseKey) => {
+  const sendPendingItems = useCallback(
+    (tableId: string, requestedCourse: CourseKey | null): SendPendingItemsResult => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
       if (!session) {
         return {
           ok: false,
-          message: "Für diesen Tisch gibt es noch keine laufende Bestellung."
+          message: "Für diesen Tisch gibt es noch keine laufende Bestellung.",
+          sentItemCount: 0,
+          affectedCourses: [],
+          targets: []
         };
       }
 
+      const pendingSummary = buildPendingOrderSendSummary(session, next.products);
       const kitchenCourseItems = kitchenCourseOrder
         .map((kitchenCourse) => ({
           course: kitchenCourse,
-          items: session.items.filter(
-            (item) =>
-              item.category === kitchenCourse && !item.sentAt && !isOrderItemCanceled(item)
-          )
+          items: pendingSummary.byCourse[kitchenCourse]
         }))
         .filter(({ items }) => items.length > 0);
 
@@ -2363,22 +2756,35 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const table = next.tables.find((entry) => entry.id === tableId);
       const tableName = table?.name ?? tableId.replace("table-", "Tisch ");
       const bedienung = resolveSessionBedienung(next.users, session, currentUserId);
-      const kitchenPrintRequests: Parameters<typeof createPrintJob>[0][] = [];
-      const pendingDrinkItems = session.items.filter(
-        (item) => item.category === "drinks" && !item.sentAt && !isOrderItemCanceled(item)
-      );
+      const pendingDrinkItems = pendingSummary.byCourse.drinks;
+      const affectedCourses: CourseKey[] = [];
+      const targets: OrderSendTarget[] = [];
+      let sentItemCount = 0;
 
-      if (course === "drinks" && pendingDrinkItems.length === 0) {
+      if (requestedCourse === "drinks" && pendingDrinkItems.length === 0) {
         return {
           ok: false,
-          message: `Für ${courseLabels[course]} gibt es keine neuen Positionen.`
+          message: `Für ${courseLabels.drinks} gibt es keine neuen Positionen.`,
+          sentItemCount: 0,
+          affectedCourses: [],
+          targets: []
         };
       }
 
-      if (course !== "drinks" && kitchenCourseItems.length === 0) {
+      if (
+        requestedCourse !== "drinks" &&
+        kitchenCourseItems.length === 0 &&
+        !(requestedCourse === null && pendingDrinkItems.length > 0)
+      ) {
         return {
           ok: false,
-          message: "Für diesen Tisch gibt es keine neuen Speisen für die Küche."
+          message:
+            requestedCourse === null
+              ? "Für diesen Tisch gibt es keine neuen Positionen zum Senden."
+              : "Für diesen Tisch gibt es keine neuen Speisen für die Küche.",
+          sentItemCount: 0,
+          affectedCourses: [],
+          targets: []
         };
       }
 
@@ -2399,18 +2805,28 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         });
         session.skippedCourses = session.skippedCourses.filter((entry) => entry !== "drinks");
         syncDrinkTicketFromBarBatches(session);
+        affectedCourses.push("drinks");
+        targets.push("bar");
+        sentItemCount += pendingDrinkItems.reduce((sum, item) => sum + item.quantity, 0);
 
         return true;
       };
 
-      if (course === "drinks") {
+      if (
+        requestedCourse === "drinks" ||
+        (requestedCourse === null && kitchenCourseItems.length === 0)
+      ) {
         sendPendingDrinksToBar();
         session.status = "waiting";
         emitOperatorFeedback();
-        commit(next);
+        const confirmation = commit(next, undefined, "order.send");
         return {
           ok: true,
           message: "Neue Getränke wurden an die Bar gesendet.",
+          sentItemCount,
+          affectedCourses,
+          targets,
+          confirmation,
           ticketStatus: session.courseTickets.drinks.status
         };
       }
@@ -2441,6 +2857,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         session.skippedCourses = session.skippedCourses.filter((entry) => entry !== kitchenCourse);
 
         syncCourseTicketFromKitchenBatches(session, kitchenCourse);
+        affectedCourses.push(kitchenCourse);
+        sentItemCount += items.reduce((sum, item) => sum + item.quantity, 0);
 
         const batchLabel =
           batch.sequence > 1
@@ -2449,15 +2867,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         sentKitchenCourseLabels.push(batchLabel);
         if (shouldWait) {
           waitingKitchenCourseLabels.push(batchLabel);
-        }
-        if (table) {
-          kitchenPrintRequests.push({
-            type: "kitchen-ticket",
-            session: structuredClone(session),
-            table: structuredClone(table),
-            products: structuredClone(next.products),
-            batch: structuredClone(batch)
-          });
         }
         withNotification(next, {
           title: shouldWait
@@ -2470,13 +2879,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           tableId
         }, currentUserId);
       });
+      if (kitchenCourseItems.length > 0) {
+        targets.push("kitchen");
+      }
 
       session.status = "waiting";
       emitOperatorFeedback();
-      commit(next);
-      if (kitchenPrintRequests.length > 0) {
-        void Promise.all(kitchenPrintRequests.map((request) => createPrintJob(request)));
-      }
+      const confirmation = commit(next, undefined, "order.send");
       return {
         ok: true,
         message:
@@ -2489,10 +2898,24 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
               } dort erst nach der Wartezeit frei.`
             : " Alle offenen Speisen sind direkt frei.") +
           (drinksWereSent ? " Offene Getränke wurden gleichzeitig an die Bar gesendet." : ""),
+        sentItemCount,
+        affectedCourses,
+        targets,
+        confirmation,
         ticketStatus: waitingKitchenCourseLabels.length > 0 ? ("countdown" as const) : ("ready" as const)
       };
     },
     [commit, currentUserId, state]
+  );
+
+  const sendCourseToKitchen = useCallback(
+    (tableId: string, course: CourseKey) => sendPendingItems(tableId, course),
+    [sendPendingItems]
+  );
+
+  const sendAllPendingItems = useCallback(
+    (tableId: string) => sendPendingItems(tableId, null),
+    [sendPendingItems]
   );
 
   const cycleKitchenItemUnitStatus = useCallback(
@@ -2508,6 +2931,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       const item = getBatchItems(session, batch).find((entry) => entry.id === itemId);
       if (!item) return { ok: false, message: "Position wurde nicht gefunden." };
+      if (isServiceBookedItem(item, next.products)) {
+        return {
+          ok: false,
+          message: "Serviceartikel werden nicht in der Küche bearbeitet oder gedruckt."
+        };
+      }
 
       const changedAt = new Date().toISOString();
       const nextStatus = cycleKitchenUnitState(item, unitIndex, changedAt);
@@ -2519,9 +2948,26 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         syncCourseTicketFromKitchenBatches(session, batch.course);
       }
 
+      const table = next.tables.find((entry) => entry.id === tableId);
+      const printRequests: CreatePrintJobRequest[] =
+        nextStatus === "completed" && table
+          ? [
+              {
+                type: "kitchen-label",
+                session: structuredClone(session),
+                table: structuredClone(table),
+                products: structuredClone(next.products),
+                batch: structuredClone(batch),
+                itemId,
+                unitIndex,
+                completedAt: changedAt
+              }
+            ]
+          : [];
+
       emitOperatorFeedback();
-      commit(next);
-      return { ok: true, nextStatus, changedAt };
+      const confirmation = commit(next, undefined, "kitchen.status", printRequests);
+      return { ok: true, nextStatus, changedAt, confirmation };
     },
     [commit, state]
   );
@@ -2530,7 +2976,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (tableId: string, batchId: string) => {
       const next = structuredClone(state);
       const session = getSessionForTable(next.sessions, tableId);
-      if (!session) return;
+      if (!session || session.status === "closed") return;
 
       const batch = session.kitchenTicketBatches.find((entry) => entry.id === batchId);
       if (!batch || batch.status !== "completed") return;
@@ -2539,7 +2985,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (!reopened) return;
 
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "kitchen.status");
     },
     [commit, state]
   );
@@ -2570,7 +3016,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         batch.readyAt = new Date().toISOString();
         syncCourseTicketFromKitchenBatches(session, course);
         emitOperatorFeedback();
-        commit(next);
+        void commit(next, undefined, "kitchen.status");
         return;
       }
 
@@ -2583,7 +3029,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       ticket.manualRelease = true;
       ticket.readyAt = new Date().toISOString();
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "kitchen.status");
     },
     [commit, state]
   );
@@ -2615,15 +3061,43 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         return;
       }
 
+      const openKitchenLabelUnits =
+        course !== "drinks" && batch
+          ? getOpenKitchenLabelUnits(getBatchItems(session, batch), next.products)
+          : [];
       completeCourseOrBatch(next, session, tableId, course, completedAt, batch);
+      const table = next.tables.find((entry) => entry.id === tableId);
+      const printRequests: CreatePrintJobRequest[] =
+        batch && table
+          ? openKitchenLabelUnits.map(({ itemId, unitIndex }) => ({
+              type: "kitchen-label",
+              session: structuredClone(session),
+              table: structuredClone(table),
+              products: structuredClone(next.products),
+              batch: structuredClone(batch),
+              itemId,
+              unitIndex,
+              completedAt
+            }))
+          : [];
+
       emitOperatorFeedback();
-      commit(next);
+      void commit(
+        next,
+        undefined,
+        course === "drinks" ? "bar.status" : "kitchen.status",
+        printRequests
+      );
     },
     [commit, state]
   );
 
   const printReceipt = useCallback(
-    (tableId: string, sessionIds?: string[]) => {
+    (
+      tableId: string,
+      sessionIds?: string[],
+      printRequest?: CreatePrintJobRequest
+    ) => {
       const next = structuredClone(state);
       const sessions =
         sessionIds && sessionIds.length > 0
@@ -2651,13 +3125,22 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         targetRoles: ["admin"]
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      return commit(
+        next,
+        undefined,
+        "order.receipt",
+        printRequest ? [printRequest] : []
+      );
     },
     [commit, currentUserId, state]
   );
 
   const reprintReceipt = useCallback(
-    (tableId: string, sessionIdOrIds?: string | string[]) => {
+    (
+      tableId: string,
+      sessionIdOrIds?: string | string[],
+      printRequest?: CreatePrintJobRequest
+    ) => {
       const next = structuredClone(state);
       const sessions = Array.isArray(sessionIdOrIds)
         ? next.sessions.filter((entry) => sessionIdOrIds.includes(entry.id))
@@ -2701,9 +3184,20 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         targetRoles: ["admin"]
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      return commit(
+        next,
+        undefined,
+        "order.receipt",
+        printRequest ? [printRequest] : []
+      );
     },
     [commit, currentUserId, state]
+  );
+
+  const enqueuePrintJob = useCallback(
+    (request: CreatePrintJobRequest) =>
+      commit(stateRef.current, currentUserIdRef.current, "print.enqueue", [request]),
+    [commit]
   );
 
   const closeOrder = useCallback(
@@ -2746,7 +3240,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableId
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "order.close");
     },
     [commit, currentUserId, state]
   );
@@ -2809,8 +3303,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableId: uniqueTableIds[0]
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
-      return { ok: true };
+      const confirmation = commit(next, undefined, "order.payment");
+      return { ok: true, confirmation };
     },
     [commit, currentUserId, state]
   );
@@ -2866,8 +3360,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableId: uniqueTableIds[0]
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
-      return { ok: true };
+      const confirmation = commit(next, undefined, "order.cancellation");
+      return { ok: true, confirmation };
     },
     [commit, currentUserId, state]
   );
@@ -2935,8 +3429,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableId
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
-      return { ok: true, archivedTableIds };
+      const confirmation = commit(next, undefined, "order.close");
+      return { ok: true, archivedTableIds, confirmation };
     },
     [commit, currentUserId, state]
   );
@@ -2958,7 +3452,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         createdAt: now,
         updatedAt: now
       });
-      commit(next);
+      void commit(next, undefined, "order.party-group");
       return { ok: true };
     },
     [commit, state]
@@ -2976,7 +3470,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       group.label = normalizedLabel;
       group.updatedAt = new Date().toISOString();
-      commit(next);
+      void commit(next, undefined, "order.party-group");
       return { ok: true };
     },
     [commit, state]
@@ -2991,7 +3485,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       session.partyGroups = session.partyGroups.filter((group) => group.id !== groupId);
-      commit(next);
+      void commit(next, undefined, "order.party-group");
       return { ok: true };
     },
     [commit, state]
@@ -3009,7 +3503,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const validItemIds = new Set(session.items.map((item) => item.id));
       group.itemIds = [...new Set(itemIds.filter((itemId) => validItemIds.has(itemId)))];
       group.updatedAt = new Date().toISOString();
-      commit(next);
+      void commit(next, undefined, "order.party-group");
       return { ok: true };
     },
     [commit, state]
@@ -3037,7 +3531,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         active: true,
         createdAt: new Date().toISOString()
       });
-      commit(next);
+      void commit(next, undefined, "table.link");
       return { ok: true };
     },
     [commit, state]
@@ -3052,7 +3546,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       group.active = false;
-      commit(next);
+      void commit(next, undefined, "table.unlink");
       return { ok: true };
     },
     [commit, state]
@@ -3075,6 +3569,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
       const drinkSubcategory =
         input.category === "drinks" ? (input.drinkSubcategory ?? "").trim() : undefined;
+      const productionTarget =
+        input.category === "dessert" ? ("service" as const) : input.productionTarget;
 
       const next = structuredClone(state);
       next.products.unshift({
@@ -3086,8 +3582,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         priceCents: Math.max(0, input.priceCents),
         taxRate: input.taxRate,
         allergens: [],
-        showInKitchen: input.productionTarget === "kitchen",
-        productionTarget: input.productionTarget,
+        showInKitchen: productionTarget === "kitchen",
+        productionTarget,
         modifierGroups: [],
         ...(input.supportsExtraIngredients ? { supportsExtraIngredients: true } : {})
       });
@@ -3098,7 +3594,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "success"
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "catalog.create");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3119,7 +3615,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         priceDeltaCents: Math.max(0, Math.round(input.priceDeltaCents)),
         active: true
       });
-      commit(next);
+      void commit(next, undefined, "catalog.create");
       return { ok: true };
     },
     [commit, state]
@@ -3144,7 +3640,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         ingredient.active = patch.active;
       }
 
-      commit(next);
+      void commit(next, undefined, "catalog.update");
     },
     [commit, state]
   );
@@ -3164,10 +3660,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (product.category !== "drinks") {
         delete product.drinkSubcategory;
       }
-      if (patch.productionTarget !== undefined && patch.showInKitchen === undefined) {
+      if (isAlwaysServiceBookedProduct(product)) {
+        product.productionTarget = "service";
+        product.showInKitchen = false;
+      } else if (patch.productionTarget !== undefined && patch.showInKitchen === undefined) {
         product.showInKitchen = patch.productionTarget === "kitchen";
       }
-      commit(next);
+      void commit(next, undefined, "catalog.update");
     },
     [commit, state]
   );
@@ -3211,7 +3710,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "alert"
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "catalog.delete");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3279,7 +3778,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "alert"
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "catalog.delete");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3326,7 +3825,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tableId: nextSession.tableId
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "order.delete");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3364,7 +3863,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "success"
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "staff.create");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3431,7 +3930,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         password: nextPassword,
         pin: patch.pin !== undefined ? patch.pin?.trim() || undefined : user.pin
       });
-      commit(next);
+      void commit(next, undefined, "staff.update");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3446,10 +3945,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       if (currentUserId === userId) {
         return { ok: false, message: "Das aktuell angemeldete Konto kann nicht gelöscht werden." };
-      }
-
-      if (protectedSystemUserIds.has(userId)) {
-        return { ok: false, message: "Das feste Küchen- oder Getränke-Konto kann nicht gelöscht werden." };
       }
 
       if (user.role === "admin" && state.users.filter((entry) => entry.role === "admin").length <= 1) {
@@ -3491,7 +3986,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "alert"
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "staff.delete");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -3523,47 +4018,70 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         tone: "success"
       }, currentUserId);
       emitOperatorFeedback();
-      commit(next);
+      void commit(next, undefined, "table.create");
       return { ok: true };
     },
     [commit, currentUserId, state]
   );
 
-  const createPickupTable = useCallback((pickupName: string) => {
-    const normalizedPickupName = pickupName.trim().slice(0, 60);
-    if (!normalizedPickupName) {
-      return { ok: false, message: "Bitte gib den Namen der abholenden Person an." };
-    }
-
+  const createPickupTable = useCallback((input: { customerName: string; locationName: string }) => {
     const next = structuredClone(state);
-    const nextNumber = Math.max(12, getNextTableNumber(next.tables));
-    const pickupNumber = nextNumber;
+    const nextNumber = getNextTableNumber(next.tables);
+    const pickupNumber = getNextPickupNumber(next.tables);
     const tableId = `table-${nextNumber}`;
     const tableName = `Zum Abholen ${pickupNumber}`;
     const createdAt = new Date().toISOString();
+    const customerName = input.customerName.trim().replace(/\s+/g, " ");
+    const locationName = input.locationName.trim().replace(/\s+/g, " ");
+    const bedienung =
+      next.users.find((user) => user.id === currentUserId)?.name?.trim() || "Service";
     const seatCount = 1;
     const seats = createSeats(tableId, seatCount);
+
+    if (customerName.length < 2 || customerName.length > 80) {
+      return {
+        ok: false,
+        message: "Bitte gib einen Kundennamen mit 2 bis 80 Zeichen an."
+      };
+    }
+
+    if (locationName.length < 2 || locationName.length > 80) {
+      return {
+        ok: false,
+        message: "Bitte gib einen Ort mit 2 bis 80 Zeichen an."
+      };
+    }
 
     next.deletedTableIds = (next.deletedTableIds ?? []).filter((deletedId) => deletedId !== tableId);
     next.tables.push({
       id: tableId,
       name: tableName,
-      pickupName: normalizedPickupName,
       seatCount,
       active: true,
       plannedOnly: false,
-      note: `Zum Abholen · Bon ${pickupNumber}`,
+      note: `Abholung · ${customerName} · Ort ${locationName} · Bon ${pickupNumber}`,
       seats,
       ...resolveTablePlacement(next.tables.length)
     });
 
     withNotification(next, {
       title: "Abholbon angelegt",
-      body: `${tableName} wurde als normaler Tisch angelegt.`,
+      body: `${tableName} wurde für ${customerName} am Ort ${locationName} angelegt.`,
       tone: "success"
     }, currentUserId);
     emitOperatorFeedback();
-    commit(next);
+    const confirmation = commit(next, undefined, "table.create", [
+      {
+        type: "pickup-ticket",
+        tableId,
+        tableLabel: tableName,
+        pickupNumber,
+        bedienung,
+        customerName,
+        locationName,
+        createdAt
+      }
+    ]);
 
     return {
       ok: true,
@@ -3571,7 +4089,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       tableName,
       seatId: seats[0]?.id,
       pickupNumber,
-      createdAt
+      createdAt,
+      confirmation
     };
   }, [commit, currentUserId, state]);
 
@@ -3592,7 +4111,119 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         table.archivedAt = undefined;
       }
 
-      commit(next);
+      void commit(next, undefined, "table.update");
+    },
+    [commit, state]
+  );
+
+  const createSelfOrderLocation = useCallback(
+    (name: string) => {
+      const normalizedName = name.trim().replace(/\s+/g, " ");
+      if (normalizedName.length < 2 || normalizedName.length > 80) {
+        return {
+          ok: false,
+          message: "Der Ortsname muss zwischen 2 und 80 Zeichen lang sein."
+        };
+      }
+      if (
+        state.selfOrderLocations.some(
+          (location) =>
+            location.name.toLocaleLowerCase("de-DE") ===
+            normalizedName.toLocaleLowerCase("de-DE")
+        )
+      ) {
+        return { ok: false, message: "Dieser Ort ist bereits angelegt." };
+      }
+
+      const next = structuredClone(state);
+      const createdAt = new Date().toISOString();
+      const location: SelfOrderLocation = {
+        id: createClientId("self-order-location"),
+        name: normalizedName,
+        accessKey: createSelfOrderAccessKey(),
+        sortOrder:
+          next.selfOrderLocations.reduce(
+            (highest, entry) => Math.max(highest, entry.sortOrder),
+            -1
+          ) + 1,
+        active: true,
+        createdAt,
+        updatedAt: createdAt
+      };
+      next.selfOrderLocations.push(location);
+      withNotification(
+        next,
+        {
+          title: "Selbstbestell-Ort angelegt",
+          body: `${normalizedName} besitzt jetzt einen eigenen Bestell-QR-Code.`,
+          tone: "success",
+          targetRoles: ["admin"]
+        },
+        currentUserId
+      );
+      void commit(next, undefined, "settings.update");
+      return { ok: true, location };
+    },
+    [commit, currentUserId, state]
+  );
+
+  const updateSelfOrderLocation = useCallback(
+    (
+      locationId: string,
+      patch: Partial<Pick<SelfOrderLocation, "name" | "sortOrder" | "active">>
+    ) => {
+      const next = structuredClone(state);
+      const location = next.selfOrderLocations.find((entry) => entry.id === locationId);
+      if (!location) return { ok: false, message: "Der Ort wurde nicht gefunden." };
+
+      if (patch.name !== undefined) {
+        const normalizedName = patch.name.trim().replace(/\s+/g, " ");
+        if (normalizedName.length < 2 || normalizedName.length > 80) {
+          return {
+            ok: false,
+            message: "Der Ortsname muss zwischen 2 und 80 Zeichen lang sein."
+          };
+        }
+        location.name = normalizedName;
+      }
+      if (patch.sortOrder !== undefined) {
+        location.sortOrder = Math.max(0, Math.round(patch.sortOrder));
+      }
+      if (patch.active !== undefined) {
+        location.active = patch.active;
+      }
+      location.updatedAt = new Date().toISOString();
+      void commit(next, undefined, "settings.update");
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const deleteSelfOrderLocation = useCallback(
+    (locationId: string) => {
+      const next = structuredClone(state);
+      if (!next.selfOrderLocations.some((entry) => entry.id === locationId)) {
+        return { ok: false, message: "Der Ort wurde nicht gefunden." };
+      }
+      next.selfOrderLocations = next.selfOrderLocations.filter(
+        (entry) => entry.id !== locationId
+      );
+      void commit(next, undefined, "settings.update");
+      return { ok: true };
+    },
+    [commit, state]
+  );
+
+  const rotateSelfOrderLocationKey = useCallback(
+    (locationId: string) => {
+      const next = structuredClone(state);
+      const location = next.selfOrderLocations.find((entry) => entry.id === locationId);
+      if (!location) return { ok: false, message: "Der Ort wurde nicht gefunden." };
+
+      location.accessKey = createSelfOrderAccessKey();
+      location.updatedAt = new Date().toISOString();
+      void commit(next, undefined, "settings.update");
+      return { ok: true, accessKey: location.accessKey };
     },
     [commit, state]
   );
@@ -3601,7 +4232,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (mode: ServiceOrderMode) => {
       const next = structuredClone(state);
       next.serviceOrderMode = mode;
-      commit(next);
+      void commit(next, undefined, "settings.update");
     },
     [commit, state]
   );
@@ -3610,7 +4241,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     (mode: DesignMode) => {
       const next = structuredClone(state);
       next.designMode = mode;
-      commit(next);
+      void commit(next, undefined, "settings.update");
     },
     [commit, state]
   );
@@ -3636,7 +4267,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           });
       }
 
-      commit(next);
+      void commit(next, undefined, "table.update");
     },
     [commit, state]
   );
@@ -3649,7 +4280,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       table.active = !table.active;
       table.plannedOnly = !table.active;
-      commit(next);
+      void commit(next, undefined, "table.update");
     },
     [commit, state]
   );
@@ -3694,7 +4325,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       });
     });
 
-    const removedEmployeeIds = new Set(next.users.filter(isResettableEmployeeAccount).map((user) => user.id));
+    const removedEmployeeIds = new Set(next.users.filter(isEmployeeAccount).map((user) => user.id));
     next.users = next.users.filter((user) => !removedEmployeeIds.has(user.id));
     next.deletedUserIds = [
       ...new Set([...(next.deletedUserIds ?? []), ...removedEmployeeIds])
@@ -3743,7 +4374,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const nextUserId = next.users.some((user) => user.id === currentUserId)
       ? currentUserId
       : next.users.find((user) => user.role === "admin" && user.active)?.id ?? null;
-    commit(next, nextUserId);
+    void commit(next, nextUserId, "daily.reset");
 
     return {
       ok: true,
@@ -3759,7 +4390,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     dailyResetUndoRef.current = null;
     const nextUserId = snapshot.users.some((user) => user.id === currentUserId) ? currentUserId : null;
-    commit(structuredClone(snapshot), nextUserId);
+    void commit(structuredClone(snapshot), nextUserId, "daily.reset.undo");
     return { ok: true };
   }, [commit, currentUserId]);
 
@@ -3794,7 +4425,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         targetUserIds: serviceUserIds
       });
       rememberServiceHandoverUndo();
-      commit(next);
+      void commit(next, undefined, "staff.handover");
       return { ok: true, message: `${user.name} wurde zur Schichtübergabe hinzugefügt.` };
     },
     [commit, rememberServiceHandoverUndo, state]
@@ -3866,7 +4497,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         targetUserIds: [targetUser.id]
       });
       rememberServiceHandoverUndo();
-      commit(next);
+      void commit(next, undefined, "staff.handover");
       return { ok: true, message: `Offene Service-Aufgaben wurden an ${targetUser.name} übergeben.` };
     },
     [commit, currentUserId, rememberServiceHandoverUndo, state]
@@ -3906,7 +4537,18 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       if (notification.acceptedByUserId === currentUser.id) {
         notification.kind =
-          notification.kind === "service-drinks-accepted" ? "service-drinks" : "service-course-ready";
+          notification.kind === "service-drinks-accepted"
+            ? "service-drinks"
+            : notification.kind === "self-order-payment-accepted"
+              ? "self-order-payment"
+              : "service-course-ready";
+        if (notification.kind === "self-order-payment" && notification.tableId) {
+          const session = getSessionForTable(next.sessions, notification.tableId);
+          if (session?.selfOrder) {
+            session.selfOrder.paymentCallStatus = "requested";
+            session.selfOrder.paymentAcceptedAt = undefined;
+          }
+        }
         notification.acceptedByUserId = undefined;
         notification.acceptedByName = undefined;
         notification.sourceNotificationId = undefined;
@@ -3925,7 +4567,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       targetRoles: ["waiter"]
     });
     rememberServiceHandoverUndo();
-    commit(next);
+    void commit(next, undefined, "staff.handover");
     return { ok: true, message: "Offene Service-Aufgaben wurden für das Team freigegeben." };
   }, [commit, currentUserId, rememberServiceHandoverUndo, state]);
 
@@ -3940,7 +4582,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const nextUserId = snapshot.state.users.some((user) => user.id === snapshot.currentUserId)
       ? snapshot.currentUserId
       : snapshot.state.users.find((user) => user.role === "admin" && user.active)?.id ?? null;
-    commit(structuredClone(snapshot.state), nextUserId);
+    void commit(
+      structuredClone(snapshot.state),
+      nextUserId,
+      "staff.handover.undo"
+    );
     return { ok: true, message: "Die letzte Schichtübergabe wurde rückgängig gemacht." };
   }, [commit]);
 
@@ -3948,7 +4594,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     const next = createDefaultOperationalState();
     const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
     clearServiceHandoverUndo();
-    commit(next, nextUserId);
+    void commit(next, nextUserId, "state.reset");
   }, [clearServiceHandoverUndo, commit, currentUserId]);
 
   const removeTableAndServices = useCallback(
@@ -3989,7 +4635,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       emitOperatorFeedback();
 
       const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
-      commit(next, nextUserId);
+      void commit(next, nextUserId, "table.update");
       return { ok: true };
     },
     [commit, currentUserId, state]
@@ -4003,6 +4649,36 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         if (!notification || notification.read) return;
 
         notification.read = true;
+
+        if (scope === "shared" && notification.kind === "self-order-payment") {
+          const acceptedByUser = next.users.find((user) => user.id === currentUserId);
+          const acceptedByName = acceptedByUser?.name ?? "Service";
+          const session = notification.tableId
+            ? getSessionForTable(next.sessions, notification.tableId)
+            : undefined;
+          if (session?.selfOrder) {
+            session.selfOrder.paymentCallStatus = "accepted";
+            session.selfOrder.paymentAcceptedAt = new Date().toISOString();
+          }
+          withNotification(
+            next,
+            {
+              kind: "self-order-payment-accepted",
+              title: "Bezahlung übernommen",
+              body: `${acceptedByName} kümmert sich jetzt um die Bezahlung.`,
+              tone: "success",
+              tableId: notification.tableId,
+              targetUserIds: acceptedByUser?.id ? [acceptedByUser.id] : undefined,
+              acceptedByUserId: acceptedByUser?.id,
+              acceptedByName,
+              sourceNotificationId: notification.id
+            },
+            currentUserId
+          );
+          emitOperatorFeedback();
+          void commit(next, undefined, "notification.update");
+          return;
+        }
 
         if (
           scope === "shared" &&
@@ -4041,7 +4717,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           emitOperatorFeedback();
         }
 
-        commit(next);
+        void commit(next, undefined, "notification.update");
         return;
       }
 
@@ -4089,6 +4765,62 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [localNotificationReads, state.notifications]
   );
 
+  const retryPendingTransactions = useCallback(() => {
+    void listPendingTransactions().then(async (transactions) => {
+      const activeTransactions =
+        await discardDisposablePresenceTransactions(transactions);
+      await Promise.all(
+        activeTransactions
+          .filter((transaction) => transaction.status === "failed")
+          .map((transaction) =>
+            savePendingTransaction({
+              ...transaction,
+              status: "pending",
+              attemptCount: 0,
+              nextAttemptAt: Date.now(),
+              lastError: undefined,
+              lastStatusCode: undefined
+            })
+          )
+      );
+      const nextTransactions = await discardDisposablePresenceTransactions(
+        await listPendingTransactions()
+      );
+      updateSyncFromQueue(
+        nextTransactions,
+        nextTransactions.length > 0 ? "pending" : "online",
+        nextTransactions.length > 0
+          ? "Erneute sichere Übertragung wurde gestartet."
+          : undefined
+      );
+      drainQueueRef.current();
+    });
+  }, [discardDisposablePresenceTransactions, updateSyncFromQueue]);
+
+  const cancelFailedTransaction = useCallback(
+    (transactionId: string) => {
+      void listPendingTransactions().then(async (transactions) => {
+        const transaction = transactions.find(
+          (entry) => entry.transactionId === transactionId
+        );
+        if (!transaction || transaction.status !== "failed") return;
+
+        await removePendingTransaction(transactionId);
+        const remainingTransactions = await listPendingTransactions();
+        applyPendingQueue(confirmedStateRef.current, remainingTransactions);
+        updateSyncFromQueue(remainingTransactions);
+        transactionWaitersRef.current.get(transactionId)?.({
+          ok: false,
+          transactionId,
+          message:
+            "Die lokale Änderung wurde verworfen und nicht als erfolgreich bestätigt."
+        });
+        transactionWaitersRef.current.delete(transactionId);
+      });
+    },
+    [applyPendingQueue, updateSyncFromQueue]
+  );
+
   const currentUser = state.users.find((user) => user.id === currentUserId);
   const readerKey = getNotificationReaderKey();
   const hiddenNotificationIds = new Set(localNotificationReads[readerKey] ?? []);
@@ -4126,12 +4858,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         skipCourse,
         setCourseWait,
         sendCourseToKitchen,
+        sendAllPendingItems,
         cycleKitchenItemUnitStatus,
         reopenKitchenBatch,
         releaseCourse,
         markCourseCompleted,
         printReceipt,
         reprintReceipt,
+        enqueuePrintJob,
         closeOrder,
         closePaidOrder,
         recordPartialPayment,
@@ -4153,6 +4887,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         deleteUser,
         createTable,
         createPickupTable,
+        createSelfOrderLocation,
+        updateSelfOrderLocation,
+        deleteSelfOrderLocation,
+        rotateSelfOrderLocationKey,
         updateTable,
         setServiceOrderMode,
         setDesignMode,
@@ -4167,7 +4905,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         resetDemoState,
         removeTableAndServices,
         markNotificationRead,
-        markNotificationsRead
+        markNotificationsRead,
+        retryPendingTransactions,
+        cancelFailedTransaction
       }
     }),
     [
@@ -4181,15 +4921,19 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       createProduct,
       createTable,
       createPickupTable,
+      createSelfOrderLocation,
       createUser,
       cycleKitchenItemUnitStatus,
       canUndoServiceHandover,
+      cancelFailedTransaction,
       reopenKitchenBatch,
       deletePartyGroup,
       currentUser,
       deleteProductHard,
       deleteSession,
+      deleteSelfOrderLocation,
       deleteUser,
+      enqueuePrintJob,
       hydrated,
       handoverServiceTasks,
       login,
@@ -4207,9 +4951,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       recordInvoiceCancellation,
       resetDailyState,
       releaseServiceTasks,
+      retryPendingTransactions,
+      rotateSelfOrderLocationKey,
       resetDemoState,
       removeTableAndServices,
       sendCourseToKitchen,
+      sendAllPendingItems,
       setItemExtraIngredients,
       setCourseWait,
       setDesignMode,
@@ -4228,6 +4975,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       updateTable,
       updateItem,
       updateProduct,
+      updateSelfOrderLocation,
       updateUser
     ]
   );
@@ -4244,8 +4992,18 @@ export const useDemoApp = () => {
   return context;
 };
 
-export const resolveCourseStatus = (session: OrderSession | undefined, course: CourseKey) => {
-  const unsentItems = session?.items.filter((item) => item.category === course && !item.sentAt) ?? [];
+export const resolveCourseStatus = (
+  session: OrderSession | undefined,
+  course: CourseKey,
+  products: Product[] = []
+) => {
+  const unsentItems =
+    session?.items.filter(
+      (item) =>
+        item.category === course &&
+        !item.sentAt &&
+        !isServiceBookedItem(item, products)
+    ) ?? [];
   if (unsentItems.length > 0) {
     return {
       status: "not-recorded" as const,
