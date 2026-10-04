@@ -77,6 +77,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.12.07-beta",
+    date: "2026-10-04",
+    time: "18:09 +02:00",
+    type: "Verbesserung",
+    title: "Server-Deployment über GitHub Actions vorbereitet",
+    summary:
+      "Ein berechtigtes Teammitglied kann das Server-Deployment manuell aus GitHub starten.",
+    categories: ["Betrieb", "Deployment", "GitHub"],
+    changes: [
+      "Der Deploy-Workflow läuft nur manuell und ausschließlich vom Branch main.",
+      "Der Serverzugriff verwendet einen eigenen SSH-Schlüssel mit auf das Deploy-Skript beschränkten Rechten."
+    ]
+  },
+  {
     version: "0.12.06-beta",
     date: "2026-10-04",
     time: "17:20 +02:00",

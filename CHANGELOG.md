@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.07-beta
+- Datum: 2026-10-04
+- Uhrzeit: 18:09 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der Server kann manuell über GitHub Actions aktualisiert werden.
+- Änderungen:
+  Ein auf `main` beschränkter Workflow startet das vorhandene Server-Deploy-Skript nach ausdrücklicher Bestätigung.
+  Der Zugriff verwendet einen eigenen SSH-Schlüssel mit serverseitig eingeschränktem Deploy-Befehl.
+
 ## 0.12.06-beta
 - Datum: 2026-10-04
 - Uhrzeit: 17:20 +02:00
