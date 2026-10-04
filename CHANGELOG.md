@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.19-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:32 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Webdienst leitet den bisherigen lokalen Gesundheitscheck-Port an die App weiter.
+- Änderungen:
+  Der Standalone-Startpunkt leitet Anfragen auf Port 3011 an den konfigurierten Next.js-Port weiter.
+
 ## 0.12.18-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:24 +02:00
