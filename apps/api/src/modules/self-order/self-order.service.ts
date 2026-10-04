@@ -28,6 +28,7 @@ import {
 } from "@kiju/domain";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { LiveEventsService } from "../events/live-events.service";
 import { PrintQueueService } from "../print/print-queue.service";
 
 const OPERATIONAL_STATE_ID = "operational-state";
@@ -119,7 +120,8 @@ export class SelfOrderService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly printQueue: PrintQueueService
+    private readonly printQueue: PrintQueueService,
+    private readonly liveEvents: LiveEventsService
   ) {}
 
   assertRateLimit(scope: string, clientId: string, maximum: number) {
@@ -542,7 +544,7 @@ export class SelfOrderService {
     ) => Promise<TResult>
   ): Promise<TResult> {
     try {
-      return await this.prisma.$transaction(
+      const outcome = await this.prisma.$transaction(
         async (database) => {
           const existing = await database.transactionRecord.findUnique({
             where: { transactionId }
@@ -554,7 +556,12 @@ export class SelfOrderService {
                 "Diese Vorgangs-ID wurde bereits mit anderen Bestelldaten verwendet."
               );
             }
-            return stored.response as TResult;
+            return {
+              response: stored.response as TResult,
+              stateVersion: existing.stateVersion,
+              savedAt: existing.savedAt,
+              changed: false
+            };
           }
 
           const current =
@@ -597,7 +604,12 @@ export class SelfOrderService {
             }
           });
 
-          return response;
+          return {
+            response,
+            stateVersion: nextVersion,
+            savedAt,
+            changed: true
+          };
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -605,6 +617,10 @@ export class SelfOrderService {
           timeout: 15000
         }
       );
+      if (outcome.changed) {
+        this.liveEvents.publishStateChanged(outcome.stateVersion, outcome.savedAt);
+      }
+      return outcome.response;
     } catch (error) {
       if (
         error instanceof BadRequestException ||

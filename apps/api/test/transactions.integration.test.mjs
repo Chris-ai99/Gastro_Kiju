@@ -7,7 +7,7 @@ import {
   createDefaultOperationalState
 } from "@kiju/domain";
 
-import transactionsModule from "../dist/modules/transactions/transactions.service.js";
+import transactionsModule from "../dist/api/src/modules/transactions/transactions.service.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const integrationTest = (name, run) =>
@@ -16,8 +16,9 @@ const integrationTest = (name, run) =>
 integrationTest("Transaktionen sind idempotent und Druckjobs atomar gespeichert", async () => {
   const prisma = new PrismaClient({ datasourceUrl: databaseUrl });
   const printQueue = { schedule() {} };
+  const liveEvents = { publishStateChanged() {} };
   const { TransactionsService } = transactionsModule;
-  const service = new TransactionsService(prisma, printQueue);
+  const service = new TransactionsService(prisma, printQueue, liveEvents);
 
   try {
     await prisma.transmissionAttempt.deleteMany();

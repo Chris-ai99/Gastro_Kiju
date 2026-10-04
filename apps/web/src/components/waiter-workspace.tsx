@@ -556,7 +556,7 @@ const resolveHistoryPaymentTargets = (
 };
 
 export const WaiterWorkspace = () => {
-  const { state, currentUser, unreadNotifications, sharedSync, canUndoServiceHandover, actions } = useDemoApp();
+  const { state, currentUser, unreadNotifications, serverConnection, canUndoServiceHandover, actions } = useDemoApp();
   const serviceSectionRef = useRef<HTMLElement | null>(null);
   const orderWizardModalRef = useRef<HTMLDivElement | null>(null);
   const dashboard = useMemo(() => buildDashboardSummary(state), [state]);
@@ -837,15 +837,19 @@ export const WaiterWorkspace = () => {
       );
   }, [selectedSession]);
   const syncStatusLabel =
-    sharedSync.status === "online"
-      ? "Geräte-Sync aktiv"
-      : sharedSync.status === "connecting"
-        ? "Synchronisiere..."
-        : "Nur lokaler Stand";
+    serverConnection.status === "online"
+      ? "Server verbunden"
+      : serverConnection.status === "saving"
+        ? "Speichert …"
+        : serverConnection.status === "connecting" || serverConnection.status === "reconnecting"
+          ? "Verbinde …"
+          : "Server nicht erreichbar";
   const syncStatusTone =
-    sharedSync.status === "online"
+    serverConnection.status === "online"
       ? "green"
-      : sharedSync.status === "connecting"
+      : serverConnection.status === "connecting" ||
+          serverConnection.status === "reconnecting" ||
+          serverConnection.status === "saving"
         ? "amber"
         : "red";
   const editableItems = useMemo(() => {
@@ -1283,7 +1287,7 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleSendCourseToKitchen = () => {
+  const handleSendCourseToKitchen = async () => {
     if (!selectedTable) return;
 
     const result = actions.sendCourseToKitchen(selectedTable.id, activeCourse);
@@ -1301,14 +1305,20 @@ export const WaiterWorkspace = () => {
       return;
     }
 
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Nicht gespeichert",
+        detail: confirmation.message
+      });
+      return;
+    }
+
     const syncHint =
       activeCourse === "drinks"
-        ? sharedSync.status === "online"
-          ? "Der Bon ist für die Bar und andere Geräte jetzt im gemeinsamen Stand."
-          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein."
-        : sharedSync.status === "online"
-          ? "Der Bon ist für Küche und andere Geräte jetzt im gemeinsamen Stand."
-          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein.";
+        ? "Der Server hat den Bon bestätigt und an die Bar-Geräte verteilt."
+        : "Der Server hat den Bon bestätigt und an die Küchengeräte verteilt.";
 
     setServiceFeedback({
       tone: "success",
@@ -1342,7 +1352,7 @@ export const WaiterWorkspace = () => {
     setWaitPlannerOpen((current) => !current);
   };
 
-  const confirmCourseWait = () => {
+  const confirmCourseWait = async () => {
     if (!selectedTable) return;
 
     const minutes = Number(waitMinutes);
@@ -1361,6 +1371,16 @@ export const WaiterWorkspace = () => {
         tone: "alert",
         title: "Wartezeit nicht gesetzt",
         detail: result.message ?? "Der Gang konnte nicht auf Warten gesetzt werden."
+      });
+      return;
+    }
+
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Wartezeit nicht gespeichert",
+        detail: confirmation.message
       });
       return;
     }
@@ -1538,7 +1558,7 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleRecordPartialPayment = () => {
+  const handleRecordPartialPayment = async () => {
     if (!selectedTable) return;
 
     const result = actions.recordPartialPayment(
@@ -1548,19 +1568,30 @@ export const WaiterWorkspace = () => {
       selectedPaymentTotal === checkoutOpenTotal ? "Restzahlung" : "Teilzahlung"
     );
 
-    setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok ? "Zahlung verbucht" : "Zahlung nicht verbucht",
-      detail: result.message ?? (result.ok ? "Die ausgewählten Positionen sind bezahlt." : "Bitte Auswahl prüfen.")
-    });
-
-    if (result.ok) {
-      setSelectedPaymentQuantities({});
-      setReceiptPreview(null);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Zahlung nicht verbucht",
+        detail: result.message ?? "Bitte Auswahl prüfen."
+      });
+      return;
     }
+
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({ tone: "alert", title: "Zahlung nicht gespeichert", detail: confirmation.message });
+      return;
+    }
+    setServiceFeedback({
+      tone: "success",
+      title: "Zahlung verbucht",
+      detail: result.message ?? "Die Zahlung wurde vom Server bestätigt."
+    });
+    setSelectedPaymentQuantities({});
+    setReceiptPreview(null);
   };
 
-  const handleRecordInvoiceCancellation = () => {
+  const handleRecordInvoiceCancellation = async () => {
     if (!selectedTable || selectedPaymentLineItems.length === 0) return;
 
     const selectedQuantity = selectedPaymentLineItems.reduce(
@@ -1580,20 +1611,27 @@ export const WaiterWorkspace = () => {
       "Rechnungsstorno"
     );
 
-    setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok ? "Storno gespeichert" : "Storno nicht gespeichert",
-      detail:
-        result.message ??
-        (result.ok
-          ? "Die ausgewählten Positionen wurden storniert."
-          : "Bitte Auswahl prüfen.")
-    });
-
-    if (result.ok) {
-      setSelectedPaymentQuantities({});
-      setReceiptPreview(null);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Storno nicht gespeichert",
+        detail: result.message ?? "Bitte Auswahl prüfen."
+      });
+      return;
     }
+
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({ tone: "alert", title: "Storno nicht gespeichert", detail: confirmation.message });
+      return;
+    }
+    setServiceFeedback({
+      tone: "success",
+      title: "Storno gespeichert",
+      detail: result.message ?? "Das Storno wurde vom Server bestätigt."
+    });
+    setSelectedPaymentQuantities({});
+    setReceiptPreview(null);
   };
 
   const handleClosePaidOrder = async (payRemaining = false) => {
@@ -1761,6 +1799,16 @@ export const WaiterWorkspace = () => {
         tone: "alert",
         title: "Abholbon nicht erstellt",
         detail: result.message ?? "Der Abholtisch konnte nicht angelegt werden."
+      });
+      return;
+    }
+
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abholbon nicht gespeichert",
+        detail: confirmation.message
       });
       return;
     }

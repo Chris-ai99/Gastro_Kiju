@@ -78,6 +78,11 @@ export const deploymentConfig = {
 
 export const resolveAppUrl = (path = "/") => joinBasePath(deploymentConfig.basePath, path);
 
+export const resolveApiUrl = (path = "", basePath = deploymentConfig.basePath) => {
+  const normalizedPath = path ? `/${path.replace(/^\/+/, "")}` : "";
+  return joinBasePath(basePath, `/api${normalizedPath}`);
+};
+
 export const selfOrderPublicConfig = {
   baseUrl: normalizeSelfOrderPublicBaseUrl(
     runtimeScope.process?.env?.["NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL"]

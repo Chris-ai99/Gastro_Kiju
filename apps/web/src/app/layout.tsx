@@ -18,11 +18,7 @@ const themeInitScript = `
     const storedTheme = window.localStorage.getItem("kiju-theme-mode-v1");
     const theme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "light";
     document.documentElement.dataset.theme = theme;
-
-    const storedState = window.localStorage.getItem("kiju-app-state-v2");
-    const parsedState = storedState ? JSON.parse(storedState) : null;
-    const designMode = parsedState?.designMode === "classic" ? "classic" : "modern";
-    document.documentElement.dataset.design = designMode;
+    document.documentElement.dataset.design = "modern";
   } catch {
     document.documentElement.dataset.theme = "light";
     document.documentElement.dataset.design = "modern";

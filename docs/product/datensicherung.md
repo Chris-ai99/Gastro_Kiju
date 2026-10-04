@@ -1,89 +1,51 @@
-# Datensicherung im Restaurantbetrieb
+# Datensicherung im VPS-Betrieb
 
-## Ziel
+## Verbindliche Daten
 
-Bestellungen, Abrechnungen, Benutzer, Einstellungen und Druckaufträge dürfen bei einem
-Absturz, Neustart oder Austausch des Programmordners nicht verloren gehen.
+PostgreSQL auf dem IONOS-VPS enthält den operativen Zustand, Bestellungen,
+Zahlungen, Benutzer, Konfiguration, Transaktionsprotokolle, Undo-Punkte und
+Druckaufträge. Der Programmordner und Browserdaten sind keine produktive
+Sicherungskopie.
 
-## Serverseitiger Speicher
+Die API verwendet `DATABASE_URL` aus dem Systemd-Environment. Vor dem ersten
+Produktivbetrieb müssen die Prisma-Migrationen angewendet und ein automatisches
+PostgreSQL-Backup eingerichtet werden. Bestehende Daten werden nicht zurückgesetzt
+oder neu importiert.
 
-Der Produktivdienst speichert seine Betriebsdaten außerhalb des Programmordners:
+## Empfohlene VPS-Sicherung
 
-```text
-/var/lib/gastroweb/kiju-shared-state.json
-/var/lib/gastroweb/kiju-print-state.json
-```
+- täglicher `pg_dump` der Produktionsdatenbank auf ein getrenntes Backupziel
+- mindestens sieben tägliche und vier wöchentliche Generationen aufbewahren
+- Backups nicht im Release-Verzeichnis speichern
+- Wiederherstellung regelmäßig mit einer separaten Testdatenbank prüfen
+- vor größeren Updates zusätzlich einen Snapshot des IONOS-VPS erstellen
 
-Der Pfad wird über den Systemdienst mit diesen Variablen gesetzt:
-
-```env
-KIJU_DATA_DIR=/var/lib/gastroweb
-KIJU_SHARED_STATE_FILE=/var/lib/gastroweb/kiju-shared-state.json
-KIJU_PRINT_STATE_FILE=/var/lib/gastroweb/kiju-print-state.json
-```
-
-Das Deploy-Skript `scripts/deploy-gastroweb.sh` richtet den Ordner und die
-Systemd-Konfiguration ein. Beim ersten Lauf migriert es vorhandene Live-Daten aus dem
-Projektordner, bevor der Dienst auf den dauerhaften Pfad umgestellt wird.
-
-## Schutz bei einem Absturz
-
-Jeder neue Stand wird zuerst vollständig in eine temporäre Datei geschrieben und auf
-den Datenträger synchronisiert. Erst danach ersetzt diese Datei den bisherigen Stand.
-
-Vor Änderungen werden automatisch rotierende Sicherungen angelegt:
-
-```text
-kiju-shared-state.json.bak.1
-kiju-shared-state.json.bak.2
-...
-kiju-shared-state.json.bak.50
-```
-
-Wenn die Hauptdatei beschädigt oder gelöscht wurde, lädt der Server beim nächsten Start
-automatisch die jüngste gültige Sicherung. Eine beschädigte Datei wird zur Prüfung mit
-dem Zusatz `.corrupt-<Zeitpunkt>` aufbewahrt. Sind Hauptdatei und alle Sicherungen
-ungültig, startet die Speicherung absichtlich nicht mit einem leeren Stand.
-
-## Kontrolle nach dem Deployment
-
-Auf dem GastroWeb-Container:
+Beispiel für einen manuellen Dump:
 
 ```bash
-systemctl show gastroweb --property=Environment
-ls -lah /var/lib/gastroweb
-systemctl status gastroweb --no-pager
+install -d -m 0700 /var/backups/kiju-gastro
+pg_dump --format=custom --file=/var/backups/kiju-gastro/kiju-$(date -u +%Y%m%dT%H%M%SZ).dump "$DATABASE_URL"
+chmod 0600 /var/backups/kiju-gastro/*.dump
 ```
 
-Nach einer Teständerung in der Anwendung müssen die Hauptdatei und mindestens
-`kiju-shared-state.json.bak.1` vorhanden sein.
+Das Passwort und `DATABASE_URL` dürfen nicht in Shell-Historie, Git oder
+Deploy-Protokollen landen. Für die regelmäßige Ausführung sollte ein geschütztes
+Systemd-Credential oder ein passendes Secret-File verwendet werden.
 
-## Schutz des gesamten Containers
+## Wiederherstellung
 
-Die Sicherungen unter `/var/lib/gastroweb` schützen nicht vor einem gelöschten oder
-defekten Proxmox-Container. Dafür muss in Proxmox zusätzlich ein geplanter Backupjob
-für den vollständigen GastroWeb-LXC eingerichtet werden.
+1. API und Webdienst in den Wartungsmodus versetzen.
+2. Einen aktuellen Datenbankdump zusätzlich unverändert kopieren.
+3. Die PostgreSQL-Datenbank in eine vorbereitete Zielinstanz zurückspielen.
+4. `prisma migrate deploy` ausführen, falls der Dump ältere Migrationen enthält.
+5. `GET /gastro/api/health` prüfen und anschließend eine Testbestellung aus zwei
+   Browsergeräten durchführen.
 
-Empfehlung:
+Der Legacy-JSON-Import bleibt nur für eine ausdrücklich geplante Migration oder
+Wiederherstellung bestehen. Er wird nicht automatisch beim Deploy ausgeführt.
 
-- tägliches Backup auf einen anderen Datenträger oder ein anderes Backupziel
-- mindestens sieben tägliche Sicherungen aufbewahren
-- Wiederherstellung regelmäßig mit einem separaten Test-Container prüfen
-- vor größeren Updates zusätzlich ein manuelles Proxmox-Backup erstellen
+## Druckdaten
 
-## Manuelle Wiederherstellung
-
-Normalerweise erfolgt die Wiederherstellung automatisch. Falls eine bestimmte Sicherung
-manuell verwendet werden soll:
-
-```bash
-systemctl stop gastroweb
-cp -a /var/lib/gastroweb/kiju-shared-state.json \
-  /var/lib/gastroweb/kiju-shared-state.json.vor-wiederherstellung
-cp -a /var/lib/gastroweb/kiju-shared-state.json.bak.1 \
-  /var/lib/gastroweb/kiju-shared-state.json
-systemctl start gastroweb
-```
-
-Vor einer manuellen Wiederherstellung immer zuerst eine Kopie des aktuellen Standes
-anlegen.
+Die serverseitige Druckwarteschlange bleibt als eigener, betrieblicher Teil
+erhalten. Ihre lokalen Dateien und Druckerdiagnosen ersetzen jedoch nicht die
+PostgreSQL-Sicherung der Bestellungen und Transaktionen.

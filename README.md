@@ -1,74 +1,88 @@
 # KiJu Gastro Order System
 
-Lokales Gastro- und Service-System für Kinder- und Jugendarbeit mit Fokus auf Tischservice, Küchenfluss, Admin-Konfiguration und professioneller Ausbau Richtung deutscher Kassensoftware.
+Gastro- und Service-System für Kinder- und Jugendarbeit mit Tischservice,
+Küchenfluss, Admin-Konfiguration und professioneller Druckanbindung.
 
 ## Struktur
 
-- `apps/web`: Next.js Tablet-First UI für Kellner, Küche und Admin
-- `apps/api`: NestJS API-Skelett mit Realtime- und Prisma-Vorbereitung
+- `apps/web`: Next.js Tablet-First UI für Kellner, Küche, Bar und Admin
+- `apps/api`: NestJS-API mit PostgreSQL-Transaktionen, Authentifizierung und SSE-Live-Events
 - `apps/print-bridge`: Bondrucker- und Fiskal-Adapter-Schicht
 - `packages/domain`: gemeinsame Typen, Demo-Daten und Bestelllogik
 - `packages/ui`: wiederverwendbare React UI-Bausteine
 - `packages/config`: Theme, Routen und Betriebs-Konstanten
 - `docs/product`: Produkt- und Betriebsdokumentation
-- `docs/compliance`: Compliance- und Fiskal-Planung
-- `infra/postgres`: lokaler PostgreSQL-Startpunkt
+- `infra/postgres`: PostgreSQL-Startpunkt
 
 ## Schnellstart
 
-1. `npx pnpm@10.22.0 install`
-2. `npx pnpm@10.22.0 build`
-3. `npx pnpm@10.22.0 dev:web`
-4. Optional parallel: `npx pnpm@10.22.0 dev:api`
+```powershell
+npx pnpm@10.22.0 install
+npx pnpm@10.22.0 build
+npx pnpm@10.22.0 dev:web
+```
 
-## WLAN-Betrieb mit sicherer zentraler Speicherung
+Die API kann parallel mit `npx pnpm@10.22.0 dev:api` gestartet werden.
 
-PostgreSQL und die NestJS-API sind die verbindliche Datenquelle. Geräte speichern offene Vorgänge zusätzlich in IndexedDB und senden sie nach einem Verbindungsabbruch automatisch erneut.
+## VPS-Betrieb unter `/gastro`
 
-1. PostgreSQL starten und `DATABASE_URL` in `apps/api/.env` setzen.
-2. Prisma-Migrationen anwenden:
+PostgreSQL auf dem IONOS-VPS ist die einzige verbindliche Datenquelle. Geräte
+arbeiten unter `/gastro`, erhalten bestätigte Zustandsänderungen über SSE und
+fragen den Server zusätzlich alle 30 Sekunden sowie bei Fokus und
+Wiederverbindung ab. Der Browser speichert weder Bestellungen noch eine
+automatische Retry-Warteschlange dauerhaft.
+
+Die API-Umgebung benötigt mindestens:
+
+```env
+DATABASE_URL=postgresql://kiju:PASSWORT@127.0.0.1:5432/kiju_gastro?schema=public
+KIJU_INTERNAL_ACCESS_CODE=<gemeinsamer Betriebscode, mindestens 8 Zeichen>
+KIJU_SESSION_SECRET=<langer zufälliger Sitzungs-Schlüssel, mindestens 32 Zeichen>
+```
+
+Migrationen anwenden und Dienste starten:
 
 ```powershell
 npx pnpm@10.22.0 --filter @kiju/api prisma:migrate:deploy
-```
-
-3. API starten:
-
-```powershell
 npx pnpm@10.22.0 --filter @kiju/api dev
-```
-
-4. Web-App für das Netzwerk starten:
-
-```powershell
 npx pnpm@10.22.0 --filter @kiju/web dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-Wenn Geräte die API direkt im WLAN erreichen sollen, in `apps/api/.env` zusätzlich
-`HOST=0.0.0.0` setzen. Im Serverbetrieb bleibt die API standardmäßig auf `127.0.0.1`;
-die Web-App leitet Anfragen intern weiter.
+Im Produktivbetrieb bleibt die API auf `127.0.0.1`; der Next.js-Proxy leitet
+`/gastro/api/*` intern weiter. Andere Geräte öffnen
+`https://<DEINE-DOMAIN>/gastro` und geben den gemeinsamen Betriebscode einmal
+ein.
 
-5. Andere Geräte im WLAN rufen dann `http://<DEINE-IP>:3000` auf.
-
-Optional kann in `apps/web/.env` eine feste API-Adresse gesetzt werden:
+Für den internen Proxy kann zusätzlich gesetzt werden:
 
 ```env
-NEXT_PUBLIC_KIJU_API_BASE_URL=http://10.128.174.93:4000/api
+KIJU_API_INTERNAL_URL=http://127.0.0.1:4000/api
+NEXT_PUBLIC_BASE_PATH=/gastro
 ```
 
-## QR-Selbstbestellung über mobiles Internet
+Der gemeinsame Infrastrukturcheck ist
+`https://<DEINE-DOMAIN>/gastro/api/health`. Er prüft Web-Proxy, API und
+PostgreSQL gemeinsam.
 
-Gedruckte Selbstbestell-QR-Codes dürfen nicht auf `localhost`, `127.0.0.1` oder eine WLAN-IP zeigen, wenn Gäste ohne Restaurant-WLAN bestellen sollen. Dafür eine öffentliche HTTPS-Adresse setzen:
+## QR-Selbstbestellung
+
+Für öffentliche QR-Codes wird eine HTTPS-Adresse gesetzt:
 
 ```env
 NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL=https://bestellen.deine-domain.de
 ```
 
-Die empfohlene Betriebsart ist ein Cloudflare Tunnel auf die lokale Web-App. Die öffentliche Domain wird in der App auf die Gastbestellung und die Self-Order-API begrenzt; Admin, Küche, Bar und Service bleiben über die interne Adresse erreichbar.
+Die öffentliche Self-Order-API bleibt über ihren jeweiligen Schlüssel geschützt;
+interne Bereiche verlangen weiterhin die Betriebscode-Sitzung. Details stehen in
+`docs/product/qr-selbstbestellung-cloudflare-tunnel.md`.
 
-Die Anleitung steht in `docs/product/qr-selbstbestellung-cloudflare-tunnel.md`, ein Beispiel für `cloudflared` in `infra/cloudflared/config.example.yml`.
+## Legacy und Sicherung
 
-Die alten JSON-Dateien bleiben nach dem einmaligen Import als Sicherung erhalten, werden aber nicht mehr produktiv beschrieben. Architektur, Import und Umschaltung sind in `docs/product/sichere-uebertragung.md` beschrieben.
+Die früheren JSON-Dateien bleiben nur für den Legacy-Import und ausdrückliche
+Wiederherstellungen erhalten. Produktive Bestellungen werden ausschließlich in
+PostgreSQL geschrieben. Backup- und Restore-Hinweise stehen in
+`docs/product/datensicherung.md`; der Übertragungsablauf in
+`docs/product/sichere-uebertragung.md`.
 
 ## Demo-Zugänge
 
@@ -76,32 +90,8 @@ Die alten JSON-Dateien bleiben nach dem einmaligen Import als Sicherung erhalten
 - Admin: `Admin` / `Admin1234`
 - Küche: `Kueche` / `Kitchen1234` oder PIN `2026`
 
-## Deployment unter `/kiJu`
-
-Für ein Hosting unter `https://autosello.de/kiJu` ist die Web-App jetzt auf einen konfigurierbaren Base-Path vorbereitet.
-
-1. In `apps/web/.env` oder als Server-Umgebungsvariable setzen:
-
-```env
-NEXT_PUBLIC_BASE_PATH=/kiJu
-```
-
-2. App bauen und starten:
-
-```powershell
-npx pnpm@10.22.0 --filter @kiju/web build
-npx pnpm@10.22.0 --filter @kiju/web start -- --hostname 127.0.0.1 --port 3110
-```
-
-3. Reverse Proxy für `/kiJu` auf diese App zeigen lassen.
-
-Die genaue Anleitung steht in `docs/product/autosello-deployment.md`.
-
-## Phasenhinweis
-
-Die aktuelle Implementierung liefert einen professionellen operativen Kern mit Demo-Daten, lokaler Sync-Logik im Browser, UI-Workflows, API-Skelett und Druck-/Fiskal-Adapter-Grenzen. Die rechtssichere deutsche Fiskalschicht bleibt bewusst als separate Phase vorgesehen.
-
 ## Changelog
 
-- Laufende Änderungen stehen in `CHANGELOG.md`
-- Die Regel für neue Versionseinträge steht in `docs/product/changelog-policy.md`
+- technische Änderungen: `CHANGELOG.md`
+- sichtbarer Admin-Changelog: `apps/web/src/components/admin-panel.tsx`
+- Formatregeln: `docs/product/changelog-policy.md`

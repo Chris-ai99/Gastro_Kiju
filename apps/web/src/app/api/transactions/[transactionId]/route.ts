@@ -7,9 +7,11 @@ type RouteContext = {
   params: Promise<{ transactionId: string }>;
 };
 
-export async function GET(_: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { transactionId } = await context.params;
   return proxyApiRequest(
-    `/transactions/${encodeURIComponent(transactionId)}`
+    `/transactions/${encodeURIComponent(transactionId)}`,
+    undefined,
+    request
   );
 }

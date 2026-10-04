@@ -8,6 +8,7 @@ readonly DEPLOY_RECEIVER="/usr/local/sbin/kiju-gastroweb-deploy"
 readonly WEB_SERVICE="kiju-gastro.service"
 readonly API_SERVICE="gastroapi.service"
 readonly WEB_HEALTH_URL="http://127.0.0.1:3110/gastro/"
+readonly WEB_API_HEALTH_URL="http://127.0.0.1:3110/gastro/api/health"
 readonly API_HEALTH_URL="http://127.0.0.1:4000/api/health"
 readonly MAX_ARCHIVE_BYTES=536870912
 readonly REQUIRED_PNPM="10.22.0"
@@ -175,6 +176,7 @@ wait_for_health() {
 }
 
 wait_for_health "${API_HEALTH_URL}"
+wait_for_health "${WEB_API_HEALTH_URL}"
 wait_for_health "${WEB_HEALTH_URL}"
 install -o root -g root -m 0755 "${release_dir}/scripts/deploy-gastroweb.sh" "${DEPLOY_RECEIVER}"
 switch_started="0"

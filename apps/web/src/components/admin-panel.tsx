@@ -77,6 +77,22 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.13.00-beta",
+    date: "2026-10-04",
+    time: "21:00 +02:00",
+    type: "Architektur / Fix",
+    title: "Zentraler VPS-Sync mit bestätigten Live-Updates",
+    summary:
+      "Bestellungen und Statusänderungen laufen jetzt verbindlich über PostgreSQL auf dem VPS und werden nach dem Commit an alle Geräte verteilt.",
+    categories: ["VPS", "PostgreSQL", "Synchronisierung", "Sicherheit"],
+    changes: [
+      "Der State-Pfad berücksichtigt den produktiven Base-Path /gastro; der gemeinsame Health-Proxy prüft Web, API und Datenbank.",
+      "Bestätigte Transaktionen lösen authentifizierte SSE-Live-Events aus; zusätzlich bleiben Kontrollabrufe und Wiederverbindungsabrufe aktiv.",
+      "Die alte Browser-Warteschlange mit IndexedDB, BroadcastChannel und automatischen Wiederholungen ist entfernt. Nicht bestätigte Änderungen werden verworfen und müssen bewusst erneut ausgelöst werden.",
+      "Die interne Oberfläche wird über einen gemeinsamen Betriebscode und eine signierte HttpOnly-Sitzung geschützt."
+    ]
+  },
+  {
     version: "0.12.08-beta",
     date: "2026-10-04",
     time: "18:49 +02:00",

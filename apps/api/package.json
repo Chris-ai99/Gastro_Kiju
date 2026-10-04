@@ -7,6 +7,8 @@
     "build": "nest build && tsc --project tsconfig.json --incremental false && node scripts/ensure-runtime-entry.mjs",
     "start": "node dist/main",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.mjs",
+    "test:unit": "node --test test/auth.unit.test.mjs test/events.unit.test.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "import:legacy": "node scripts/import-legacy-state.mjs",
@@ -18,14 +20,11 @@
     "@nestjs/common": "^11.1.9",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
-    "@nestjs/platform-socket.io": "^11.1.9",
-    "@nestjs/websockets": "^11.1.9",
     "@prisma/client": "^6.19.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "socket.io": "^4.8.1"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.12",

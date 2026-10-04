@@ -7,9 +7,11 @@ type RetryContext = {
   params: Promise<{ jobId: string }>;
 };
 
-export async function POST(_: Request, context: RetryContext) {
+export async function POST(request: Request, context: RetryContext) {
   const { jobId } = await context.params;
-  return proxyApiRequest(`/print/jobs/${encodeURIComponent(jobId)}/retry`, {
-    method: "POST"
-  });
+  return proxyApiRequest(
+    `/print/jobs/${encodeURIComponent(jobId)}/retry`,
+    { method: "POST" },
+    request
+  );
 }

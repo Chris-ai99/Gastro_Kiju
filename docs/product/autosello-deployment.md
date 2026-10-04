@@ -1,58 +1,54 @@
-# AutoSello Deployment unter `/kiJu`
+# VPS-Deployment unter `/gastro`
 
-Diese Anwendung ist für einen öffentlichen Subpfad unter `https://autosello.de/kiJu` vorbereitet.
-Der Login bleibt dabei vollständig der KiJu-Login der App und benötigt keinen AutoSello-Login.
-
-## Zielbild
-
-- Öffentliche Route: `https://autosello.de/kiJu`
-- Eigene KiJu-Anmeldung: `Kellner`, `Kueche`, `Admin`
-- Kein vorgeschalteter AutoSello-Login für diesen Pfad
-- Betrieb als eigenständige Next.js-App hinter einem Reverse Proxy
+Die produktive Web-App läuft auf dem IONOS-VPS unter
+`https://<DEINE-DOMAIN>/gastro`. Der Browser erreicht die interne NestJS-API
+nicht direkt; Next.js leitet die API-Aufrufe intern an
+`http://127.0.0.1:4000/api` weiter.
 
 ## Build-Konfiguration
 
-Vor dem Build muss in `apps/web/.env` oder in der Server-Umgebung gesetzt werden:
+Vor dem Build setzen:
 
 ```env
-NEXT_PUBLIC_BASE_PATH=/kiJu
+NEXT_PUBLIC_BASE_PATH=/gastro
+KIJU_API_INTERNAL_URL=http://127.0.0.1:4000/api
 ```
 
-Dann bauen und starten:
+Die API benötigt zusätzlich im geschützten Systemd-Environment:
 
-```powershell
-npx pnpm@10.22.0 install
-npx pnpm@10.22.0 --filter @kiju/web build
-npx pnpm@10.22.0 --filter @kiju/web start -- --hostname 127.0.0.1 --port 3110
+```env
+DATABASE_URL=postgresql://...
+KIJU_INTERNAL_ACCESS_CODE=<zufälliger Betriebscode>
+KIJU_SESSION_SECRET=<langer zufälliger Sitzungs-Schlüssel>
 ```
 
-## Reverse-Proxy-Idee
+Build und Start erfolgen über die vorhandenen Systemd-Vorlagen und
+`scripts/deploy-gastroweb.sh`. Ein Deployment wird nicht automatisch von der
+Anwendung ausgelöst.
 
-Der Webserver vor `autosello.de` muss den Pfad `/kiJu` an diese Next.js-App durchreichen.
-Wichtig ist, dass der Präfix `/kiJu` nicht entfernt wird, weil die App genau für diesen Base-Path gebaut wird.
+## Reverse Proxy
 
-Beispiel für Nginx:
+Der öffentliche Webserver muss den Präfix `/gastro` erhalten und an den lokalen
+Next-Port weiterleiten. SSE darf nicht gepuffert werden:
 
 ```nginx
-location /kiJu/ {
+location /gastro/ {
     proxy_pass http://127.0.0.1:3110;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+    proxy_buffering off;
+    proxy_read_timeout 1h;
 }
 ```
 
-## Was noch extern fehlt
+## Prüfungen nach dem Neustart
 
-- Zugriff auf den AutoSello-Server oder das Hosting-Panel
-- Zugriff auf das AutoSello-Git-Repository oder die Ziel-Deployment-Pipeline
-- Eintrag im Reverse Proxy oder Webserver für `/kiJu`
+```bash
+curl --fail https://<DEINE-DOMAIN>/gastro/api/health
+```
 
-## Hinweis
-
-Dieses Projekt ist in diesem Workspace nicht mit einem AutoSello-Remote verbunden.
-Die App ist jetzt technisch für den Subpfad vorbereitet, aber der eigentliche Live-Rollout auf `autosello.de` muss mit Server- oder Repo-Zugang durchgeführt werden.
+Der Health-Endpunkt prüft die Web-Weiterleitung, die API und die PostgreSQL-
+Verbindung. Danach mit zwei getrennten Browsern anmelden und eine Testbestellung
+von Service nach Küche und Bar verfolgen.

@@ -15,6 +15,7 @@ import {
 } from "@kiju/domain";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { LiveEventsService } from "../events/live-events.service";
 import { PrintQueueService } from "../print/print-queue.service";
 
 const OPERATIONAL_STATE_ID = "operational-state";
@@ -48,7 +49,8 @@ const parseConfirmation = (value: Prisma.JsonValue) =>
 export class TransactionsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly printQueue: PrintQueueService
+    private readonly printQueue: PrintQueueService,
+    private readonly liveEvents: LiveEventsService
   ) {}
 
   async process(
@@ -212,6 +214,10 @@ export class TransactionsService {
       });
 
       this.printQueue.schedule();
+      this.liveEvents.publishStateChanged(
+        confirmation.stateVersion,
+        new Date(confirmation.savedAt)
+      );
       return confirmation;
     } catch (error) {
       const message =

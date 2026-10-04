@@ -2,25 +2,32 @@
 
 ## Zielbild
 
-KiJu Gastro Order System ist ein lokales Service-System für Kinder- und Jugendarbeit mit einem professionellen Gastro-Flow:
-
-- Tablet-first Kellneroberflaeche mit Raumansicht, Tisch-Zoom und Sitzplatzwahl
-- Geführter Bestellweg für Getränke, Vorspeise, Hauptspeise und Nachtisch
-- Hold, Warten, Kuechenversand, Review, Rechnung und Schliessen im selben Fluss
-- Fester Kuechenmonitor mit 7 Tischspalten und klarer Wellenschaltung pro Gang
-- Admin-Konsole für Produkte, Preise, Rollen, Tischstatus und Tagesübersichten
+KiJu Gastro Order System ist ein Tablet-first Service-System für
+Kinder- und Jugendarbeit mit Raumansicht, Tisch- und Sitzplatzwahl,
+Küchen-/Barfluss, Abrechnung, Admin-Konfiguration und professioneller
+Druckanbindung.
 
 ## Aktueller Implementierungsstand
 
-- Shared Domain-Modell mit Demo-Daten, Produkten, Tischen, Rollen und Workflow-Helfern
-- Next.js UI für Login, Kellner, Küche und Admin
-- Browserbasierte lokale Sync-Schicht per `localStorage` und `BroadcastChannel`
-- NestJS API-Skelett für Auth, Dashboard, Küche, Admin und Realtime-Gateway
-- Druck- und Fiskalgrenzen als eigenstaendige Adapter-Schicht
+- gemeinsame Domain- und Workflow-Logik für Service, Küche, Bar und QR-Bestellung
+- PostgreSQL als zentrale operative Datenquelle auf dem VPS
+- Next.js-Weboberfläche unter dem konfigurierten Base-Path, produktiv `/gastro`
+- NestJS-API mit serialisierbaren Transaktionen und idempotenter Verarbeitung
+- authentifizierter SSE-Livestream plus 30-Sekunden-Fallback-Polling
+- gemeinsamer Betriebscode für die öffentlich erreichbare interne Oberfläche
+- getrennte Druckwarteschlange und lokale Druckbrücke
+- Legacy-JSON-Import ausschließlich für Wiederherstellungen und Migrationen
+
+## Betriebsprinzip
+
+Ein Gerät zeigt nur den bestätigten Serverstand als verbindlich an. Schnelle
+Eingaben werden bis zur Serverantwort flüchtig in Reihenfolge verarbeitet. Bei
+Verbindungsfehlern gibt es keine lokale Erfolgsbuchung und keine automatische
+Wiederholung nach einem Browserneustart.
 
 ## Nächste fachliche Ausbaustufen
 
-- Persistente PostgreSQL-Anbindung ueber Prisma
-- Reale Split-Zahlung nach Sitzplatz, Position oder Betrag
-- Vollstaendige Varianten-, Rabatt- und Storno-Prozesse
-- WebSocket-basierte Realtime-Synchronisation ueber API statt nur Browser-Store
+- differenzierte PostgreSQL-Backup- und Restore-Automation auf dem IONOS-VPS
+- reale Split-Zahlungen nach Sitzplatz, Position oder Betrag
+- vollständige Varianten-, Rabatt- und Fiskalprozesse
+- getrennte Rollen- und Gerätesitzungen mit zentraler Administration

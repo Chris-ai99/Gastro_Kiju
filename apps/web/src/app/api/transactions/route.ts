@@ -11,5 +11,5 @@ export async function POST(request: Request) {
       "X-KiJu-Forwarded-By": "web"
     },
     body: await request.text()
-  });
+  }, request);
 }

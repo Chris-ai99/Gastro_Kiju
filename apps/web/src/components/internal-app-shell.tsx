@@ -3,13 +3,15 @@
 import type { PropsWithChildren } from "react";
 
 import { DesignModeBridge } from "./design-mode-bridge";
-import { TransmissionStatusBanner } from "./transmission-status-banner";
+import { InternalAccessGate } from "./internal-access-gate";
+import { ServerConnectionBoundary } from "./server-connection-boundary";
 import { DemoAppProvider } from "../lib/app-state";
 
 export const InternalAppShell = ({ children }: PropsWithChildren) => (
-  <DemoAppProvider>
-    <DesignModeBridge />
-    <TransmissionStatusBanner />
-    {children}
-  </DemoAppProvider>
+  <InternalAccessGate>
+    <DemoAppProvider>
+      <DesignModeBridge />
+      <ServerConnectionBoundary>{children}</ServerConnectionBoundary>
+    </DemoAppProvider>
+  </InternalAccessGate>
 );

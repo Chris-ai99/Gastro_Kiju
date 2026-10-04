@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import type { NetworkPrinterConfig } from "@kiju/domain";
 
+import { PublicEndpoint } from "../auth/public.decorator";
 import { PrintQueueService } from "./print-queue.service";
 import type { PrintJobRequest } from "./print.types";
 
@@ -61,6 +62,7 @@ export class PrintController {
   }
 
   @Post("bridge/heartbeat")
+  @PublicEndpoint()
   async bridgeHeartbeat(
     @Headers("authorization") authorization: string | undefined,
     @Body() body?: unknown
@@ -92,12 +94,14 @@ export class PrintController {
   }
 
   @Get("bridge/jobs/next")
+  @PublicEndpoint()
   async nextBridgeJob(@Headers("authorization") authorization?: string) {
     this.printQueue.assertBridgeToken(bearerToken(authorization));
     return this.printQueue.claimNextBridgeJob();
   }
 
   @Post("bridge/jobs/result")
+  @PublicEndpoint()
   async bridgeJobResult(
     @Headers("authorization") authorization: string | undefined,
     @Body() body: unknown

@@ -9,7 +9,7 @@ Das Deployment lässt sich von jedem Rechner aus der GitHub-Oberfläche starten.
 3. Als Branch `main` auswählen und bei der Bestätigung **Ja, jetzt deployen** wählen.
 4. Den Lauf bis zum grünen Abschluss verfolgen.
 
-Der Workflow überträgt den ausgewählten Commit als Quellarchiv per SSH. Der VPS baut daraus eine neue Release unter **/opt/kiju-gastro/releases**, kopiert die Next.js-Assets in den eigenständigen Webserver und schaltet die API- und Web-Verknüpfung erst nach erfolgreichem Build um. Anschließend startet er **gastroapi** und **kiju-gastro** neu und prüft **/api/health** sowie **/gastro/** lokal auf dem Server. Bei einem Fehler stellt er die vorherigen Verknüpfungen wieder her. Frühere Releases und die bestehenden Anwendungsdaten bleiben erhalten.
+Der Workflow überträgt den ausgewählten Commit als Quellarchiv per SSH. Der VPS baut daraus eine neue Release unter **/opt/kiju-gastro/releases**, kopiert die Next.js-Assets in den eigenständigen Webserver und schaltet die API- und Web-Verknüpfung erst nach erfolgreichem Build um. Anschließend startet er **gastroapi** und **kiju-gastro** neu und prüft die direkte API-Gesundheit unter **/api/health**, den öffentlichen Proxy unter **/gastro/api/health** sowie **/gastro/** lokal auf dem Server. Der Proxy-Check stellt sicher, dass Base-Path, Webdienst, API und PostgreSQL gemeinsam erreichbar sind. Bei einem Fehler stellt er die vorherigen Verknüpfungen wieder her. Frühere Releases und die bestehenden PostgreSQL-Daten bleiben erhalten.
 
 ## Zugriff
 

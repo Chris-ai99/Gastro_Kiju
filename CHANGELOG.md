@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.00-beta
+- Datum: 2026-10-04
+- Uhrzeit: 21:00 +02:00
+- Typ: Architektur / Fix
+- Zusammenfassung:
+  Der VPS ist jetzt die zentrale Quelle für Bestellungen und Statusänderungen.
+- Änderungen:
+  Der fehlerhafte State-Pfad unter `/gastro` wurde korrigiert und über eine zentrale API-Pfadroutine vereinheitlicht.
+  PostgreSQL-Transaktionen veröffentlichen bestätigte Zustandsversionen über einen authentifizierten SSE-Stream; 30-Sekunden-Polling bleibt als Rückfallebene aktiv.
+  IndexedDB, BroadcastChannel, lokale Betriebszustandskopien und automatische Browser-Retries wurden entfernt; schnelle Eingaben laufen nur noch durch eine flüchtige FIFO-Pipeline.
+  Die interne Oberfläche verlangt einen signierten Betriebscode-Session-Cookie. `GET /gastro/api/health` prüft zusätzlich PostgreSQL.
+  Deployment- und Sicherungsdokumentation verwenden PostgreSQL statt des alten JSON-Syncservers.
+
 ## 0.12.20-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:40 +02:00

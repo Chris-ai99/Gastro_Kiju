@@ -4,7 +4,7 @@ import test from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { createDefaultOperationalState } from "@kiju/domain";
 
-import selfOrderModule from "../dist/modules/self-order/self-order.service.js";
+import selfOrderModule from "../dist/api/src/modules/self-order/self-order.service.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const integrationTest = (name, run) =>
@@ -13,8 +13,9 @@ const integrationTest = (name, run) =>
 integrationTest("öffentliche Selbstbestellung ist geschützt und idempotent", async () => {
   const prisma = new PrismaClient({ datasourceUrl: databaseUrl });
   const printQueue = { schedule() {} };
+  const liveEvents = { publishStateChanged() {} };
   const { SelfOrderService } = selfOrderModule;
-  const service = new SelfOrderService(prisma, printQueue);
+  const service = new SelfOrderService(prisma, printQueue, liveEvents);
 
   try {
     await prisma.transmissionAttempt.deleteMany();

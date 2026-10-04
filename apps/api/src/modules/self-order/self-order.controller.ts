@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 
 import { SelfOrderService } from "./self-order.service";
+import { PublicEndpoint } from "../auth/public.decorator";
 
 const bearerToken = (authorization?: string) =>
   authorization?.startsWith("Bearer ")
@@ -18,6 +19,7 @@ const clientAddress = (forwardedFor: string | undefined, ip: string) =>
   forwardedFor?.split(",")[0]?.trim() || ip;
 
 @Controller("public/self-order")
+@PublicEndpoint()
 export class SelfOrderController {
   constructor(private readonly selfOrderService: SelfOrderService) {}
 

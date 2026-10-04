@@ -3,8 +3,8 @@ import { proxyApiRequest } from "../../../server/api-proxy";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  return proxyApiRequest("/state");
+export async function GET(request: Request) {
+  return proxyApiRequest("/state", undefined, request);
 }
 
 export async function PUT() {

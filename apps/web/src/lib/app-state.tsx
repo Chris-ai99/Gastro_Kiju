@@ -47,7 +47,7 @@ import {
   type TableLayout,
   type UserAccount
 } from "@kiju/domain";
-import { kitchenRules } from "@kiju/config";
+import { kitchenRules, resolveApiUrl } from "@kiju/config";
 import {
   createContext,
   useCallback,
@@ -69,33 +69,32 @@ import {
   type OrderSendTarget
 } from "./order-overview";
 import {
+  clearPendingTransactions,
   createPendingTransaction,
-  fetchPendingTransactionConfirmation,
-  getRetryDelayMs,
-  hasAutomaticRetryRemaining,
   listPendingTransactions,
   removePendingTransaction,
   savePendingTransaction,
   sendPendingTransaction,
   type PendingTransaction
-} from "./transaction-queue";
+} from "./in-memory-write-queue";
 
-const STORAGE_KEY = "kiju-app-state-v2";
-const CONFIRMED_STORAGE_KEY = "kiju-confirmed-app-state-v1";
 const AUTH_KEY = "kiju-auth-session-v1";
 const LEGACY_AUTH_KEY = "kiju-auth-v2";
 const NOTIFICATION_READS_KEY = "kiju-notification-reads-v1";
 const NOTIFICATION_DEVICE_KEY = "kiju-notification-device-v1";
 const TRANSACTION_DEVICE_KEY = "kiju-transaction-device-v1";
-const SHARED_SYNC_POLL_MS = 5000;
-const SHARED_SYNC_REQUEST_TIMEOUT_MS = 2500;
+const SERVER_RECONCILIATION_POLL_MS = 30_000;
+const SERVER_REQUEST_TIMEOUT_MS = 5_000;
 
-type SharedSyncState = {
-  status: "connecting" | "online" | "pending" | "offline" | "error";
+type ServerConnectionState = {
+  status:
+    | "connecting"
+    | "online"
+    | "saving"
+    | "reconnecting"
+    | "offline"
+    | "error";
   lastSyncedAt?: string;
-  usingSharedState: boolean;
-  pendingCount: number;
-  failedCount: number;
   message?: string;
 };
 
@@ -293,8 +292,7 @@ type DemoActions = {
     scope?: "local" | "shared" | "shared-dismiss"
   ) => void;
   markNotificationsRead: (notificationIds: string[], scope?: "local") => void;
-  retryPendingTransactions: () => void;
-  cancelFailedTransaction: (transactionId: string) => void;
+  reconnectServer: () => void;
 };
 
 type DemoContextValue = {
@@ -302,7 +300,7 @@ type DemoContextValue = {
   state: AppState;
   currentUser?: UserAccount;
   unreadNotifications: AppNotification[];
-  sharedSync: SharedSyncState;
+  serverConnection: ServerConnectionState;
   canUndoServiceHandover: boolean;
   actions: DemoActions;
 };
@@ -1523,18 +1521,6 @@ const reopenCompletedKitchenBatch = (
   return true;
 };
 
-const commitStorage = (state: AppState) => {
-  if (typeof window === "undefined") return;
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-};
-
-const commitConfirmedStorage = (state: AppState) => {
-  if (typeof window === "undefined") return;
-
-  localStorage.setItem(CONFIRMED_STORAGE_KEY, JSON.stringify(state));
-};
-
 const commitAuthStorage = (currentUserId: string | null) => {
   if (typeof window === "undefined") return;
 
@@ -1545,32 +1531,6 @@ const commitAuthStorage = (currentUserId: string | null) => {
   }
 
   localStorage.removeItem(LEGACY_AUTH_KEY);
-};
-
-const readStoredState = () => {
-  if (typeof window === "undefined") return null;
-
-  const rawState = localStorage.getItem(STORAGE_KEY);
-  if (!rawState) return null;
-
-  try {
-    return JSON.parse(rawState) as AppState;
-  } catch {
-    return null;
-  }
-};
-
-const readStoredConfirmedState = () => {
-  if (typeof window === "undefined") return null;
-
-  const rawState = localStorage.getItem(CONFIRMED_STORAGE_KEY);
-  if (!rawState) return null;
-
-  try {
-    return JSON.parse(rawState) as AppState;
-  } catch {
-    return null;
-  }
 };
 
 const getTransactionDeviceId = () => {
@@ -1600,25 +1560,9 @@ const readStoredAuth = () => {
   }
 };
 
-const resolveSharedStateUrl = () => {
-  const configuredBaseUrl = process.env["NEXT_PUBLIC_KIJU_API_BASE_URL"]?.trim();
-  if (configuredBaseUrl) {
-    return `${configuredBaseUrl.replace(/\/+$/, "")}/state`;
-  }
-
-  if (typeof window === "undefined") return null;
-
-  const deployedBasePath = normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"]);
-  if (deployedBasePath) {
-    return `${window.location.origin}/api/kiju/state`;
-  }
-
-  return `${window.location.origin}/api/state`;
-};
-
 const requestSharedSnapshot = async (input: string, init?: RequestInit) => {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), SHARED_SYNC_REQUEST_TIMEOUT_MS);
+  const timeoutId = window.setTimeout(() => controller.abort(), SERVER_REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(input, {
@@ -1715,10 +1659,7 @@ const pruneNotificationReads = (
 };
 
 const fetchSharedSnapshot = async () => {
-  const sharedStateUrl = resolveSharedStateUrl();
-  if (!sharedStateUrl) return null;
-
-  return requestSharedSnapshot(sharedStateUrl);
+  return requestSharedSnapshot(resolveApiUrl("state"));
 };
 
 export const DemoAppProvider = ({ children }: PropsWithChildren) => {
@@ -1729,22 +1670,17 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
   const [notificationClock, setNotificationClock] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
-  const [sharedSync, setSharedSync] = useState<SharedSyncState>({
-    status: "connecting",
-    usingSharedState: false,
-    pendingCount: 0,
-    failedCount: 0
+  const [serverConnection, setServerConnection] = useState<ServerConnectionState>({
+    status: "connecting"
   });
-  const channelRef = useRef<BroadcastChannel | null>(null);
-  const sharedSyncEnabledRef = useRef(false);
   const sharedVersionRef = useRef<number | null>(null);
   const stateRef = useRef(state);
   const confirmedStateRef = useRef(state);
   const currentUserIdRef = useRef(currentUserId);
   const localWriteRevisionRef = useRef(0);
   const queueProcessingRef = useRef(false);
-  const queueRetryTimerRef = useRef<number | null>(null);
   const drainQueueRef = useRef<() => void>(() => undefined);
+  const reconnectServerRef = useRef<() => void>(() => undefined);
   const transactionWaitersRef = useRef(
     new Map<string, (result: CommitResult) => void>()
   );
@@ -1757,16 +1693,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       Boolean(notification.expiresAt) &&
       !isNotificationExpired(notification, notificationClock)
   );
-
-  const broadcast = useCallback((nextState: AppState) => {
-    try {
-      channelRef.current?.postMessage({
-        state: nextState
-      });
-    } catch {
-      channelRef.current = null;
-    }
-  }, []);
 
   const applyPendingQueue = useCallback(
     (baseState: AppState, transactions: PendingTransaction[]) => {
@@ -1785,180 +1711,24 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       stateRef.current = visibleState;
       setState(visibleState);
-      commitStorage(visibleState);
-      broadcast(visibleState);
       return visibleState;
     },
-    [broadcast]
-  );
-
-  const isDisposablePresenceTransaction = (transaction: PendingTransaction) => {
-    if (transaction.request.operation.kind !== "staff.update") return false;
-    if (transaction.request.printJobs?.length) return false;
-
-    const patches = transaction.request.operation.patches;
-    return (
-      patches.length > 0 &&
-      patches.every((patch) => {
-        const userSegment = patch.path[1];
-        return (
-          patch.op === "set" &&
-          patch.path.length === 3 &&
-          patch.path[0] === "users" &&
-          typeof userSegment === "object" &&
-          userSegment !== null &&
-          !Array.isArray(userSegment) &&
-          typeof (userSegment as { id?: unknown }).id === "string" &&
-          patch.path[2] === "lastSeenAt"
-        );
-      })
-    );
-  };
-
-  const discardDisposablePresenceTransactions = useCallback(
-    async (transactions: PendingTransaction[]) => {
-      const disposableTransactions = transactions.filter(isDisposablePresenceTransaction);
-      if (disposableTransactions.length === 0) return transactions;
-
-      const disposableIds = new Set(
-        disposableTransactions.map((transaction) => transaction.transactionId)
-      );
-      await Promise.all(
-        disposableTransactions.map((transaction) =>
-          removePendingTransaction(transaction.transactionId)
-        )
-      );
-
-      return transactions.filter(
-        (transaction) => !disposableIds.has(transaction.transactionId)
-      );
-    },
     []
-  );
-
-  const rememberConfirmedTransaction = useCallback(
-    (confirmation: CriticalTransactionConfirmation) => {
-      if (
-        sharedVersionRef.current !== null &&
-        confirmation.stateVersion < sharedVersionRef.current
-      ) {
-        return confirmedStateRef.current;
-      }
-
-      const confirmedState = normalizeAppState(confirmation.state);
-      confirmedStateRef.current = confirmedState;
-      sharedVersionRef.current = confirmation.stateVersion;
-      sharedSyncEnabledRef.current = true;
-      commitConfirmedStorage(confirmedState);
-      return confirmedState;
-    },
-    []
-  );
-
-  const reconcilePendingTransactions = useCallback(
-    async (transactions: PendingTransaction[]) => {
-      const activeTransactions =
-        await discardDisposablePresenceTransactions(transactions);
-
-      if (
-        activeTransactions.length === 0 ||
-        (typeof navigator !== "undefined" && navigator.onLine === false)
-      ) {
-        return {
-          transactions: activeTransactions,
-          latestConfirmation: null as CriticalTransactionConfirmation | null
-        };
-      }
-
-      const transactionsToCheck = activeTransactions.filter(
-        (transaction) =>
-          transaction.attemptCount > 0 ||
-          transaction.status === "failed" ||
-          transaction.status === "sending"
-      );
-
-      if (transactionsToCheck.length === 0) {
-        return {
-          transactions: activeTransactions,
-          latestConfirmation: null as CriticalTransactionConfirmation | null
-        };
-      }
-
-      const checkedTransactions = await Promise.all(
-        transactionsToCheck.map(async (transaction) => ({
-          transaction,
-          confirmation: await fetchPendingTransactionConfirmation(
-            transaction.transactionId
-          )
-        }))
-      );
-      const confirmedTransactions = checkedTransactions.filter(
-        (entry): entry is {
-          transaction: PendingTransaction;
-          confirmation: CriticalTransactionConfirmation;
-        } => Boolean(entry.confirmation)
-      );
-
-      if (confirmedTransactions.length === 0) {
-        return {
-          transactions: activeTransactions,
-          latestConfirmation: null as CriticalTransactionConfirmation | null
-        };
-      }
-
-      const confirmedIds = new Set(
-        confirmedTransactions.map((entry) => entry.transaction.transactionId)
-      );
-      await Promise.all(
-        confirmedTransactions.map((entry) =>
-          removePendingTransaction(entry.transaction.transactionId)
-        )
-      );
-
-      const latestConfirmation =
-        confirmedTransactions
-          .map((entry) => entry.confirmation)
-          .sort((left, right) => left.stateVersion - right.stateVersion)
-          .at(-1) ?? null;
-
-      if (latestConfirmation) {
-        rememberConfirmedTransaction(latestConfirmation);
-      }
-
-      return {
-        transactions: activeTransactions.filter(
-          (transaction) => !confirmedIds.has(transaction.transactionId)
-        ),
-        latestConfirmation
-      };
-    },
-    [discardDisposablePresenceTransactions, rememberConfirmedTransaction]
   );
 
   const updateSyncFromQueue = useCallback(
     (
       transactions: PendingTransaction[],
-      statusOverride?: SharedSyncState["status"],
+      statusOverride?: ServerConnectionState["status"],
       message?: string
     ) => {
-      const failedCount = transactions.filter(
-        (transaction) => transaction.status === "failed"
-      ).length;
-      const pendingCount = transactions.length;
       const status =
         statusOverride ??
-        (failedCount > 0
-          ? "error"
-          : pendingCount > 0
-            ? "pending"
-            : "online");
+        (transactions.length > 0 ? "saving" : "online");
 
-      setSharedSync((current) => ({
+      setServerConnection((current) => ({
         status,
-        usingSharedState: current.usingSharedState || status === "online",
         lastSyncedAt: current.lastSyncedAt,
-        pendingCount,
-        failedCount,
         message
       }));
     },
@@ -1969,61 +1739,19 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     if (queueProcessingRef.current || typeof window === "undefined") return;
     queueProcessingRef.current = true;
 
-    if (queueRetryTimerRef.current !== null) {
-      window.clearTimeout(queueRetryTimerRef.current);
-      queueRetryTimerRef.current = null;
-    }
-
     try {
       while (true) {
-        const {
-          transactions,
-          latestConfirmation
-        } = await reconcilePendingTransactions(await listPendingTransactions());
-
-        if (latestConfirmation) {
-          applyPendingQueue(confirmedStateRef.current, transactions);
-        }
+        const transactions = await listPendingTransactions();
 
         if (transactions.length === 0) {
-          setSharedSync((current) => ({
+          setServerConnection((current) => ({
             status: "online",
-            usingSharedState: true,
-            lastSyncedAt: current.lastSyncedAt,
-            pendingCount: 0,
-            failedCount: 0
+            lastSyncedAt: current.lastSyncedAt
           }));
           return;
         }
 
-        const failed = transactions.find(
-          (transaction) => transaction.status === "failed"
-        );
-        if (failed) {
-          updateSyncFromQueue(
-            transactions,
-            "error",
-            failed.lastError ??
-              "Mindestens ein Vorgang wartet auf manuelles erneutes Senden."
-          );
-          return;
-        }
-
         const transaction = transactions[0]!;
-        const waitTime = Math.max(0, transaction.nextAttemptAt - Date.now());
-        if (waitTime > 0) {
-          updateSyncFromQueue(
-            transactions,
-            "pending",
-            "Offene Vorgänge warten auf die nächste Serverübertragung."
-          );
-          queueRetryTimerRef.current = window.setTimeout(
-            () => drainQueueRef.current(),
-            waitTime
-          );
-          return;
-        }
-
         const sendingTransaction: PendingTransaction = {
           ...transaction,
           status: "sending",
@@ -2035,8 +1763,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
             sendingTransaction,
             ...transactions.slice(1)
           ],
-          "pending",
-          "Wird sicher an den Server übertragen …"
+          "saving",
+          "Speichert auf dem Server …"
         );
 
         const result = await sendPendingTransaction(sendingTransaction);
@@ -2045,21 +1773,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           const confirmedState = normalizeAppState(result.confirmation.state);
           confirmedStateRef.current = confirmedState;
           sharedVersionRef.current = result.confirmation.stateVersion;
-          sharedSyncEnabledRef.current = true;
-          commitConfirmedStorage(confirmedState);
-
-          const { transactions: remainingTransactions } =
-            await reconcilePendingTransactions(await listPendingTransactions());
+          const remainingTransactions = await listPendingTransactions();
           applyPendingQueue(confirmedState, remainingTransactions);
-          setSharedSync({
+          setServerConnection({
             status:
-              remainingTransactions.length > 0 ? "pending" : "online",
-            usingSharedState: true,
+              remainingTransactions.length > 0 ? "saving" : "online",
             lastSyncedAt: result.confirmation.savedAt,
-            pendingCount: remainingTransactions.length,
-            failedCount: remainingTransactions.filter(
-              (entry) => entry.status === "failed"
-            ).length
           });
           transactionWaitersRef.current
             .get(transaction.transactionId)?.({
@@ -2071,53 +1790,36 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           continue;
         }
 
-        const attemptCount = transaction.attemptCount + 1;
-        const shouldRetry =
-          result.transient && hasAutomaticRetryRemaining(attemptCount);
-        const nextTransaction: PendingTransaction = {
-          ...transaction,
-          status: shouldRetry ? "pending" : "failed",
-          attemptCount,
-          nextAttemptAt: shouldRetry
-            ? Date.now() + getRetryDelayMs(attemptCount)
-            : transaction.nextAttemptAt,
-          lastAttemptAt: new Date().toISOString(),
-          lastError: result.message,
-          lastStatusCode: result.statusCode
-        };
-        await savePendingTransaction(nextTransaction);
-        const nextTransactions = [
-          nextTransaction,
-          ...transactions.slice(1)
-        ];
-
-        if (!shouldRetry) {
-          updateSyncFromQueue(nextTransactions, "error", result.message);
-          transactionWaitersRef.current
-            .get(transaction.transactionId)?.({
-              ok: false,
-              transactionId: transaction.transactionId,
-              message: result.message
-            });
-          transactionWaitersRef.current.delete(transaction.transactionId);
-          return;
+        await clearPendingTransactions();
+        for (const pending of transactions) {
+          transactionWaitersRef.current.get(pending.transactionId)?.({
+            ok: false,
+            transactionId: pending.transactionId,
+            message:
+              pending.transactionId === transaction.transactionId
+                ? result.message
+                : "Der Vorgang wurde verworfen, weil eine vorherige Serveränderung fehlgeschlagen ist."
+          });
+          transactionWaitersRef.current.delete(pending.transactionId);
         }
 
-        updateSyncFromQueue(
-          nextTransactions,
-          "offline",
-          `${result.message} Automatischer erneuter Versuch folgt.`
-        );
-        queueRetryTimerRef.current = window.setTimeout(
-          () => drainQueueRef.current(),
-          getRetryDelayMs(attemptCount)
-        );
+        const snapshot = await fetchSharedSnapshot();
+        if (snapshot) {
+          sharedVersionRef.current = snapshot.version;
+          confirmedStateRef.current = normalizeAppState(snapshot.state);
+        }
+        applyPendingQueue(confirmedStateRef.current, []);
+        setServerConnection({
+          status: "error",
+          lastSyncedAt: snapshot?.updatedAt,
+          message: `${result.message} Nicht bestätigte Änderungen wurden verworfen.`
+        });
         return;
       }
     } finally {
       queueProcessingRef.current = false;
     }
-  }, [applyPendingQueue, reconcilePendingTransactions, updateSyncFromQueue]);
+  }, [applyPendingQueue, updateSyncFromQueue]);
 
   drainQueueRef.current = () => {
     void drainQueue();
@@ -2143,9 +1845,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
       setState(normalizedState);
       setCurrentUserId(nextUserId);
-      commitStorage(normalizedState);
       commitAuthStorage(nextUserId);
-      broadcast(normalizedState);
 
       if (operation.patches.length === 0 && printRequests.length === 0) {
         return Promise.resolve({ ok: true });
@@ -2168,13 +1868,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       };
       const pendingTransaction = createPendingTransaction(request);
 
-      setSharedSync((current) => ({
-        status: "pending",
-        usingSharedState: current.usingSharedState,
+      setServerConnection((current) => ({
+        status: "saving",
         lastSyncedAt: current.lastSyncedAt,
-        pendingCount: current.pendingCount + 1,
-        failedCount: current.failedCount,
-        message: "Wird sicher an den Server übertragen …"
+        message: "Speichert auf dem Server …"
       }));
 
       return new Promise<CommitResult>((resolve) => {
@@ -2184,7 +1881,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         });
       });
     },
-    [broadcast, currentUserId]
+    [currentUserId]
   );
 
   const rememberServiceHandoverUndo = useCallback(() => {
@@ -2201,7 +1898,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || sharedSync.status === "connecting") return;
+    if (!hydrated || serverConnection.status === "connecting") return;
 
     setLocalNotificationReads((currentReads) => {
       const nextReads = pruneNotificationReads(currentReads, state.notifications);
@@ -2212,7 +1909,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       storeNotificationReads(nextReads);
       return nextReads;
     });
-  }, [hydrated, sharedSync.status, state.notifications]);
+  }, [hydrated, serverConnection.status, state.notifications]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !hasActiveExpiringNotification) return;
@@ -2229,17 +1926,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedState = readStoredState();
-    const storedConfirmedState =
-      readStoredConfirmedState() ?? storedState ?? createFreshOperationalState();
     const storedAuth = readStoredAuth();
     const storedNotificationReads = readStoredNotificationReads();
-    const normalizedConfirmedState = normalizeAppState(storedConfirmedState);
+    const normalizedConfirmedState = normalizeAppState(createFreshOperationalState());
 
     confirmedStateRef.current = normalizedConfirmedState;
-    stateRef.current = storedState
-      ? normalizeAppState(storedState)
-      : normalizedConfirmedState;
+    stateRef.current = normalizedConfirmedState;
     setState(stateRef.current);
 
     if (storedAuth) {
@@ -2249,27 +1941,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     setLocalNotificationReads(storedNotificationReads);
 
-    if ("BroadcastChannel" in window) {
-      channelRef.current = new BroadcastChannel("kiju-app-sync-v2");
-      channelRef.current.onmessage = (event) => {
-        const payload = event.data as { state: AppState };
-        const normalizedBroadcastState = normalizeAppState(payload.state);
-        stateRef.current = normalizedBroadcastState;
-        setState(normalizedBroadcastState);
-      };
-    }
-
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY && event.newValue) {
-        try {
-          const normalizedStoredState = normalizeAppState(JSON.parse(event.newValue) as AppState);
-          stateRef.current = normalizedStoredState;
-          setState(normalizedStoredState);
-        } catch {
-          // Ignore malformed local cache entries.
-        }
-      }
-
       if (event.key === NOTIFICATION_READS_KEY) {
         setLocalNotificationReads(readStoredNotificationReads());
       }
@@ -2285,70 +1957,28 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       if (!isActive) return;
 
       if (snapshot) {
-        sharedSyncEnabledRef.current = true;
         sharedVersionRef.current = snapshot.version;
         const normalizedSnapshotState = normalizeAppState(snapshot.state);
         confirmedStateRef.current = normalizedSnapshotState;
-        commitConfirmedStorage(normalizedSnapshotState);
-      }
-
-      const {
-        transactions,
-        latestConfirmation
-      } = await reconcilePendingTransactions(await listPendingTransactions());
-      if (!isActive) return;
-
-      if (snapshot) {
+        const transactions = await listPendingTransactions();
         applyPendingQueue(confirmedStateRef.current, transactions);
-        const failedCount = transactions.filter(
-          (transaction) => transaction.status === "failed"
-        ).length;
-        setSharedSync({
-          status:
-            failedCount > 0
-              ? "error"
-              : transactions.length > 0
-                ? "pending"
-                : "online",
-          usingSharedState: true,
-          lastSyncedAt:
-            latestConfirmation &&
-            latestConfirmation.stateVersion >= snapshot.version
-              ? latestConfirmation.savedAt
-              : snapshot.updatedAt,
-          pendingCount: transactions.length,
-          failedCount
+        setServerConnection({
+          status: transactions.length > 0 ? "saving" : "online",
+          lastSyncedAt: snapshot.updatedAt
         });
-      }
-
-      if (!snapshot) {
-        applyPendingQueue(confirmedStateRef.current, transactions);
-        const failedCount = transactions.filter(
-          (transaction) => transaction.status === "failed"
-        ).length;
-        const status =
-          failedCount > 0
-            ? "error"
-            : transactions.length === 0 && latestConfirmation
-              ? "online"
-              : "offline";
-        setSharedSync({
-          status,
-          usingSharedState: Boolean(latestConfirmation),
-          lastSyncedAt: latestConfirmation?.savedAt,
-          pendingCount: transactions.length,
-          failedCount,
-          message:
-            status === "online"
-              ? undefined
-              : "Server nicht erreichbar. Offene Vorgänge bleiben lokal gespeichert."
-        });
-      }
-
-      if (isActive) {
         setHydrated(true);
         drainQueueRef.current();
+        return;
       }
+
+      applyPendingQueue(confirmedStateRef.current, []);
+      setServerConnection({
+        status: "offline",
+        lastSyncedAt: undefined,
+        message:
+          "Server nicht erreichbar. Es wurden keine lokalen Betriebsdaten übernommen."
+      });
+      setHydrated(false);
     };
 
     const pollSharedState = async () => {
@@ -2360,17 +1990,10 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         if (!isActive) return;
 
         if (!latestSnapshot) {
-          const { transactions } = await reconcilePendingTransactions(
-            await listPendingTransactions()
-          );
-          if (!isActive) return;
-
           updateSyncFromQueue(
-            transactions,
-            transactions.some((entry) => entry.status === "failed")
-              ? "error"
-              : "offline",
-            "Server nicht erreichbar. Offene Vorgänge bleiben lokal gespeichert."
+            await listPendingTransactions(),
+            "offline",
+            "Server nicht erreichbar. Änderungen sind derzeit nicht möglich."
           );
           return;
         }
@@ -2379,34 +2002,22 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           sharedVersionRef.current !== null &&
           latestSnapshot.version <= sharedVersionRef.current
         ) {
-          const { transactions, latestConfirmation } =
-            await reconcilePendingTransactions(await listPendingTransactions());
-          if (!isActive) return;
-
-          if (latestConfirmation) {
-            applyPendingQueue(confirmedStateRef.current, transactions);
-          }
-          updateSyncFromQueue(transactions);
+          updateSyncFromQueue(await listPendingTransactions());
           return;
         }
 
         sharedVersionRef.current = latestSnapshot.version;
-        sharedSyncEnabledRef.current = true;
         const normalizedSnapshotState = normalizeAppState(latestSnapshot.state);
         confirmedStateRef.current = normalizedSnapshotState;
-        commitConfirmedStorage(normalizedSnapshotState);
-        const { transactions } = await reconcilePendingTransactions(
-          await listPendingTransactions()
-        );
+        const transactions = await listPendingTransactions();
         if (!isActive) return;
 
         applyPendingQueue(confirmedStateRef.current, transactions);
         updateSyncFromQueue(transactions);
-        setSharedSync((current) => ({
-          ...current,
-          usingSharedState: true,
+        setServerConnection({
+          status: transactions.length > 0 ? "saving" : "online",
           lastSyncedAt: latestSnapshot.updatedAt
-        }));
+        });
       } finally {
         isPollingSharedState = false;
       }
@@ -2425,11 +2036,55 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       void pollSharedState();
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void pollSharedState();
+    };
+
+    const eventSource = new EventSource(resolveApiUrl("events"));
+    eventSource.onopen = () => {
+      if (!isActive) return;
+      setServerConnection((current) => ({
+        ...current,
+        status: current.status === "saving" ? "saving" : "online",
+        message: undefined
+      }));
+      void pollSharedState();
+    };
+    eventSource.addEventListener("state-changed", (event) => {
+      if (!isActive) return;
+      try {
+        const payload = JSON.parse((event as MessageEvent<string>).data) as { version?: number };
+        if (
+          typeof payload.version !== "number" ||
+          sharedVersionRef.current === null ||
+          payload.version > sharedVersionRef.current
+        ) {
+          void pollSharedState();
+        }
+      } catch {
+        void pollSharedState();
+      }
+    });
+    eventSource.onerror = () => {
+      if (!isActive) return;
+      setServerConnection((current) => ({
+        ...current,
+        status: sharedVersionRef.current !== null ? "reconnecting" : "offline",
+        message: "Live-Verbindung wird wiederhergestellt."
+      }));
+    };
+
     window.addEventListener("online", handleOnline);
+    window.addEventListener("focus", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    reconnectServerRef.current = () => {
+      void synchronizeFromServer();
+      void pollSharedState();
+    };
     void synchronizeFromServer();
     pollTimer = setInterval(() => {
       void pollSharedStateIfVisible();
-    }, SHARED_SYNC_POLL_MS);
+    }, SERVER_RECONCILIATION_POLL_MS);
 
     return () => {
       isActive = false;
@@ -2438,14 +2093,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("online", handleOnline);
-      if (queueRetryTimerRef.current !== null) {
-        window.clearTimeout(queueRetryTimerRef.current);
-        queueRetryTimerRef.current = null;
-      }
-      channelRef.current?.close();
-      channelRef.current = null;
+      window.removeEventListener("focus", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      eventSource.close();
+      reconnectServerRef.current = () => undefined;
     };
-  }, [applyPendingQueue, reconcilePendingTransactions, updateSyncFromQueue]);
+  }, [applyPendingQueue, updateSyncFromQueue]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -4927,60 +4580,14 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [localNotificationReads, state.notifications]
   );
 
-  const retryPendingTransactions = useCallback(() => {
-    void listPendingTransactions().then(async (transactions) => {
-      const { transactions: activeTransactions } =
-        await reconcilePendingTransactions(transactions);
-      await Promise.all(
-        activeTransactions
-          .filter((transaction) => transaction.status === "failed")
-          .map((transaction) =>
-            savePendingTransaction({
-              ...transaction,
-              status: "pending",
-              attemptCount: 0,
-              nextAttemptAt: Date.now(),
-              lastError: undefined,
-              lastStatusCode: undefined
-            })
-          )
-      );
-      const { transactions: nextTransactions } =
-        await reconcilePendingTransactions(await listPendingTransactions());
-      updateSyncFromQueue(
-        nextTransactions,
-        nextTransactions.length > 0 ? "pending" : "online",
-        nextTransactions.length > 0
-          ? "Erneute sichere Übertragung wurde gestartet."
-          : undefined
-      );
-      drainQueueRef.current();
-    });
-  }, [reconcilePendingTransactions, updateSyncFromQueue]);
-
-  const cancelFailedTransaction = useCallback(
-    (transactionId: string) => {
-      void listPendingTransactions().then(async (transactions) => {
-        const transaction = transactions.find(
-          (entry) => entry.transactionId === transactionId
-        );
-        if (!transaction || transaction.status !== "failed") return;
-
-        await removePendingTransaction(transactionId);
-        const remainingTransactions = await listPendingTransactions();
-        applyPendingQueue(confirmedStateRef.current, remainingTransactions);
-        updateSyncFromQueue(remainingTransactions);
-        transactionWaitersRef.current.get(transactionId)?.({
-          ok: false,
-          transactionId,
-          message:
-            "Die lokale Änderung wurde verworfen und nicht als erfolgreich bestätigt."
-        });
-        transactionWaitersRef.current.delete(transactionId);
-      });
-    },
-    [applyPendingQueue, updateSyncFromQueue]
-  );
+  const reconnectServer = useCallback(() => {
+    setServerConnection((current) => ({
+      ...current,
+      status: "connecting",
+      message: undefined
+    }));
+    reconnectServerRef.current();
+  }, []);
 
   const currentUser = state.users.find((user) => user.id === currentUserId);
   const readerKey = getNotificationReaderKey();
@@ -5006,7 +4613,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       state,
       currentUser,
       unreadNotifications,
-      sharedSync,
+      serverConnection,
       canUndoServiceHandover,
       actions: {
         login,
@@ -5067,8 +4674,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         removeTableAndServices,
         markNotificationRead,
         markNotificationsRead,
-        retryPendingTransactions,
-        cancelFailedTransaction
+        reconnectServer
       }
     }),
     [
@@ -5086,7 +4692,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       createUser,
       cycleKitchenItemUnitStatus,
       canUndoServiceHandover,
-      cancelFailedTransaction,
       reopenKitchenBatch,
       deletePartyGroup,
       currentUser,
@@ -5112,7 +4717,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       recordInvoiceCancellation,
       resetDailyState,
       releaseServiceTasks,
-      retryPendingTransactions,
+      reconnectServer,
       rotateSelfOrderLocationKey,
       resetDemoState,
       removeTableAndServices,
@@ -5123,7 +4728,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       setDesignMode,
       setSeatVisible,
       setServiceOrderMode,
-      sharedSync,
+      serverConnection,
       skipCourse,
       state,
       toggleTableActive,
