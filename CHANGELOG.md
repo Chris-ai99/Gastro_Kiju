@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.13-beta
+- Datum: 2026-10-04
+- Uhrzeit: 19:57 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Deploy erkennt den kompilierten API-Einstieg auch bei abweichender NestJS-Ausgabestruktur.
+- Änderungen:
+  Die Suche im API-Build-Verzeichnis berücksichtigt nun jede verschachtelte `main.js`-Datei.
+
 ## 0.12.12-beta
 - Datum: 2026-10-04
 - Uhrzeit: 19:46 +02:00

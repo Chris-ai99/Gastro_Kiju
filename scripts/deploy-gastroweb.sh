@@ -111,7 +111,7 @@ standalone_web_dir="${release_dir}/apps/web/.next/standalone/apps/web"
 api_dist_dir="${release_dir}/apps/api/dist"
 api_runtime_entry="${api_dist_dir}/main.js"
 if [[ ! -f "${api_runtime_entry}" ]]; then
-  api_entry="$(find "${api_dist_dir}" -type f -path '*/src/main.js' -print -quit)"
+  api_entry="$(find "${api_dist_dir}" -type f -name 'main.js' -print -quit)"
   [[ -n "${api_entry}" ]] || die "Der API-Build fehlt."
   api_entry_relative="${api_entry#"${api_dist_dir}/"}"
   printf 'require("./%s");\n' "${api_entry_relative}" > "${api_runtime_entry}"
