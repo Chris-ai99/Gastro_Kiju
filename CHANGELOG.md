@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.02-beta
+- Datum: 2026-10-04
+- Uhrzeit: 22:10 +02:00
+- Typ: Sicherheit / Deployment
+- Zusammenfassung:
+  Betriebsgeheimnisse bleiben ausschließlich auf dem VPS.
+- Änderungen:
+  Der GitHub-Deploy verwendet nur noch `KIJU_DEPLOY_SSH_KEY` für den eingeschränkten Deploy-Zugriff.
+  `KIJU_INTERNAL_ACCESS_CODE` und `KIJU_SESSION_SECRET` werden nicht aus GitHub übertragen und verbleiben in `/etc/gastro-kiju/api.env`.
+
 ## 0.13.01-beta
 - Datum: 2026-10-04
 - Uhrzeit: 21:30 +02:00
