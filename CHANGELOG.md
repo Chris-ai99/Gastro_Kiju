@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.10-beta
+- Datum: 2026-10-04
+- Uhrzeit: 19:31 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Kellnerabschluss lässt sich wieder für den Produktions-Build typprüfen.
+- Änderungen:
+  Der Status ausstehender sicherer Übertragungen wird in der Kellneransicht als Zustand verwaltet.
+  Der Abschluss setzt die vorhandene Auswahl bezahlter Positionen korrekt zurück.
+
 ## 0.12.09-beta
 - Datum: 2026-10-04
 - Uhrzeit: 19:25 +02:00

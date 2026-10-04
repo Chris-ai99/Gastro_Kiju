@@ -575,6 +575,7 @@ export const WaiterWorkspace = () => {
   const [categoryDialogInitialItemIds, setCategoryDialogInitialItemIds] = useState<string[]>([]);
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
+  const [isSecureTransferPending, setIsSecureTransferPending] = useState(false);
   const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
@@ -1641,7 +1642,7 @@ export const WaiterWorkspace = () => {
               ? "Der Abholtisch wurde abgeschlossen und aus der Serviceansicht entfernt."
               : "Der Abschluss wurde vom Server bestätigt.")
     });
-    setSelectedPaymentUnits({});
+    setSelectedPaymentQuantities({});
     setReceiptPreview(null);
 
     if (archivedCurrentTable) {
