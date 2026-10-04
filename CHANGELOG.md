@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.12-beta
+- Datum: 2026-10-04
+- Uhrzeit: 19:46 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Deploy findet den API-Starteinstieg unabhängig von der verschachtelten Build-Ausgabe.
+- Änderungen:
+  Falls `dist/main.js` fehlt, sucht das Deploy-Skript den kompilierten Nest-Einstieg und erstellt den erwarteten Start-Wrapper.
+
 ## 0.12.11-beta
 - Datum: 2026-10-04
 - Uhrzeit: 19:40 +02:00
