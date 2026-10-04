@@ -1,8 +1,22 @@
-import { Body, Controller, Get, Param, Post, Put } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Put
+} from "@nestjs/common";
 import type { NetworkPrinterConfig } from "@kiju/domain";
 
 import { PrintQueueService } from "./print-queue.service";
 import type { PrintJobRequest } from "./print.types";
+
+const bearerToken = (authorization?: string) =>
+  authorization?.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
 
 @Controller("print")
 export class PrintController {
@@ -31,7 +45,9 @@ export class PrintController {
   @Put("config")
   async updateConfig(
     @Body()
-    input: Pick<NetworkPrinterConfig, "enabled" | "host" | "port">
+    input: Pick<NetworkPrinterConfig, "enabled" | "host" | "port"> & {
+      connectionMode?: NetworkPrinterConfig["connectionMode"];
+    }
   ) {
     return {
       ok: true,
@@ -42,5 +58,66 @@ export class PrintController {
   @Post("test")
   async test() {
     return { ok: true, ...(await this.printQueue.enqueueTest()) };
+  }
+
+  @Post("bridge/heartbeat")
+  async bridgeHeartbeat(
+    @Headers("authorization") authorization: string | undefined,
+    @Body() body?: unknown
+  ) {
+    this.printQueue.assertBridgeToken(bearerToken(authorization));
+    if (body !== undefined && (!body || typeof body !== "object")) {
+      throw new BadRequestException("Der Druckerstatus ist ungültig.");
+    }
+    const status = body as Record<string, unknown> | undefined;
+    if (
+      status &&
+      (typeof status["printerReachable"] !== "boolean" ||
+        (status["printerError"] !== undefined &&
+          typeof status["printerError"] !== "string"))
+    ) {
+      throw new BadRequestException("Der Druckerstatus ist ungültig.");
+    }
+    return this.printQueue.recordBridgeHeartbeat(
+      status
+        ? {
+            reachable: status["printerReachable"] as boolean,
+            error:
+              typeof status["printerError"] === "string"
+                ? status["printerError"]
+                : undefined
+          }
+        : undefined
+    );
+  }
+
+  @Get("bridge/jobs/next")
+  async nextBridgeJob(@Headers("authorization") authorization?: string) {
+    this.printQueue.assertBridgeToken(bearerToken(authorization));
+    return this.printQueue.claimNextBridgeJob();
+  }
+
+  @Post("bridge/jobs/result")
+  async bridgeJobResult(
+    @Headers("authorization") authorization: string | undefined,
+    @Body() body: unknown
+  ) {
+    this.printQueue.assertBridgeToken(bearerToken(authorization));
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Das Druckergebnis fehlt.");
+    }
+    const result = body as Record<string, unknown>;
+    if (
+      typeof result["jobId"] !== "string" ||
+      typeof result["claimId"] !== "string" ||
+      typeof result["success"] !== "boolean" ||
+      (result["error"] !== undefined && typeof result["error"] !== "string")
+    ) {
+      throw new BadRequestException("Das Druckergebnis ist ungültig.");
+    }
+    return this.printQueue.completeBridgeJob(result["jobId"], result["claimId"], {
+      success: result["success"],
+      error: typeof result["error"] === "string" ? result["error"] : undefined
+    });
   }
 }

@@ -77,6 +77,81 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.12.04-beta",
+    date: "2026-10-04",
+    time: "17:10 +02:00",
+    type: "Wiederherstellung",
+    title: "Vollständige Kellneransicht wiederhergestellt",
+    summary:
+      "Die Kellneransicht entspricht wieder dem vollständigen lokalen Stand vor dem Merge.",
+    categories: ["Service", "Tischansicht", "Bestellübersicht"],
+    changes: [
+      "Der gesamte Kellner-Arbeitsbereich wurde auf den letzten vollständigen Vor-Merge-Stand zurückgesetzt.",
+      "Innen- und Außenbereich, Tischplan, Bestellübersicht und Abholbon-Abläufe sind wieder gemeinsam enthalten."
+    ]
+  },
+  {
+    version: "0.12.03-beta",
+    date: "2026-10-04",
+    time: "16:57 +02:00",
+    type: "Fix",
+    title: "Innen- und Außenbereich-Plan wiederhergestellt",
+    summary:
+      "Die Kellner-Tischwahl verwendet wieder den vollständigen interaktiven Raumplan.",
+    categories: ["Service", "Tischansicht", "Raumplan"],
+    changes: [
+      "Der alte Grundriss wurde durch den gespeicherten Plan mit Innen-, Außen- und Abholbereich ersetzt.",
+      "Tischflächen, Schnellauswahl und Abholbon-Auswahl greifen wieder auf die vorhandenen Daten zu."
+    ]
+  },
+  {
+    version: "0.12.02-beta",
+    date: "2026-10-04",
+    time: "16:44 +02:00",
+    type: "Fix",
+    title: "Gastraumplan auf Mobilgeräten direkt geöffnet",
+    summary:
+      "Die neue Tischansicht erscheint auf schmalen Service-Geräten direkt beim Öffnen des Bereichs.",
+    categories: ["Service", "Tischansicht", "Mobil"],
+    changes: [
+      "Der Gastraumplan startet auf Mobilgeräten geöffnet, statt hinter der Schaltfläche Raumplan anzeigen verborgen zu sein.",
+      "Der Raumplan kann weiterhin über die Schaltfläche ausgeblendet werden.",
+      "Tisch- und Sitzplatz-Hotspots bleiben direkt auswählbar."
+    ]
+  },
+  {
+    version: "0.12.01-beta",
+    date: "2026-10-04",
+    time: "16:28 +02:00",
+    type: "Verbesserung",
+    title: "Druck-PC und Netzwerkdrucker getrennt überwacht",
+    summary:
+      "Die Druckseite zeigt PC-Verbindung und TCP-Erreichbarkeit des Druckers separat und bietet eine geordnete Pause der lokalen Brücke.",
+    categories: ["Drucker", "Druckbrücke", "Admin"],
+    changes: [
+      "Die Admin-Druckseite zeigt den letzten TCP-Check und erklärt, dass Papier- und Deckelstatus nicht ausgelesen werden.",
+      "Die lokale Brücke holt Aufträge nur ab, wenn der TCP-Check erfolgreich und aktuell ist.",
+      "Abgelaufene Druckaufträge werden auch dann zur Prüfung markiert, wenn der Druck-PC offline bleibt.",
+      "Windows-Skripte halten die Druckbrücke an oder setzen sie fort, ohne Konfiguration, Zugangsschlüssel oder Protokolle zu löschen."
+    ]
+  },
+  {
+    version: "0.12.00-beta",
+    date: "2026-10-04",
+    time: "16:14 +02:00",
+    type: "Verbesserung",
+    title: "Lokale Druckbrücke für den Bon-Druck vorbereitet",
+    summary:
+      "Ein Windows-PC am Standort kann Druckaufträge künftig sicher vom Online-System übernehmen.",
+    categories: ["Drucker", "Lokales Netzwerk", "Druckbrücke"],
+    changes: [
+      "Die Admin-Druckseite kann zwischen Serverdruck und lokaler Druckbrücke umschalten und zeigt deren Verbindungsstatus.",
+      "Ein eigenständiger Windows-Agent holt Aufträge verschlüsselt ab und sendet sie im Standortnetz an den Drucker.",
+      "Abgebrochene Druckverbindungen werden zur Prüfung markiert und nicht automatisch erneut gedruckt.",
+      "Die PC-Installation und Freischaltung auf dem Server erfolgen später; der Serverdruck bleibt bis dahin der Standard."
+    ]
+  },
+  {
     version: "0.11.15-beta",
     date: "2026-10-04",
     time: "17:10 +02:00",
@@ -93,7 +168,7 @@ const adminChangelogEntries: AdminChangelogEntry[] = [
   {
     version: "0.11.14-beta",
     date: "2026-10-04",
-    time: "16:53 +02:00",
+    time: "16:57 +02:00",
     type: "Fix",
     title: "Vollständigen Tischplan wiederhergestellt",
     summary:

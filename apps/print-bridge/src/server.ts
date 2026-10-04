@@ -177,6 +177,40 @@ export const buildEscPosReceiptBuffer = (input: PipaReceiptInput | ReceiptDocume
     "sections" in input ? buildReceiptPrintDocument(input) : buildPipaReceiptDocument(input)
   );
 
+export const probeNetworkPrinter = async (
+  printer: Pick<NetworkPrinterConfig, "enabled" | "host" | "port">,
+  timeoutMs = 2500
+) => {
+  if (!printer.enabled) {
+    throw new Error("Der Netzwerkdrucker ist deaktiviert.");
+  }
+
+  const host = printer.host.trim();
+  if (!host) {
+    throw new Error("Für den Drucker ist keine IP-Adresse hinterlegt.");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const socket = net.createConnection({
+      host,
+      port: Number.isFinite(printer.port) ? printer.port : 9100
+    });
+    const fail = (error: Error) => {
+      socket.destroy();
+      reject(error);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once("timeout", () =>
+      fail(new Error("Zeitüberschreitung bei der Druckerverbindung."))
+    );
+    socket.once("error", fail);
+    socket.once("connect", () => {
+      socket.end();
+      resolve();
+    });
+  });
+};
+
 export const sendEscPosDocumentToNetworkPrinter = async (
   printer: Pick<NetworkPrinterConfig, "enabled" | "host" | "port">,
   document: ThermalPrintDocument,

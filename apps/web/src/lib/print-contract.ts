@@ -55,7 +55,10 @@ export type CreatePrintJobRequest =
       completedAt: string;
     };
 
-export type UpdatePrinterConfigRequest = Pick<NetworkPrinterConfig, "enabled" | "host" | "port">;
+export type UpdatePrinterConfigRequest = Pick<
+  NetworkPrinterConfig,
+  "enabled" | "host" | "port"
+> & { connectionMode: "server" | "local-bridge" };
 
 export type PrintOverviewResponse = {
   ok: true;

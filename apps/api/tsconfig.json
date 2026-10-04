@@ -15,7 +15,9 @@
     "strictPropertyInitialization": false,
     "types": ["node"],
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@kiju/print-bridge/server": ["../../apps/print-bridge/src/server.ts"]
+    }
   },
   "include": ["src/**/*", "prisma/**/*"]
 }

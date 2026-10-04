@@ -86,7 +86,8 @@ export const createPrintJob = async (
           enabled: false,
           host: "",
           port: 9100,
-          model: "Epson TM-T70II"
+          model: "Epson TM-T70II",
+          connectionMode: "server"
         },
         message: payload?.message ?? "Druckjob konnte nicht erstellt werden."
       };
@@ -100,7 +101,8 @@ export const createPrintJob = async (
         enabled: false,
         host: "",
         port: 9100,
-        model: "Epson TM-T70II"
+        model: "Epson TM-T70II",
+        connectionMode: "server"
       },
       message: "Druckjob konnte nicht erstellt werden."
     };
@@ -122,7 +124,8 @@ export const requestPrinterTestPrint = async (): Promise<PrintJobResponse> =>
             enabled: false,
             host: "",
             port: 9100,
-            model: "Epson TM-T70II"
+            model: "Epson TM-T70II",
+            connectionMode: "server"
           },
           message: payload?.message ?? "Testdruck konnte nicht gestartet werden."
         };
@@ -136,7 +139,8 @@ export const requestPrinterTestPrint = async (): Promise<PrintJobResponse> =>
           enabled: false,
           host: "",
           port: 9100,
-          model: "Epson TM-T70II"
+          model: "Epson TM-T70II",
+          connectionMode: "server"
         },
         message: "Testdruck konnte nicht gestartet werden."
       };

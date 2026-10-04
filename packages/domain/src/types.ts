@@ -320,8 +320,13 @@ export interface NetworkPrinterConfig {
   host: string;
   port: number;
   model: string;
+  connectionMode?: "server" | "local-bridge";
   lastTestAt?: string;
   lastError?: string;
+  bridgeLastSeenAt?: string;
+  bridgePrinterReachable?: boolean;
+  bridgePrinterCheckedAt?: string;
+  bridgePrinterError?: string;
 }
 
 export interface PersistedPrintJob {

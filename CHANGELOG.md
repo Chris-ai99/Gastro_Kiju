@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.04-beta
+- Datum: 2026-10-04
+- Uhrzeit: 17:10 +02:00
+- Typ: Wiederherstellung
+- Zusammenfassung:
+  Die vollständige Kellneransicht wurde auf den lokalen Stand vor dem Merge zurückgesetzt.
+- Änderungen:
+  Tischplan, Bestellübersicht, Abholbon-Auswahl und zugehörige Bedienabläufe stammen wieder aus dem letzten vollständigen Vor-Merge-Stand.
+
 ## 0.11.15-beta
 - Datum: 2026-10-04
 - Uhrzeit: 17:10 +02:00
@@ -9,15 +18,59 @@
 - Änderungen:
   Tischplan, Bestellübersicht, Abholbon-Auswahl und zugehörige Bedienabläufe stammen wieder aus dem letzten vollständigen Vor-Merge-Stand.
 
-## 0.11.14-beta
+## 0.12.03-beta
 - Datum: 2026-10-04
-- Uhrzeit: 16:53:37 +02:00
+- Uhrzeit: 16:57 +02:00
 - Typ: Fix
 - Zusammenfassung:
-  Die Kellneransicht verwendet wieder den vollständigen Tischplan mit Innen- und Außenbereich.
+  Die Kellner-Tischwahl zeigt wieder den vollständigen Innen- und Außenbereich-Plan.
 - Änderungen:
-  Die korrekte Raumplan-Ansicht wurde als vollständiger Stand wiederhergestellt und ersetzt die alte Grundrissansicht.
-  Tischwahl und Schnellauswahl greifen wieder auf dieselben aktiven Tisch- und Abholbon-Daten zu.
+  Der alte Grundriss wurde durch den gespeicherten interaktiven Raumplan ersetzt.
+  Tischflächen, Schnellauswahl und Abholbon-Auswahl verwenden wieder den gemeinsamen Planstand.
+
+## 0.12.02-beta
+- Datum: 2026-10-04
+- Uhrzeit: 16:44 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der neue Gastraumplan ist auf schmalen Service-Geräten wieder direkt sichtbar.
+- Änderungen:
+  Der Raumplan startet auf Mobilgeräten geöffnet; die Bedienung kann ihn weiterhin über die Schaltfläche ausblenden.
+  Die Sitzplatz- und Tisch-Hotspots bleiben wie zuvor auswählbar.
+
+## 0.12.01-beta
+- Datum: 2026-10-04
+- Uhrzeit: 16:28 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Die lokale Bon-Druckbrücke zeigt PC- und Druckerstatus getrennt und lässt sich geordnet anhalten.
+- Änderungen:
+  Die Admin-Druckseite zeigt die zuletzt geprüfte TCP-Erreichbarkeit des Netzwerkdruckers separat vom Online-Status des PCs.
+  Aufträge werden erst abgeholt, wenn der Druckercheck erfolgreich und aktuell ist.
+  Abgelaufene lokale Druckversuche werden auch ohne weiteren PC-Kontakt als ungeklärt markiert und nicht automatisch erneut gedruckt.
+  Windows-Skripte halten die Druckbrücke an oder setzen sie fort, ohne Konfiguration, Zugangsschlüssel oder Protokolle zu löschen.
+
+## 0.12.00-beta
+- Datum: 2026-10-04
+- Uhrzeit: 16:14 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Ein Windows-PC am Standort kann Druckaufträge künftig sicher vom Online-System übernehmen.
+- Änderungen:
+  Die Admin-Druckseite kann zwischen Serverdruck und lokaler Druckbrücke umschalten und zeigt deren Verbindungsstatus.
+  Ein eigenständiger Windows-Agent holt Aufträge verschlüsselt ab und sendet sie im Standortnetz an den Drucker.
+  Abgebrochene Druckverbindungen werden zur Prüfung markiert und nicht automatisch erneut gedruckt.
+  Die PC-Installation und Freischaltung auf dem Server erfolgen später; der Serverdruck bleibt bis dahin der Standard.
+
+## 0.11.14-beta
+- Datum: 2026-10-04
+- Uhrzeit: 16:57 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die Kellner-Tischwahl zeigt wieder den vollständigen Innen- und Außenbereich-Plan.
+- Änderungen:
+  Der alte Grundriss wurde durch den gespeicherten interaktiven Raumplan ersetzt.
+  Tischflächen, Schnellauswahl und Abholbon-Auswahl verwenden wieder den gemeinsamen Planstand.
 
 ## 0.11.13-beta
 - Datum: 2026-10-04

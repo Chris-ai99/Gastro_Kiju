@@ -63,27 +63,34 @@ model UndoCheckpoint {
 }
 
 model PrinterConfig {
-  id        String   @id
-  version   Int      @default(1)
-  config    Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                     String    @id
+  version                Int       @default(1)
+  config                 Json
+  bridgeLastSeenAt       DateTime?
+  bridgePrinterReachable Boolean?
+  bridgePrinterCheckedAt DateTime?
+  bridgePrinterError     String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }
 
 model PrintJob {
-  id            String    @id
-  transactionId String
-  requestHash   String
-  request       Json
-  status        String    @default("pending")
-  attemptCount  Int       @default(0)
-  lastAttemptAt DateTime?
-  printedAt     DateTime?
-  failedAt      DateTime?
-  error         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                    String    @id
+  transactionId         String
+  requestHash           String
+  request               Json
+  status                String    @default("pending")
+  attemptCount          Int       @default(0)
+  lastAttemptAt         DateTime?
+  printedAt             DateTime?
+  failedAt              DateTime?
+  error                 String?
+  bridgeClaimId         String?
+  bridgeLeaseExpiresAt  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@unique([transactionId, requestHash])
   @@index([status, createdAt])
+  @@index([status, bridgeLeaseExpiresAt])
 }

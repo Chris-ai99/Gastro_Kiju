@@ -24,7 +24,8 @@ const defaultPrinter: NetworkPrinterConfig = {
   enabled: false,
   host: "",
   port: 9100,
-  model: "Epson TM-T70II"
+  model: "Epson TM-T70II",
+  connectionMode: "server"
 };
 
 const formatDateTime = (value?: string) => {
@@ -75,7 +76,8 @@ export const PrinterAdminPanel = () => {
   const [draft, setDraft] = useState({
     enabled: false,
     host: "",
-    port: "9100"
+    port: "9100",
+    connectionMode: "server" as "server" | "local-bridge"
   });
   const [jobs, setJobs] = useState<PersistedPrintJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +105,8 @@ export const PrinterAdminPanel = () => {
       setDraft({
         enabled: overview.printer.enabled,
         host: overview.printer.host,
-        port: String(overview.printer.port)
+        port: String(overview.printer.port),
+        connectionMode: overview.printer.connectionMode ?? "server"
       });
     }
     setJobs(overview.jobs);
@@ -136,7 +139,8 @@ export const PrinterAdminPanel = () => {
     const result = await savePrinterConfig({
       enabled: draft.enabled,
       host: draft.host,
-      port: Number(draft.port || "9100")
+      port: Number(draft.port || "9100"),
+      connectionMode: draft.connectionMode
     });
     setIsSaving(false);
 
@@ -152,7 +156,8 @@ export const PrinterAdminPanel = () => {
     setDraft({
       enabled: result.printer.enabled,
       host: result.printer.host,
-      port: String(result.printer.port)
+      port: String(result.printer.port),
+      connectionMode: result.printer.connectionMode ?? "server"
     });
     setIsDraftDirty(false);
     setFeedback({
@@ -202,7 +207,21 @@ export const PrinterAdminPanel = () => {
   const isDirty =
     draft.enabled !== printer.enabled ||
     draft.host !== printer.host ||
-    Number(draft.port || "9100") !== printer.port;
+    Number(draft.port || "9100") !== printer.port ||
+    draft.connectionMode !== (printer.connectionMode ?? "server");
+  const bridgeLastSeen = printer.bridgeLastSeenAt
+    ? new Date(printer.bridgeLastSeenAt).getTime()
+    : 0;
+  const isBridgeOnline = bridgeLastSeen > 0 && Date.now() - bridgeLastSeen < 45000;
+  const printerCheckedAt = printer.bridgePrinterCheckedAt
+    ? new Date(printer.bridgePrinterCheckedAt).getTime()
+    : 0;
+  const hasFreshPrinterProbe =
+    printerCheckedAt > 0 && Date.now() - printerCheckedAt < 45000;
+  const isPrinterReachable =
+    hasFreshPrinterProbe && printer.bridgePrinterReachable === true;
+  const isPrinterUnreachable =
+    hasFreshPrinterProbe && printer.bridgePrinterReachable === false;
 
   return (
     <div id="drucker">
@@ -224,6 +243,16 @@ export const PrinterAdminPanel = () => {
             <StatusPill
               label={`${failedCount} Fehler`}
               tone={failedCount > 0 ? "red" : "slate"}
+            />
+            <StatusPill
+              label={
+                isBridgeOnline
+                  ? "Druck-PC online"
+                  : printer.bridgeLastSeenAt
+                    ? "Druck-PC offline"
+                    : "Druck-PC nicht verbunden"
+              }
+              tone={isBridgeOnline ? "green" : "slate"}
             />
           </>
         }
@@ -263,7 +292,57 @@ export const PrinterAdminPanel = () => {
             </div>
 
             <label className="kiju-inline-field">
-              <span>IP-Adresse oder Hostname</span>
+              <span>Druckweg</span>
+              <select
+                value={draft.connectionMode}
+                onChange={(event) => {
+                  setDraft((current) => ({
+                    ...current,
+                    connectionMode: event.target.value as "server" | "local-bridge"
+                  }));
+                  setIsDraftDirty(true);
+                }}
+              >
+                <option value="server">Druck direkt vom Online-Server</option>
+                <option value="local-bridge">Lokale Druckbrücke am Standort</option>
+              </select>
+            </label>
+
+            {draft.connectionMode === "local-bridge" ? (
+              <div
+                className={`kiju-inline-panel${
+                  !draft.enabled || !isBridgeOnline || isPrinterUnreachable
+                    ? " is-alert"
+                    : ""
+                }`}
+              >
+                <span>
+                  {!draft.enabled
+                    ? "Der Drucker ist deaktiviert. Druckaufträge bleiben in der Warteschlange."
+                    : !isBridgeOnline
+                    ? printer.bridgeLastSeenAt
+                      ? "Der Druck-PC ist offline. Aufträge bleiben in der Warteschlange, bis er wieder verbunden ist."
+                      : "Der Druck-PC ist noch nicht verbunden. Nach der PC-Einrichtung erscheint er hier automatisch."
+                    : isPrinterReachable
+                      ? "Der Druck-PC ist online und die TCP-Verbindung zum Drucker ist erreichbar. Druckaufträge können abgeholt werden."
+                      : isPrinterUnreachable
+                        ? `Der Druck-PC ist online, erreicht den Drucker aber nicht. Aufträge bleiben in der Warteschlange. ${printer.bridgePrinterError ?? ""}`
+                        : "Der Druck-PC ist online. Die Erreichbarkeit des Druckers wird geprüft; Aufträge bleiben bis dahin in der Warteschlange."}
+                </span>
+                <span>
+                  Die TCP-Prüfung bestätigt nur die Netzwerkverbindung. Papier- und Deckelstatus werden nicht ausgelesen. Letzter Druckercheck: {formatDateTime(printer.bridgePrinterCheckedAt)}
+                </span>
+              </div>
+            ) : (
+              <div className="kiju-inline-panel">
+                <span>
+                  Direktdruck funktioniert nur, wenn der Online-Server die Druckeradresse erreichen kann. Ein Drucker im privaten Standortnetz braucht die lokale Druckbrücke.
+                </span>
+              </div>
+            )}
+
+            <label className="kiju-inline-field">
+              <span>IP-Adresse oder Hostname des Druckers</span>
               <input
                 placeholder="z. B. 192.168.178.70"
                 value={draft.host}

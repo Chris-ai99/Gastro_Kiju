@@ -1,5 +1,14 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
-import { createHash, randomUUID } from "node:crypto";
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+  ServiceUnavailableException,
+  UnauthorizedException
+} from "@nestjs/common";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { Prisma, type PrintJob as DatabasePrintJob } from "@prisma/client";
 import {
   buildBookingStatisticsPrintDocument,
@@ -9,6 +18,7 @@ import {
   buildPrinterTestDocument,
   buildReceiptPrintDocument
 } from "@kiju/print-bridge";
+import { sendEscPosDocumentToNetworkPrinter } from "@kiju/print-bridge/server";
 import type {
   CourseKey,
   NetworkPrinterConfig,
@@ -17,7 +27,6 @@ import type {
 } from "@kiju/domain";
 
 import { PrismaService } from "../prisma/prisma.service";
-import { sendDocumentToNetworkPrinter } from "./network-printer";
 import type { PrintJobRequest } from "./print.types";
 
 const PRINTER_CONFIG_ID = "network-printer";
@@ -25,10 +34,14 @@ const DEFAULT_PRINTER_CONFIG: NetworkPrinterConfig = {
   enabled: false,
   host: "",
   port: 9100,
-  model: "Epson TM-T70II"
+  model: "Epson TM-T70II",
+  connectionMode: "server"
 };
 const ACTIVE_PRINT_JOB_STATUSES = ["pending", "processing", "failed"];
 const PRINT_OVERVIEW_RECENT_JOB_LIMIT = 80;
+const BRIDGE_JOB_LEASE_MS = 90_000;
+const BRIDGE_LEASE_ERROR =
+  "Die Verbindung zur lokalen Druckbrücke wurde während des Drucks unterbrochen. Bitte zuerst prüfen, ob der Bon gedruckt wurde, bevor Sie ihn erneut senden.";
 const courseLabels: Record<Exclude<CourseKey, "drinks">, string> = {
   starter: "Vorspeise",
   main: "Hauptspeise",
@@ -62,19 +75,39 @@ const normalizePrinterConfig = (
       ? Math.round(printer.port)
       : DEFAULT_PRINTER_CONFIG.port,
   model: printer?.model?.trim() || DEFAULT_PRINTER_CONFIG.model,
+  connectionMode:
+    printer?.connectionMode === "local-bridge" ? "local-bridge" : "server",
   lastTestAt: printer?.lastTestAt,
-  lastError: printer?.lastError
+  lastError: printer?.lastError,
+  bridgeLastSeenAt: printer?.bridgeLastSeenAt,
+  bridgePrinterReachable: printer?.bridgePrinterReachable,
+  bridgePrinterCheckedAt: printer?.bridgePrinterCheckedAt,
+  bridgePrinterError: printer?.bridgePrinterError
 });
 
 @Injectable()
-export class PrintQueueService implements OnModuleInit {
+export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrintQueueService.name);
   private workerPromise: Promise<void> | null = null;
+  private leaseReaper: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly prisma: PrismaService) {}
 
   onModuleInit() {
     this.schedule();
+    this.leaseReaper = setInterval(() => {
+      void this.expireBridgeLeases().catch((error: unknown) => {
+        this.logger.error(
+          "Abgelaufene lokale Druckaufträge konnten nicht bereinigt werden.",
+          error instanceof Error ? error.stack : undefined
+        );
+      });
+    }, 15000);
+    this.leaseReaper.unref?.();
+  }
+
+  onModuleDestroy() {
+    if (this.leaseReaper) clearInterval(this.leaseReaper);
   }
 
   schedule() {
@@ -135,22 +168,31 @@ export class PrintQueueService implements OnModuleInit {
       },
       update: {}
     });
-    return normalizePrinterConfig(
-      record.config as unknown as Partial<NetworkPrinterConfig>
-    );
+    return normalizePrinterConfig({
+      ...(record.config as unknown as Partial<NetworkPrinterConfig>),
+      bridgeLastSeenAt: record.bridgeLastSeenAt?.toISOString(),
+      bridgePrinterReachable: record.bridgePrinterReachable ?? undefined,
+      bridgePrinterCheckedAt: record.bridgePrinterCheckedAt?.toISOString(),
+      bridgePrinterError: record.bridgePrinterError ?? undefined
+    });
   }
 
   async updatePrinterConfig(
-    input: Pick<NetworkPrinterConfig, "enabled" | "host" | "port">
+    input: Pick<NetworkPrinterConfig, "enabled" | "host" | "port"> & {
+      connectionMode?: NetworkPrinterConfig["connectionMode"];
+    }
   ) {
     const current = await this.getPrinterConfig();
     const next = normalizePrinterConfig({ ...current, ...input });
     await this.prisma.printerConfig.upsert({
       where: { id: PRINTER_CONFIG_ID },
-      create: { id: PRINTER_CONFIG_ID, config: asJson(next) },
+      create: {
+        id: PRINTER_CONFIG_ID,
+        config: asJson(this.toStoredPrinterConfig(next))
+      },
       update: {
         version: { increment: 1 },
-        config: asJson(next)
+        config: asJson(this.toStoredPrinterConfig(next))
       }
     });
     this.schedule();
@@ -189,7 +231,9 @@ export class PrintQueueService implements OnModuleInit {
         status: "pending",
         printedAt: null,
         failedAt: null,
-        error: null
+        error: null,
+        bridgeClaimId: null,
+        bridgeLeaseExpiresAt: null
       }
     });
     this.schedule();
@@ -197,6 +241,9 @@ export class PrintQueueService implements OnModuleInit {
   }
 
   private async processNextJob() {
+    const printer = await this.getPrinterConfig();
+    if (printer.connectionMode === "local-bridge") return false;
+
     const claimed = await this.prisma.$transaction(
       async (database) => {
         const next = await database.printJob.findFirst({
@@ -220,10 +267,9 @@ export class PrintQueueService implements OnModuleInit {
     );
     if (!claimed) return false;
 
-    const printer = await this.getPrinterConfig();
     const request = claimed.request as unknown as PrintJobRequest;
     try {
-      await sendDocumentToNetworkPrinter(
+      await sendEscPosDocumentToNetworkPrinter(
         printer,
         this.buildDocument(request, printer)
       );
@@ -252,14 +298,16 @@ export class PrintQueueService implements OnModuleInit {
           status: "printed",
           printedAt,
           failedAt: null,
-          error: null
+          error: null,
+          bridgeClaimId: null,
+          bridgeLeaseExpiresAt: null
         }
       }),
       this.prisma.printerConfig.update({
         where: { id: PRINTER_CONFIG_ID },
         data: {
           config: asJson({
-            ...printer,
+            ...this.toStoredPrinterConfig(printer),
             lastError: undefined,
             ...(request.type === "test-print"
               ? { lastTestAt: printedAt.toISOString() }
@@ -280,13 +328,19 @@ export class PrintQueueService implements OnModuleInit {
     await this.prisma.$transaction([
       this.prisma.printJob.update({
         where: { id: jobId },
-        data: { status: "failed", failedAt, error: message }
+        data: {
+          status: "failed",
+          failedAt,
+          error: message,
+          bridgeClaimId: null,
+          bridgeLeaseExpiresAt: null
+        }
       }),
       this.prisma.printerConfig.update({
         where: { id: PRINTER_CONFIG_ID },
         data: {
           config: asJson({
-            ...printer,
+            ...this.toStoredPrinterConfig(printer),
             lastError: message,
             ...(request.type === "test-print"
               ? { lastTestAt: failedAt.toISOString() }
@@ -295,6 +349,211 @@ export class PrintQueueService implements OnModuleInit {
         }
       })
     ]);
+  }
+
+  assertBridgeToken(token: string) {
+    const configuredToken = process.env["KIJU_PRINT_BRIDGE_TOKEN"]?.trim();
+    if (!configuredToken || configuredToken.length < 64) {
+      throw new ServiceUnavailableException(
+        "Die lokale Druckbrücke ist auf dem Server noch nicht freigeschaltet."
+      );
+    }
+
+    const expected = createHash("sha256").update(configuredToken).digest();
+    const received = createHash("sha256").update(token).digest();
+    if (!token || !timingSafeEqual(expected, received)) {
+      throw new UnauthorizedException("Die Druckbrücke ist nicht autorisiert.");
+    }
+  }
+
+  async recordBridgeHeartbeat(probe?: { reachable: boolean; error?: string }) {
+    const now = new Date();
+    const probeData = probe
+      ? {
+          bridgePrinterReachable: probe.reachable,
+          bridgePrinterCheckedAt: now,
+          bridgePrinterError: probe.reachable
+            ? null
+            : (probe.error?.trim().slice(0, 500) ||
+              "Der Netzwerkdrucker ist im Standortnetz nicht erreichbar.")
+        }
+      : {};
+    const record = await this.prisma.printerConfig.upsert({
+      where: { id: PRINTER_CONFIG_ID },
+      create: {
+        id: PRINTER_CONFIG_ID,
+        config: asJson(DEFAULT_PRINTER_CONFIG),
+        bridgeLastSeenAt: now,
+        ...probeData
+      },
+      update: { bridgeLastSeenAt: now, ...probeData }
+    });
+    return {
+      ok: true as const,
+      printer: normalizePrinterConfig({
+        ...(record.config as unknown as Partial<NetworkPrinterConfig>),
+        bridgeLastSeenAt: record.bridgeLastSeenAt?.toISOString(),
+        bridgePrinterReachable: record.bridgePrinterReachable ?? undefined,
+        bridgePrinterCheckedAt: record.bridgePrinterCheckedAt?.toISOString(),
+        bridgePrinterError: record.bridgePrinterError ?? undefined
+      })
+    };
+  }
+
+  async claimNextBridgeJob() {
+    const printer = await this.getPrinterConfig();
+    const printerCheckedAt = printer.bridgePrinterCheckedAt
+      ? Date.parse(printer.bridgePrinterCheckedAt)
+      : 0;
+    const printerProbeIsFresh =
+      printerCheckedAt > 0 && Date.now() - printerCheckedAt < 45000;
+    if (
+      !printer.enabled ||
+      printer.connectionMode !== "local-bridge" ||
+      printer.bridgePrinterReachable !== true ||
+      !printerProbeIsFresh
+    ) {
+      return { ok: true as const, job: null };
+    }
+
+    await this.expireBridgeLeases();
+
+    const now = new Date();
+    const claimId = randomUUID();
+    const claimed = await this.prisma.$transaction(
+      async (database) => {
+        const next = await database.printJob.findFirst({
+          where: { status: "pending" },
+          orderBy: { createdAt: "asc" }
+        });
+        if (!next) return null;
+        const updated = await database.printJob.updateMany({
+          where: { id: next.id, status: "pending" },
+          data: {
+            status: "processing",
+            attemptCount: { increment: 1 },
+            lastAttemptAt: now,
+            bridgeClaimId: claimId,
+            bridgeLeaseExpiresAt: new Date(now.getTime() + BRIDGE_JOB_LEASE_MS)
+          }
+        });
+        return updated.count === 1
+          ? database.printJob.findUnique({ where: { id: next.id } })
+          : null;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    if (!claimed) return { ok: true as const, job: null };
+    const request = claimed.request as unknown as PrintJobRequest;
+    const persisted = this.toPersistedJob(claimed);
+    return {
+      ok: true as const,
+      claimId,
+      printer,
+      job: {
+        ...persisted,
+        document: this.buildDocument(request, printer)
+      }
+    };
+  }
+
+  private async expireBridgeLeases() {
+    const now = new Date();
+    const expired = await this.prisma.printJob.updateMany({
+      where: {
+        status: "processing",
+        bridgeLeaseExpiresAt: { lte: now }
+      },
+      data: {
+        status: "failed",
+        failedAt: now,
+        error: BRIDGE_LEASE_ERROR,
+        bridgeClaimId: null,
+        bridgeLeaseExpiresAt: null
+      }
+    });
+    if (expired.count > 0) {
+      this.logger.warn(`${expired.count} abgelaufene lokale Druckaufträge zur Prüfung markiert.`);
+    }
+    return expired.count;
+  }
+
+  async completeBridgeJob(
+    jobId: string,
+    claimId: string,
+    result: { success: boolean; error?: string }
+  ) {
+    const existing = await this.prisma.printJob.findUnique({ where: { id: jobId } });
+    if (!existing) throw new NotFoundException("Druckjob wurde nicht gefunden.");
+    if (
+      (existing.status === "printed" || existing.status === "failed") &&
+      existing.bridgeClaimId === claimId
+    ) {
+      return { ok: true as const, alreadyCompleted: true };
+    }
+    if (existing.status !== "processing" || existing.bridgeClaimId !== claimId) {
+      throw new ConflictException("Der Druckauftrag ist nicht mehr dieser Druckbrücke zugeordnet.");
+    }
+
+    const request = existing.request as unknown as PrintJobRequest;
+    const printer = await this.getPrinterConfig();
+    const completedAt = new Date();
+    const message = result.success
+      ? null
+      : (result.error?.trim().slice(0, 500) || "Der lokale Druck ist fehlgeschlagen.");
+
+    await this.prisma.$transaction(async (database) => {
+      const updated = await database.printJob.updateMany({
+        where: { id: jobId, status: "processing", bridgeClaimId: claimId },
+        data: result.success
+          ? {
+              status: "printed",
+              printedAt: completedAt,
+              failedAt: null,
+              error: null,
+              bridgeLeaseExpiresAt: null
+            }
+          : {
+              status: "failed",
+              failedAt: completedAt,
+              error: message,
+              bridgeLeaseExpiresAt: null
+            }
+      });
+      if (updated.count !== 1) {
+        throw new ConflictException("Der Druckauftrag wurde zwischenzeitlich geändert.");
+      }
+      await database.printerConfig.update({
+        where: { id: PRINTER_CONFIG_ID },
+        data: {
+          config: asJson({
+            ...this.toStoredPrinterConfig(printer),
+            ...(result.success
+              ? {
+                  lastError: undefined,
+                  ...(request.type === "test-print"
+                    ? { lastTestAt: completedAt.toISOString() }
+                    : {})
+                }
+              : { lastError: message })
+          })
+        }
+      });
+    });
+
+    return { ok: true as const, alreadyCompleted: false };
+  }
+
+  private toStoredPrinterConfig(printer: NetworkPrinterConfig) {
+    const {
+      bridgeLastSeenAt: _bridgeLastSeenAt,
+      bridgePrinterReachable: _bridgePrinterReachable,
+      bridgePrinterCheckedAt: _bridgePrinterCheckedAt,
+      bridgePrinterError: _bridgePrinterError,
+      ...stored
+    } = printer;
+    return stored;
   }
 
   private buildDocument(
