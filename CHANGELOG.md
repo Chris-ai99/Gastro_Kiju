@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.11-beta
+- Datum: 2026-10-04
+- Uhrzeit: 19:40 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der VPS-Deploy stellt dem API-Dienst wieder den erwarteten Starteinstieg bereit.
+- Änderungen:
+  Nach dem API-Build verweist `apps/api/dist/main.js` auf den tatsächlich erzeugten Nest-Einstieg.
+
 ## 0.12.10-beta
 - Datum: 2026-10-04
 - Uhrzeit: 19:31 +02:00

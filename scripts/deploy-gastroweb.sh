@@ -108,7 +108,12 @@ runuser -u kiju-wawi -- env \
 
 standalone_web_dir="${release_dir}/apps/web/.next/standalone/apps/web"
 [[ -f "${standalone_web_dir}/server.js" ]] || die "Der eigenständige Webserver fehlt nach dem Build."
-[[ -f "${release_dir}/apps/api/dist/main.js" ]] || die "Der API-Build fehlt."
+api_entry="${release_dir}/apps/api/dist/api/src/main.js"
+api_runtime_entry="${release_dir}/apps/api/dist/main.js"
+[[ -f "${api_entry}" ]] || die "Der API-Build fehlt."
+printf '%s\n' 'require("./api/src/main.js");' > "${api_runtime_entry}"
+chown kiju-wawi:kiju-wawi "${api_runtime_entry}"
+chmod 0644 "${api_runtime_entry}"
 [[ -d "${release_dir}/apps/web/.next/static" ]] || die "Next.js-Assets fehlen."
 runuser -u kiju-wawi -- rm -rf "${standalone_web_dir}/.next/static"
 runuser -u kiju-wawi -- install -d -m 0755 "${standalone_web_dir}/.next"
