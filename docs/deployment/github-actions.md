@@ -15,6 +15,8 @@ Der Workflow überträgt den ausgewählten Commit als Quellarchiv per SSH. Der V
 
 Das Repository verwendet das Actions-Secret **KIJU_DEPLOY_SSH_KEY**. Der passende öffentliche Schlüssel auf dem VPS ist auf **/usr/local/sbin/kiju-gastroweb-deploy** beschränkt. Er kann keine Shell öffnen und keine SSH-Portweiterleitungen verwenden.
 
+Zusätzlich werden die Actions-Secrets **KIJU_INTERNAL_ACCESS_CODE** und **KIJU_SESSION_SECRET** benötigt. Der Workflow überträgt sie vor jedem Deployment geschützt im Quellarchiv; der eingeschränkte Deploy-Empfänger ersetzt damit auf dem VPS nur diese beiden Variablen in **/etc/gastro-kiju/api.env** und lässt **DATABASE_URL** sowie andere Serverwerte unverändert. Die Datei bleibt auf dem VPS mit Modus **600** geschützt; die Werte werden weder in Git gespeichert noch im Workflow-Protokoll ausgegeben. Der SSH-Schlüssel bleibt auf den einzigen `deploy`-Befehl beschränkt.
+
 Der SSH-Hostschlüssel ist im Workflow fest hinterlegt und wird strikt geprüft. Private Schlüssel und Serverpasswörter gehören nicht in Git-Dateien. Zum Starten des Workflows von einem anderen Rechner wird kein lokaler privater Schlüssel benötigt; erforderlich ist Zugriff auf das GitHub-Repository und dessen Actions.
 
 ## Grenzen

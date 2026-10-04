@@ -33,6 +33,8 @@ jobs:
       - name: Serverzugang sicher vorbereiten
         env:
           KIJU_DEPLOY_SSH_KEY: ${{ secrets.KIJU_DEPLOY_SSH_KEY }}
+          KIJU_INTERNAL_ACCESS_CODE: ${{ secrets.KIJU_INTERNAL_ACCESS_CODE }}
+          KIJU_SESSION_SECRET: ${{ secrets.KIJU_SESSION_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
@@ -40,19 +42,42 @@ jobs:
             echo "GitHub-Secret KIJU_DEPLOY_SSH_KEY fehlt." >&2
             exit 1
           fi
+          if [[ -z "${KIJU_INTERNAL_ACCESS_CODE}" ]]; then
+            echo "GitHub-Secret KIJU_INTERNAL_ACCESS_CODE fehlt." >&2
+            exit 1
+          fi
+          if [[ -z "${KIJU_SESSION_SECRET}" || ${#KIJU_SESSION_SECRET} -lt 32 ]]; then
+            echo "GitHub-Secret KIJU_SESSION_SECRET fehlt oder ist zu kurz (mindestens 32 Zeichen)." >&2
+            exit 1
+          fi
+          if [[ "${KIJU_INTERNAL_ACCESS_CODE}" == *$'\n'* || "${KIJU_INTERNAL_ACCESS_CODE}" == *$'\r'* || "${KIJU_SESSION_SECRET}" == *$'\n'* || "${KIJU_SESSION_SECRET}" == *$'\r'* ]]; then
+            echo "Die VPS-Secrets dürfen keine Zeilenumbrüche enthalten." >&2
+            exit 1
+          fi
 
           install -m 700 -d "${HOME}/.ssh"
           key_file="${RUNNER_TEMP}/kiju-gastroweb-deploy-key"
           known_hosts_file="${RUNNER_TEMP}/kiju-gastroweb-known-hosts"
           archive_file="${RUNNER_TEMP}/kiju-gastroweb-${GITHUB_SHA}.tar.gz"
-          trap 'rm -f "${key_file}" "${known_hosts_file}" "${archive_file}"' EXIT
+          source_tar_file="${RUNNER_TEMP}/kiju-gastroweb-${GITHUB_SHA}.tar"
+          secrets_stage_dir="${RUNNER_TEMP}/kiju-gastroweb-api-secrets"
+          trap 'rm -f "${key_file}" "${known_hosts_file}" "${archive_file}" "${source_tar_file}"; rm -rf "${secrets_stage_dir}"' EXIT
           printf '%s\n' "${KIJU_DEPLOY_SSH_KEY}" > "${key_file}"
           unset KIJU_DEPLOY_SSH_KEY
           chmod 600 "${key_file}"
           printf '%s\n' '31.70.91.152 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIP7GFI/8WGI9bSwk44aGTMte/wKo3oAmZGVXKlh24QX' > "${known_hosts_file}"
           chmod 600 "${known_hosts_file}"
 
-          git archive --format=tar "${GITHUB_SHA}" | gzip -1 > "${archive_file}"
+          umask 077
+          install -d "${secrets_stage_dir}/.deploy"
+          printf 'KIJU_INTERNAL_ACCESS_CODE=%s\nKIJU_SESSION_SECRET=%s\n' \
+            "${KIJU_INTERNAL_ACCESS_CODE}" \
+            "${KIJU_SESSION_SECRET}" > "${secrets_stage_dir}/.deploy/kiju-api-secrets.env"
+          unset KIJU_INTERNAL_ACCESS_CODE KIJU_SESSION_SECRET
+
+          git archive --format=tar "${GITHUB_SHA}" > "${source_tar_file}"
+          tar --directory="${secrets_stage_dir}" --append --file="${source_tar_file}" .deploy/kiju-api-secrets.env
+          gzip -1 < "${source_tar_file}" > "${archive_file}"
           test -s "${archive_file}"
           ssh -T \
             -i "${key_file}" \

@@ -10,6 +10,7 @@ readonly API_SERVICE="gastroapi.service"
 readonly WEB_HEALTH_URL="http://127.0.0.1:3110/gastro/"
 readonly WEB_API_HEALTH_URL="http://127.0.0.1:3110/gastro/api/health"
 readonly API_HEALTH_URL="http://127.0.0.1:4000/api/health"
+readonly API_ENV_FILE="/etc/gastro-kiju/api.env"
 readonly MAX_ARCHIVE_BYTES=536870912
 readonly REQUIRED_PNPM="10.22.0"
 
@@ -44,6 +45,33 @@ atomic_symlink() {
 die() {
   echo "$*" >&2
   exit 1
+}
+
+sync_api_secrets() {
+  local incoming_file="$1"
+  local access_line
+  local session_line
+  local session_value
+  local merged_file
+
+  [[ -f "${incoming_file}" ]] || die "Das Deploy-Archiv enthält keine API-Secrets."
+  access_line="$(sed -n '1p' "${incoming_file}")"
+  session_line="$(sed -n '2p' "${incoming_file}")"
+  [[ -z "$(sed -n '3p' "${incoming_file}")" ]] || die "Das Deploy-Archiv enthält ungültige API-Secrets."
+  [[ "${access_line}" == KIJU_INTERNAL_ACCESS_CODE=* && "${access_line#*=}" != "" ]] \
+    || die "KIJU_INTERNAL_ACCESS_CODE fehlt im Deploy-Archiv."
+  session_value="${session_line#*=}"
+  [[ "${session_line}" == KIJU_SESSION_SECRET=* && ${#session_value} -ge 32 ]] \
+    || die "KIJU_SESSION_SECRET fehlt oder ist zu kurz im Deploy-Archiv."
+
+  install -d -m 700 "$(dirname "${API_ENV_FILE}")"
+  merged_file="$(mktemp "$(dirname "${API_ENV_FILE}")/api.env.XXXXXX")"
+  if [[ -f "${API_ENV_FILE}" ]]; then
+    grep -vE '^(KIJU_INTERNAL_ACCESS_CODE|KIJU_SESSION_SECRET)=' "${API_ENV_FILE}" > "${merged_file}" || true
+  fi
+  printf '%s\n%s\n' "${access_line}" "${session_line}" >> "${merged_file}"
+  install -o root -g root -m 600 "${merged_file}" "${API_ENV_FILE}"
+  rm -f "${merged_file}" "${incoming_file}"
 }
 
 original_command="${SSH_ORIGINAL_COMMAND:-}"
@@ -147,6 +175,8 @@ runuser -u kiju-wawi -- env \
   bash -c 'cd "$1" && pnpm --filter @kiju/api prisma:migrate:deploy' \
   _ "${release_dir}"
 unset database_url
+
+sync_api_secrets "${release_dir}/.deploy/kiju-api-secrets.env"
 
 [[ -L "${APP_ROOT}/api-current" ]] || die "Der API-Release-Link fehlt."
 [[ -L "${APP_ROOT}/current" ]] || die "Der Web-Release-Link fehlt."

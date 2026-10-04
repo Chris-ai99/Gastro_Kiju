@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.01-beta
+- Datum: 2026-10-04
+- Uhrzeit: 21:30 +02:00
+- Typ: Betrieb / Deployment
+- Zusammenfassung:
+  Der GitHub-Deploy synchronisiert die erforderlichen API-Sitzungswerte automatisch auf den VPS.
+- Änderungen:
+  `KIJU_INTERNAL_ACCESS_CODE` und `KIJU_SESSION_SECRET` werden aus geschützten GitHub-Actions-Secrets vor dem Deploy nach `/etc/gastro-kiju/api.env` übertragen.
+  Bestehende Serverwerte wie `DATABASE_URL` bleiben erhalten; die geheime Konfigurationsdatei wird mit restriktiven Dateirechten gespeichert und nicht im Actions-Log ausgegeben.
+
 ## 0.13.00-beta
 - Datum: 2026-10-04
 - Uhrzeit: 21:00 +02:00
