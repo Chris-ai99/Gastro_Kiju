@@ -1595,31 +1595,59 @@ export const WaiterWorkspace = () => {
     }
   };
 
-  const handleClosePaidOrder = () => {
+  const handleClosePaidOrder = async (payRemaining = false) => {
     if (!selectedTable) return;
 
-    const result = actions.closePaidOrder(selectedTable.id);
-    const archivedCurrentTable = result.archivedTableIds?.includes(selectedTable.id) === true;
-    setServiceFeedback({
-      tone: result.ok ? "success" : "alert",
-      title: result.ok
-        ? archivedCurrentTable
-          ? "Abholtisch archiviert"
-          : "Tisch geschlossen"
-        : "Noch nicht geschlossen",
-      detail:
-        result.message ??
-        (result.ok && archivedCurrentTable
-          ? "Der Abholtisch wurde abgeschlossen und aus der Serviceansicht entfernt."
-          : result.ok
-          ? "Es sind keine offenen Positionen mehr vorhanden und der Tisch ist abgeschlossen."
-          : "Es sind noch Positionen offen.")
-    });
-
-    if (result.ok && archivedCurrentTable) {
-      setSelectedTableId(null);
-      closeOrderWizard();
+    const result = actions.closePaidOrder(
+      selectedTable.id,
+      payRemaining ? paymentMethod : undefined
+    );
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Noch nicht geschlossen",
+        detail: result.message ?? "Es sind noch Positionen offen."
+      });
+      return;
     }
+
+    setIsSecureTransferPending(true);
+    const confirmation = await result.confirmation;
+    setIsSecureTransferPending(false);
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abschluss nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
+    const archivedCurrentTable = result.archivedTableIds?.includes(selectedTable.id) === true;
+    const paidAmount = result.paidAmountCents ?? 0;
+    setServiceFeedback({
+      tone: "success",
+      title:
+        paidAmount > 0
+          ? "Restzahlung abgeschlossen"
+          : archivedCurrentTable
+            ? "Abholtisch archiviert"
+            : "Tisch geschlossen",
+      detail:
+        paidAmount > 0
+          ? `${euro(paidAmount)} wurden als Restzahlung verbucht und der Tisch wurde geschlossen.`
+          : result.message ??
+            (archivedCurrentTable
+              ? "Der Abholtisch wurde abgeschlossen und aus der Serviceansicht entfernt."
+              : "Der Abschluss wurde vom Server bestätigt.")
+    });
+    setSelectedPaymentUnits({});
+    setReceiptPreview(null);
+
+    if (archivedCurrentTable) {
+      setSelectedTableId(null);
+    }
+    closeOrderWizard();
   };
 
   const closeOrderWizard = () => {
@@ -1681,7 +1709,7 @@ export const WaiterWorkspace = () => {
       return;
     }
 
-    handleClosePaidOrder();
+    void handleClosePaidOrder(checkoutOpenTotal > 0);
   };
 
   const selectWizardStep = (step: string) => {
@@ -1698,10 +1726,14 @@ export const WaiterWorkspace = () => {
     currentStep === "table"
       ? Boolean(selectedTable)
       : currentStep === "checkout"
-        ? checkoutOpenTotal === 0 && checkoutSessions.length > 0
+        ? checkoutSessions.length > 0
         : true;
   const nextButtonLabel =
-    currentStep === "checkout" ? "Abschließen" : "Weiter";
+    currentStep === "checkout"
+      ? checkoutOpenTotal > 0
+        ? "Rest zahlen & schließen"
+        : "Abschließen"
+      : "Weiter";
   const sendCourseActionLabel =
     activeCourse === "drinks"
       ? sentEditableItems.length > 0
@@ -3451,11 +3483,13 @@ export const WaiterWorkspace = () => {
                           </button>
                           <button
                             type="button"
-                            className="kiju-button kiju-button--danger"
-                            onClick={handleClosePaidOrder}
-                            disabled={checkoutOpenTotal > 0}
+                            className={`kiju-button ${
+                              checkoutOpenTotal > 0 ? "kiju-button--primary" : "kiju-button--danger"
+                            } kiju-checkout-finalize-button`}
+                            onClick={() => void handleClosePaidOrder(checkoutOpenTotal > 0)}
+                            disabled={checkoutSessions.length === 0 || isSecureTransferPending}
                           >
-                            {serviceLabels.closeOrder}
+                            {checkoutOpenTotal > 0 ? "Rest zahlen & schließen" : serviceLabels.closeOrder}
                           </button>
                         </div>
                       </section>
@@ -3709,11 +3743,13 @@ export const WaiterWorkspace = () => {
                             Auswahl stornieren
                           </button>
                           <button
-                            className="kiju-button kiju-button--danger"
-                            onClick={handleClosePaidOrder}
-                            disabled={checkoutOpenTotal > 0}
+                            className={`kiju-button ${
+                              checkoutOpenTotal > 0 ? "kiju-button--primary" : "kiju-button--danger"
+                            } kiju-checkout-finalize-button`}
+                            onClick={() => void handleClosePaidOrder(checkoutOpenTotal > 0)}
+                            disabled={checkoutSessions.length === 0 || isSecureTransferPending}
                           >
-                            {serviceLabels.closeOrder}
+                            {checkoutOpenTotal > 0 ? "Rest zahlen & schließen" : serviceLabels.closeOrder}
                           </button>
                         </SectionCard>
 

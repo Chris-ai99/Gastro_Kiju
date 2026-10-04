@@ -169,11 +169,14 @@ export const getRetryDelayMs = (attemptCount: number) =>
 export const hasAutomaticRetryRemaining = (attemptCount: number) =>
   attemptCount < transactionRetryDelaysMs.length;
 
-const resolveTransactionUrl = () => {
+const resolveTransactionUrl = (transactionId?: string) => {
   const configuredBaseUrl =
     process.env["NEXT_PUBLIC_KIJU_API_BASE_URL"]?.trim();
+  const transactionPath = transactionId
+    ? `/transactions/${encodeURIComponent(transactionId)}`
+    : "/transactions";
   if (configuredBaseUrl) {
-    return `${configuredBaseUrl.replace(/\/+$/, "")}/transactions`;
+    return `${configuredBaseUrl.replace(/\/+$/, "")}${transactionPath}`;
   }
 
   const basePath = process.env["NEXT_PUBLIC_BASE_PATH"]?.trim();
@@ -181,7 +184,10 @@ const resolveTransactionUrl = () => {
     basePath && basePath !== "/"
       ? `/${basePath.replace(/^\/+|\/+$/g, "")}`
       : "";
-  return `${normalizedBasePath}/api/transactions`;
+  const apiPath = transactionId
+    ? `/api/transactions/${encodeURIComponent(transactionId)}`
+    : "/api/transactions";
+  return `${normalizedBasePath}${apiPath}`;
 };
 
 const parseResponse = async (response: Response) => {
@@ -273,6 +279,35 @@ export const sendPendingTransaction = async (
           ? "Zeitüberschreitung: Es liegt noch keine Serverbestätigung vor."
           : "Der Server ist derzeit nicht erreichbar."
     };
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
+
+export const fetchPendingTransactionConfirmation = async (
+  transactionId: string
+): Promise<CriticalTransactionConfirmation | null> => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS
+  );
+
+  try {
+    const response = await fetch(resolveTransactionUrl(transactionId), {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-store"
+    });
+    if (!response.ok) return null;
+
+    const payload = await parseResponse(response);
+    if (!payload || typeof payload !== "object") return null;
+
+    const confirmation = (payload as { confirmation?: unknown }).confirmation;
+    return isConfirmation(confirmation, transactionId) ? confirmation : null;
+  } catch {
+    return null;
   } finally {
     window.clearTimeout(timeoutId);
   }

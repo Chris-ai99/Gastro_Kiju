@@ -1861,6 +1861,12 @@ button {
   gap: 0.65rem;
 }
 
+.kiju-checkout-finalize-button {
+  grid-column: 1 / -1;
+  min-height: 46px;
+  white-space: normal;
+}
+
 .kiju-fusion-choice {
   min-height: 96px;
   display: grid;
@@ -6279,6 +6285,20 @@ button.kiju-admin-link-pill {
     min-width: 0;
     overflow-wrap: anywhere;
     line-height: 1.05;
+  }
+
+  .kiju-table-overview-panel,
+  .kiju-table-overview-panel > .kiju-card {
+    min-height: 0;
+  }
+
+  .kiju-table-overview-panel .kiju-table-menu--compact,
+  .kiju-link-tables-panel .kiju-table-menu--compact {
+    max-height: min(46dvh, 21rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 0.15rem;
   }
 
   .kiju-mobile-floorplan-toggle {

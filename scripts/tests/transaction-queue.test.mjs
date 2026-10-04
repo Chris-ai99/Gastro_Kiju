@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createPendingTransaction,
+  fetchPendingTransactionConfirmation,
   getRetryDelayMs,
   hasAutomaticRetryRemaining,
   sendPendingTransaction,
@@ -120,4 +121,48 @@ test("accepts only the matching confirmed transaction", async (context) => {
     );
   const confirmed = await sendPendingTransaction(transaction);
   assert.equal(confirmed.ok, true);
+});
+
+test("loads an existing server confirmation for a queued transaction", async (context) => {
+  context.after(() => {
+    delete globalThis.fetch;
+  });
+  const transaction = createPendingTransaction(
+    createRequest("transaction-already-confirmed")
+  );
+  const state = { users: [], tables: [], products: [], sessions: [] };
+
+  globalThis.fetch = async (url, init) => {
+    assert.match(String(url), /transaction-already-confirmed$/);
+    assert.equal(init.method, "GET");
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        confirmation: {
+          success: true,
+          transactionId: transaction.transactionId,
+          serverId: "server-confirmed",
+          savedAt: new Date().toISOString(),
+          status: "confirmed",
+          stateVersion: 3,
+          state
+        }
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
+  const confirmation = await fetchPendingTransactionConfirmation(
+    transaction.transactionId
+  );
+  assert.equal(confirmation?.transactionId, transaction.transactionId);
+  assert.equal(confirmation?.stateVersion, 3);
+
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ success: false, confirmation: null }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  assert.equal(await fetchPendingTransactionConfirmation("missing"), null);
 });

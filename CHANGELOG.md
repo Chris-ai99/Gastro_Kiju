@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.12.06-beta
+- Datum: 2026-10-04
+- Uhrzeit: 17:20 +02:00
+- Typ: Inhalt
+- Zusammenfassung:
+  Ein druckfertiger Google-Bewertungs-Aushang für Bistro PiPa wurde ergänzt.
+- Änderungen:
+  Der A4-Aushang enthält einen QR-Code zum Google-Bewertungslink und eine deutsche Gästeansprache.
+  Der QR-Code wird zusätzlich als SVG bereitgestellt; ein Generator erstellt die PDF reproduzierbar.
+
+## 0.12.05-beta
+- Datum: 2026-10-04
+- Uhrzeit: 17:19 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Offene Restbeträge lassen sich direkt abschließen; bestätigte lokale Übertragungen werden bereinigt.
+- Änderungen:
+  Die Service-Abrechnung kann Restbeträge im Abschluss bezahlen.
+  Bereits vom Server bestätigte lokale Übertragungen werden aus der Gerätewarteschlange entfernt.
+  Die kompakte Tischübersicht und Kopplungsliste bleiben auf Mobilgeräten scrollbar.
+
 ## 0.12.04-beta
 - Datum: 2026-10-04
 - Uhrzeit: 17:10 +02:00

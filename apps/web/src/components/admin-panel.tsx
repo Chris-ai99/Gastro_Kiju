@@ -77,6 +77,35 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.12.06-beta",
+    date: "2026-10-04",
+    time: "17:20 +02:00",
+    type: "Inhalt",
+    title: "Google-Bewertungs-Aushang ergänzt",
+    summary:
+      "Ein druckfertiger A4-Aushang für Bistro PiPa führt Gäste per QR-Code zum Google-Bewertungslink.",
+    categories: ["Marketing", "Aushang", "Google-Bewertungen"],
+    changes: [
+      "Der Aushang enthält einen gut sichtbaren QR-Code und eine deutsche Gästeansprache.",
+      "Der QR-Code ist zusätzlich als SVG verfügbar; ein Skript erstellt die PDF reproduzierbar."
+    ]
+  },
+  {
+    version: "0.12.05-beta",
+    date: "2026-10-04",
+    time: "17:19 +02:00",
+    type: "Verbesserung",
+    title: "Restzahlung und lokale Übertragungen verbessert",
+    summary:
+      "Offene Restbeträge lassen sich direkt abschließen; bestätigte lokale Übertragungen werden bereinigt.",
+    categories: ["Service", "Abrechnung", "Mobil", "Synchronisierung"],
+    changes: [
+      "Offene Restbeträge können im Abschluss bezahlt und der Tisch danach geschlossen werden.",
+      "Bereits vom Server bestätigte lokale Übertragungen werden aus der Gerätewarteschlange entfernt.",
+      "Die kompakte Tischübersicht und Kopplungsliste bleiben auf Mobilgeräten scrollbar."
+    ]
+  },
+  {
     version: "0.12.04-beta",
     date: "2026-10-04",
     time: "17:10 +02:00",
