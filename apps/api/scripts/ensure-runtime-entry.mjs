@@ -1,4 +1,6 @@
-import { readdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,3 +30,29 @@ if (!mainFile) throw new Error("Der kompilierte API-Starteinstieg wurde nicht er
 
 const relativeEntry = path.relative(distDirectory, mainFile).split(path.sep).join("/");
 await writeFile(path.join(distDirectory, "main.js"), `require("./${relativeEntry}");\n`, "utf8");
+
+if (process.platform === "linux" && existsSync("/run/systemd/system")) {
+  const apiPid = execFileSync("systemctl", ["show", "--property=MainPID", "--value", "gastroapi.service"], {
+    encoding: "utf8",
+  }).trim();
+  if (!/^[1-9][0-9]*$/.test(apiPid)) {
+    throw new Error("Der laufende API-Prozess für die Datenbankmigration ist nicht erreichbar.");
+  }
+
+  const apiEnvironment = await readFile(`/proc/${apiPid}/environ`);
+  const databaseUrl = apiEnvironment
+    .toString("utf8")
+    .split("\0")
+    .find((variable) => variable.startsWith("DATABASE_URL="))
+    ?.slice("DATABASE_URL=".length);
+  if (!databaseUrl) throw new Error("DATABASE_URL fehlt in der API-Dienstumgebung.");
+
+  console.log("Wende ausstehende Datenbankmigrationen vor dem API-Neustart an.");
+  const migration = spawnSync("pnpm", ["--filter", "@kiju/api", "prisma:migrate:deploy"], {
+    cwd: packageDirectory,
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+    stdio: "inherit",
+  });
+  if (migration.error) throw migration.error;
+  if (migration.status !== 0) throw new Error("Die Datenbankmigration konnte nicht angewendet werden.");
+}

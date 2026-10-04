@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.17-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:21 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der API-Build wendet offene PostgreSQL-Migrationen vor dem Dienstneustart an.
+- Änderungen:
+  Auf dem VPS übernimmt das Build-Hilfsskript die Datenbankadresse aus dem laufenden API-Prozess und führt `prisma migrate deploy` aus.
+
 ## 0.12.16-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:16 +02:00
