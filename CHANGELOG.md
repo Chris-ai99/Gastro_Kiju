@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.20-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:40 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der Web-Build erzeugt den Kompatibilitäts-Proxy mit gültiger JavaScript-Syntax.
+- Änderungen:
+  Der Host-Header im Weiterleitungsserver wird ohne verschachtelte Template-Zeichenkette aufgebaut.
+
 ## 0.12.19-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:32 +02:00

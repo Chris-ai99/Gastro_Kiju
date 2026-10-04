@@ -20,7 +20,7 @@ if (nextPort !== compatibilityPort) {
         port: nextPort,
         path: incoming.url,
         method: incoming.method,
-        headers: { ...incoming.headers, host: `127.0.0.1:${nextPort}` },
+        headers: { ...incoming.headers, host: "127.0.0.1:" + nextPort },
       },
       (response) => {
         outgoing.writeHead(response.statusCode ?? 502, response.headers);
