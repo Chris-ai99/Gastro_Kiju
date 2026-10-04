@@ -23,7 +23,7 @@ Dann bauen und starten:
 ```powershell
 npx pnpm@10.22.0 install
 npx pnpm@10.22.0 --filter @kiju/web build
-npx pnpm@10.22.0 --filter @kiju/web start -- --hostname 127.0.0.1 --port 3011
+npx pnpm@10.22.0 --filter @kiju/web start -- --hostname 127.0.0.1 --port 3110
 ```
 
 ## Reverse-Proxy-Idee
@@ -35,7 +35,7 @@ Beispiel für Nginx:
 
 ```nginx
 location /kiJu/ {
-    proxy_pass http://127.0.0.1:3011;
+    proxy_pass http://127.0.0.1:3110;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Host $host;

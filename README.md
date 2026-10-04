@@ -90,7 +90,7 @@ NEXT_PUBLIC_BASE_PATH=/kiJu
 
 ```powershell
 npx pnpm@10.22.0 --filter @kiju/web build
-npx pnpm@10.22.0 --filter @kiju/web start -- --hostname 127.0.0.1 --port 3011
+npx pnpm@10.22.0 --filter @kiju/web start -- --hostname 127.0.0.1 --port 3110
 ```
 
 3. Reverse Proxy für `/kiJu` auf diese App zeigen lassen.

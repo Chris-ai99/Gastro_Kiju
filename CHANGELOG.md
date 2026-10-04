@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.18-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:24 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der VPS-Deploy prüft den tatsächlich verwendeten Web-Port.
+- Änderungen:
+  Gesundheitsprüfung, Systemd-Beispiel und Hosting-Anleitung verwenden Port 3110.
+
 ## 0.12.17-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:21 +02:00
