@@ -77,6 +77,19 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.13-beta",
+    date: "2026-10-04",
+    time: "15:42 +02:00",
+    type: "Migration",
+    title: "Legacy-Import übernimmt JSON-Umschlag",
+    summary:
+      "Der PostgreSQL-Import liest den Betriebszustand aus dem gespeicherten JSON-Umschlag.",
+    categories: ["Migration", "Datenhaltung"],
+    changes: [
+      "Der Import erkennt gespeicherte Zustandsdateien mit Betriebszustand, Version und Änderungszeit."
+    ]
+  },
+  {
     version: "0.11.12-beta",
     date: "2026-10-04",
     time: "15:26 +02:00",

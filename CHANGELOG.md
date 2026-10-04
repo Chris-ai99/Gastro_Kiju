@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.13-beta
+- Datum: 2026-10-04
+- Uhrzeit: 15:42 +02:00
+- Typ: Migration
+- Zusammenfassung:
+  Der Legacy-Import übernimmt den Betriebszustand aus dem gespeicherten JSON-Umschlag.
+- Änderungen:
+  Der PostgreSQL-Import erkennt das JSON-Format mit Betriebszustand, Version und Änderungszeit.
+
 ## 0.11.12-beta
 - Datum: 2026-10-04
 - Uhrzeit: 15:26 +02:00

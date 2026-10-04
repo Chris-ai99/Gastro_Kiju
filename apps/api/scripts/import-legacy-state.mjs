@@ -30,6 +30,8 @@ const parseDate = (value) => {
   const date = typeof value === "string" ? new Date(value) : null;
   return date && Number.isFinite(date.getTime()) ? date : undefined;
 };
+const isObjectRecord = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
 
 const readJson = async (path, required) => {
   try {
@@ -57,9 +59,13 @@ try {
     );
   }
 
-  const legacyState = normalizeOperationalState(
-    await readJson(statePath, true)
-  );
+  const legacyStateDocument = await readJson(statePath, true);
+  const legacyStatePayload =
+    isObjectRecord(legacyStateDocument) &&
+    isObjectRecord(legacyStateDocument.state)
+      ? legacyStateDocument.state
+      : legacyStateDocument;
+  const legacyState = normalizeOperationalState(legacyStatePayload);
   const legacyPrintState = await readJson(printPath, false);
 
   await mkdir(backupDir, { recursive: true });
