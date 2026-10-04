@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.08-beta
+- Datum: 2026-10-04
+- Uhrzeit: 18:49 +02:00
+- Typ: Verbesserung
+- Zusammenfassung:
+  Der manuelle GitHub-Deploy baut und aktiviert Releases passend zur VPS-Struktur.
+- Änderungen:
+  GitHub Actions überträgt den ausgewählten main-Commit als Quellarchiv an einen eingeschränkten Serverempfänger.
+  Der VPS baut eine neue Release, schaltet API und Web erst nach dem erfolgreichen Build um und stellt bei Fehlern die vorherigen Verknüpfungen wieder her.
+
 ## 0.12.07-beta
 - Datum: 2026-10-04
 - Uhrzeit: 18:09 +02:00

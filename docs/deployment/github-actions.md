@@ -9,13 +9,13 @@ Das Deployment lässt sich von jedem Rechner aus der GitHub-Oberfläche starten.
 3. Als Branch `main` auswählen und bei der Bestätigung **Ja, jetzt deployen** wählen.
 4. Den Lauf bis zum grünen Abschluss verfolgen.
 
-Der Workflow startet das vorhandene Skript `/root/Gastro_Kiju/Gastro_Kiju/Gastro_Kiju/scripts/deploy-gastroweb.sh`. Es aktualisiert den Server aus `main`, baut die Anwendung und startet den Dienst `gastroweb` neu.
+Der Workflow überträgt den ausgewählten Commit als Quellarchiv per SSH. Der VPS baut daraus eine neue Release unter **/opt/kiju-gastro/releases**, kopiert die Next.js-Assets in den eigenständigen Webserver und schaltet die API- und Web-Verknüpfung erst nach erfolgreichem Build um. Anschließend startet er **gastroapi** und **kiju-gastro** neu und prüft **/api/health** sowie **/gastro/** lokal auf dem Server. Bei einem Fehler stellt er die vorherigen Verknüpfungen wieder her. Frühere Releases und die bestehenden Anwendungsdaten bleiben erhalten.
 
 ## Zugriff
 
-Das Repository verwendet das Actions-Secret `KIJU_DEPLOY_SSH_KEY`. Es enthält einen eigenen SSH-Schlüssel für diesen Workflow. Auf dem Server wird der zugehörige öffentliche Schlüssel in `root`’s `authorized_keys` mit einem erzwungenen Befehl eingetragen. Dieser Schlüssel darf ausschließlich das Deploy-Skript ausführen; Shellzugriff und SSH-Portweiterleitungen bleiben gesperrt.
+Das Repository verwendet das Actions-Secret **KIJU_DEPLOY_SSH_KEY**. Der passende öffentliche Schlüssel auf dem VPS ist auf **/usr/local/sbin/kiju-gastroweb-deploy** beschränkt. Er kann keine Shell öffnen und keine SSH-Portweiterleitungen verwenden.
 
-Der SSH-Hostschlüssel ist im Workflow fest hinterlegt und wird strikt geprüft. Private Schlüssel oder Serverpasswörter gehören nicht in Git-Dateien.
+Der SSH-Hostschlüssel ist im Workflow fest hinterlegt und wird strikt geprüft. Private Schlüssel und Serverpasswörter gehören nicht in Git-Dateien. Zum Starten des Workflows von einem anderen Rechner wird kein lokaler privater Schlüssel benötigt; erforderlich ist Zugriff auf das GitHub-Repository und dessen Actions.
 
 ## Grenzen
 

@@ -1,203 +1,153 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 022
 
-PROJECT_DIR="/root/Gastro_Kiju/Gastro_Kiju/Gastro_Kiju"
-SERVICE_NAME="gastroweb"
-APP_PORT="3011"
-REQUIRED_NODE_MIN="20.9.0"
-REQUIRED_PNPM="10.22.0"
-PERSISTENT_DATA_DIR="${KIJU_DATA_DIR:-/var/lib/gastroweb}"
-PERSISTENT_STATE_FILE="${PERSISTENT_DATA_DIR}/kiju-shared-state.json"
-PERSISTENT_PRINT_FILE="${PERSISTENT_DATA_DIR}/kiju-print-state.json"
-SYSTEMD_OVERRIDE_DIR="/etc/systemd/system/${SERVICE_NAME}.service.d"
-SYSTEMD_PERSISTENCE_OVERRIDE="${SYSTEMD_OVERRIDE_DIR}/persistence.conf"
+readonly APP_ROOT="/opt/kiju-gastro"
+readonly RELEASES_DIR="${APP_ROOT}/releases"
+readonly DEPLOY_RECEIVER="/usr/local/sbin/kiju-gastroweb-deploy"
+readonly WEB_SERVICE="kiju-gastro.service"
+readonly API_SERVICE="gastroapi.service"
+readonly WEB_HEALTH_URL="http://127.0.0.1:3011/gastro/"
+readonly API_HEALTH_URL="http://127.0.0.1:4000/api/health"
+readonly MAX_ARCHIVE_BYTES=536870912
+readonly REQUIRED_PNPM="10.22.0"
 
 on_error() {
-  local line="$1"
-  echo
-  echo "Deploy failed near line ${line}."
-  echo "Recent ${SERVICE_NAME} status and logs:"
-  systemctl status "${SERVICE_NAME}" --no-pager || true
-  journalctl -u "${SERVICE_NAME}" -n 80 --no-pager || true
-}
+  local status="$1"
+  local line="$2"
+  trap - ERR
+  set +e
 
-trap 'on_error "$LINENO"' ERR
-
-run() {
-  echo
-  echo "==> $*"
-  "$@"
-}
-
-echo "Starting ${SERVICE_NAME} deploy in ${PROJECT_DIR}"
-
-cd "${PROJECT_DIR}"
-
-echo
-echo "==> Preparing persistent data outside the application directory"
-persistence_was_configured="0"
-if [[ -f "${SYSTEMD_PERSISTENCE_OVERRIDE}" ]]; then
-  persistence_was_configured="1"
-fi
-
-service_user="$(systemctl show "${SERVICE_NAME}" --property=User --value 2>/dev/null || true)"
-service_group="$(systemctl show "${SERVICE_NAME}" --property=Group --value 2>/dev/null || true)"
-service_user="${service_user:-root}"
-service_group="${service_group:-$(id -gn "${service_user}")}"
-
-run install -d -m 0750 "${PERSISTENT_DATA_DIR}"
-run chown "${service_user}:${service_group}" "${PERSISTENT_DATA_DIR}"
-run install -d -m 0755 "${SYSTEMD_OVERRIDE_DIR}"
-
-printf '%s\n' \
-  '[Service]' \
-  "Environment=\"KIJU_DATA_DIR=${PERSISTENT_DATA_DIR}\"" \
-  "Environment=\"KIJU_SHARED_STATE_FILE=${PERSISTENT_STATE_FILE}\"" \
-  "Environment=\"KIJU_PRINT_STATE_FILE=${PERSISTENT_PRINT_FILE}\"" \
-  > "${SYSTEMD_PERSISTENCE_OVERRIDE}"
-
-service_was_active="0"
-if systemctl is-active --quiet "${SERVICE_NAME}"; then
-  service_was_active="1"
-  run systemctl stop "${SERVICE_NAME}"
-fi
-
-if [[ "${persistence_was_configured}" == "0" && -f data/kiju-shared-state.json ]]; then
-  run cp -a data/kiju-shared-state.json "${PERSISTENT_STATE_FILE}"
-elif [[ ! -f "${PERSISTENT_STATE_FILE}" && -f data/kiju-shared-state.json ]]; then
-  run cp -a data/kiju-shared-state.json "${PERSISTENT_STATE_FILE}"
-fi
-
-if [[ "${persistence_was_configured}" == "0" && -f data/kiju-print-state.json ]]; then
-  run cp -a data/kiju-print-state.json "${PERSISTENT_PRINT_FILE}"
-elif [[ ! -f "${PERSISTENT_PRINT_FILE}" && -f data/kiju-print-state.json ]]; then
-  run cp -a data/kiju-print-state.json "${PERSISTENT_PRINT_FILE}"
-fi
-
-run chown -R "${service_user}:${service_group}" "${PERSISTENT_DATA_DIR}"
-if [[ -f "${PERSISTENT_STATE_FILE}" ]]; then
-  run chmod 0600 "${PERSISTENT_STATE_FILE}"
-fi
-if [[ -f "${PERSISTENT_PRINT_FILE}" ]]; then
-  run chmod 0600 "${PERSISTENT_PRINT_FILE}"
-fi
-run systemctl daemon-reload
-
-if [[ "$(git diff --name-only -- data/kiju-shared-state.json)" == "data/kiju-shared-state.json" ]]; then
-  echo
-  echo "==> Restoring the tracked seed after migrating the live state"
-  git restore -- data/kiju-shared-state.json
-fi
-
-if [[ "${service_was_active}" == "1" ]]; then
-  run systemctl start "${SERVICE_NAME}"
-fi
-
-for generated_file in apps/web/next-env.d.ts apps/web/tsconfig.tsbuildinfo; do
-  if [[ "$(git diff --name-only -- "${generated_file}")" == "${generated_file}" ]]; then
-    echo
-    echo "==> Resetting generated file ${generated_file}"
-    git restore -- "${generated_file}"
+  echo "Deploy fehlgeschlagen in Zeile ${line} (Status ${status})." >&2
+  if [[ "${switch_started}" == "1" ]]; then
+    echo "Vorherige Release-Verknüpfungen werden wiederhergestellt." >&2
+    atomic_symlink "${APP_ROOT}/api-current" "${old_api_target}" || true
+    atomic_symlink "${APP_ROOT}/current" "${old_web_target}" || true
+    systemctl restart "${API_SERVICE}" || true
+    systemctl restart "${WEB_SERVICE}" || true
   fi
-done
+  journalctl -u "${API_SERVICE}" -n 40 --no-pager >&2 || true
+  journalctl -u "${WEB_SERVICE}" -n 40 --no-pager >&2 || true
+  exit "${status}"
+}
 
-if ! git diff --quiet --exit-code || ! git diff --cached --quiet --exit-code; then
-  echo "Tracked local changes exist on the server. Refusing to deploy without manual review."
-  git status --short
+atomic_symlink() {
+  local link="$1"
+  local target="$2"
+  local temporary="${link}.next.$$"
+  rm -f -- "${temporary}"
+  ln -s -- "${target}" "${temporary}"
+  mv -Tf -- "${temporary}" "${link}"
+}
+
+die() {
+  echo "$*" >&2
   exit 1
-fi
-
-echo
-echo "==> Checking Node.js and pnpm"
-node -e "
-const min = '${REQUIRED_NODE_MIN}'.split('.').map(Number);
-const actual = process.versions.node.split('.').map(Number);
-const ok = actual[0] > min[0] ||
-  (actual[0] === min[0] && (actual[1] > min[1] ||
-  (actual[1] === min[1] && actual[2] >= min[2])));
-if (!ok) {
-  console.error('Node.js ' + process.versions.node + ' is too old. Need >= ${REQUIRED_NODE_MIN}.');
-  process.exit(1);
 }
-console.log('Node.js ' + process.versions.node + ' OK (need >= ${REQUIRED_NODE_MIN})');
-"
 
-actual_pnpm="$(pnpm --version)"
-if [[ "${actual_pnpm}" != "${REQUIRED_PNPM}" ]]; then
-  echo "Warning: repo pins pnpm ${REQUIRED_PNPM}, server has pnpm ${actual_pnpm}. Continuing with server pnpm."
-else
-  echo "pnpm ${actual_pnpm} OK"
+original_command="${SSH_ORIGINAL_COMMAND:-}"
+if [[ ! "${original_command}" =~ ^deploy[[:space:]]([0-9a-f]{40})$ ]]; then
+  die "Nur ein bestätigter Deploy-Aufruf mit vollständiger Commit-ID ist erlaubt."
+fi
+revision="${BASH_REMATCH[1]}"
+
+exec 9>/run/lock/kiju-gastroweb-deploy.lock
+flock -n 9 || die "Ein Server-Deploy läuft bereits."
+
+temporary_dir="$(mktemp -d /tmp/kiju-gastroweb-deploy.XXXXXX)"
+archive_file="${temporary_dir}/source.tar.gz"
+archive_list="${temporary_dir}/archive-files.txt"
+release_dir=""
+switch_started="0"
+old_api_target=""
+old_web_target=""
+trap 'rm -rf -- "${temporary_dir}"' EXIT
+trap 'on_error "$?" "$LINENO"' ERR
+
+cat > "${archive_file}"
+[[ -s "${archive_file}" ]] || die "Das Quellarchiv ist leer."
+archive_bytes="$(stat -c '%s' "${archive_file}")"
+(( archive_bytes <= MAX_ARCHIVE_BYTES )) || die "Das Quellarchiv überschreitet 512 MiB."
+
+if ! tar -tzf "${archive_file}" > "${archive_list}"; then
+  die "Das Quellarchiv ist ungültig."
+fi
+while IFS= read -r archive_path || [[ -n "${archive_path}" ]]; do
+  case "${archive_path}" in
+    /*|../*|*/../*|*/..|..)
+      die "Das Quellarchiv enthält einen unzulässigen Pfad."
+      ;;
+  esac
+done < "${archive_list}"
+
+release_name="$(date -u +%Y%m%dT%H%M%S)-${revision:0:7}"
+release_dir="${RELEASES_DIR}/${release_name}"
+[[ ! -e "${release_dir}" ]] || release_dir="${release_dir}-$$"
+install -d -o kiju-wawi -g kiju-wawi -m 0750 "${release_dir}"
+chmod 0755 "${temporary_dir}"
+chmod 0644 "${archive_file}"
+runuser -u kiju-wawi -- tar --extract --gzip --file="${archive_file}" \
+  --directory="${release_dir}" --no-same-owner --no-same-permissions
+printf '%s\n' "${revision}" > "${release_dir}/REVISION"
+chown kiju-wawi:kiju-wawi "${release_dir}/REVISION"
+
+[[ -f "${release_dir}/package.json" ]] || die "package.json fehlt im Archiv."
+[[ -f "${release_dir}/pnpm-lock.yaml" ]] || die "pnpm-lock.yaml fehlt im Archiv."
+[[ -f "${release_dir}/scripts/deploy-gastroweb.sh" ]] || die "Das Deploy-Skript fehlt im Archiv."
+[[ "$(pnpm --version)" == "${REQUIRED_PNPM}" ]] || die "Auf dem Server wird pnpm ${REQUIRED_PNPM} benötigt."
+node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 20 || (major === 20 && minor < 9)) process.exit(1);' \
+  || die "Auf dem Server wird Node.js 20.9 oder neuer benötigt."
+
+echo "Baue Commit ${revision} in ${release_dir}."
+runuser -u kiju-wawi -- env \
+  HOME=/home/kiju-wawi \
+  PATH="${PATH}" \
+  NEXT_PUBLIC_BASE_PATH=/gastro \
+  bash -c 'cd "$1" && pnpm install --frozen-lockfile && pnpm build' \
+  _ "${release_dir}"
+
+standalone_web_dir="${release_dir}/apps/web/.next/standalone/apps/web"
+[[ -f "${standalone_web_dir}/server.js" ]] || die "Der eigenständige Webserver fehlt nach dem Build."
+[[ -f "${release_dir}/apps/api/dist/main.js" ]] || die "Der API-Build fehlt."
+[[ -d "${release_dir}/apps/web/.next/static" ]] || die "Next.js-Assets fehlen."
+runuser -u kiju-wawi -- rm -rf "${standalone_web_dir}/.next/static"
+runuser -u kiju-wawi -- install -d -m 0755 "${standalone_web_dir}/.next"
+runuser -u kiju-wawi -- cp -a "${release_dir}/apps/web/.next/static" "${standalone_web_dir}/.next/static"
+if [[ -d "${release_dir}/apps/web/public" ]]; then
+  runuser -u kiju-wawi -- rm -rf "${standalone_web_dir}/public"
+  runuser -u kiju-wawi -- cp -a "${release_dir}/apps/web/public" "${standalone_web_dir}/public"
 fi
 
-before_rev="$(git rev-parse HEAD)"
+[[ -L "${APP_ROOT}/api-current" ]] || die "Der API-Release-Link fehlt."
+[[ -L "${APP_ROOT}/current" ]] || die "Der Web-Release-Link fehlt."
+old_api_target="$(readlink "${APP_ROOT}/api-current")"
+old_web_target="$(readlink "${APP_ROOT}/current")"
 
-run git pull --ff-only
+switch_started="1"
+atomic_symlink "${APP_ROOT}/api-current" "${release_dir}"
+atomic_symlink "${APP_ROOT}/current" "${release_dir}/apps/web"
+systemctl restart "${API_SERVICE}"
+systemctl restart "${WEB_SERVICE}"
+systemctl is-active --quiet "${API_SERVICE}"
+systemctl is-active --quiet "${WEB_SERVICE}"
 
-after_rev="$(git rev-parse HEAD)"
-install_needed="0"
+wait_for_health() {
+  local url="$1"
+  local attempt
+  for attempt in {1..30}; do
+    if curl --fail --silent --show-error --max-time 4 "${url}" >/dev/null; then
+      echo "Erreichbar: ${url}"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Gesundheitsprüfung fehlgeschlagen: ${url}" >&2
+  return 1
+}
 
-if [[ ! -d node_modules || ! -f node_modules/.modules.yaml ]]; then
-  install_needed="1"
-elif [[ "${before_rev}" != "${after_rev}" ]] && git diff --name-only "${before_rev}" "${after_rev}" -- \
-  package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc \
-  "apps/*/package.json" "packages/*/package.json" | grep -q .; then
-  install_needed="1"
-fi
-
-if [[ "${install_needed}" == "1" ]]; then
-  run pnpm install --frozen-lockfile
-else
-  echo
-  echo "==> Dependency files unchanged and node_modules exists; skipping pnpm install"
-fi
-
-run pnpm build
-
-for generated_file in apps/web/next-env.d.ts apps/web/tsconfig.tsbuildinfo; do
-  if [[ "$(git diff --name-only -- "${generated_file}")" == "${generated_file}" ]]; then
-    echo
-    echo "==> Resetting generated file ${generated_file} after build"
-    git restore -- "${generated_file}"
-  fi
-done
-
-echo
-echo "==> Copying Next.js static assets into standalone runtime"
-standalone_web_dir="apps/web/.next/standalone/apps/web"
-rm -rf "${standalone_web_dir}/.next/static"
-mkdir -p "${standalone_web_dir}/.next"
-cp -a apps/web/.next/static "${standalone_web_dir}/.next/static"
-
-if [[ -d apps/web/public ]]; then
-  rm -rf "${standalone_web_dir}/public"
-  cp -a apps/web/public "${standalone_web_dir}/public"
-fi
-
-run systemctl restart "${SERVICE_NAME}"
-
-run systemctl status "${SERVICE_NAME}" --no-pager
-
-echo
-echo "==> Checking port ${APP_PORT}"
-for attempt in {1..20}; do
-  if ss -tulpen | grep "${APP_PORT}"; then
-    break
-  fi
-
-  if [[ "${attempt}" == "20" ]]; then
-    echo "Port ${APP_PORT} did not open in time."
-    exit 1
-  fi
-
-  sleep 1
-done
-
-if systemctl list-unit-files nginx.service >/dev/null 2>&1; then
-  run systemctl status nginx --no-pager
-else
-  echo
-  echo "==> nginx service not installed; skipping nginx status check"
-fi
-
-echo
-echo "Deploy finished successfully."
+wait_for_health "${API_HEALTH_URL}"
+wait_for_health "${WEB_HEALTH_URL}"
+install -o root -g root -m 0755 "${release_dir}/scripts/deploy-gastroweb.sh" "${DEPLOY_RECEIVER}"
+switch_started="0"
+trap - ERR
+echo "DEPLOY_COMPLETED ${revision} ${release_dir}"

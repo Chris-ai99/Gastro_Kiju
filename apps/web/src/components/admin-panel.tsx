@@ -77,6 +77,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.12.08-beta",
+    date: "2026-10-04",
+    time: "18:49 +02:00",
+    type: "Verbesserung",
+    title: "GitHub-Deploy an die VPS-Releases angepasst",
+    summary:
+      "Der manuelle Workflow baut eine neue Server-Release und schaltet Web und API nach erfolgreicher Prüfung um.",
+    categories: ["Betrieb", "Deployment", "GitHub"],
+    changes: [
+      "GitHub Actions überträgt den ausgewählten main-Commit als Quellarchiv an einen eingeschränkten Serverempfänger.",
+      "Der VPS erstellt eine neue Release und stellt bei fehlgeschlagenem Start oder Gesundheitscheck die vorherigen Verknüpfungen wieder her."
+    ]
+  },
+  {
     version: "0.12.07-beta",
     date: "2026-10-04",
     time: "18:09 +02:00",
