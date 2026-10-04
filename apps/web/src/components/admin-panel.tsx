@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.12-beta",
+    date: "2026-10-04",
+    time: "15:26 +02:00",
+    type: "Sicherheit",
+    title: "Gastro-API bleibt standardmäßig intern",
+    summary:
+      "Die Gastro-API ist standardmäßig nur über den lokalen Server erreichbar.",
+    categories: ["Sicherheit", "API", "Server"],
+    changes: [
+      "Die API bindet standardmäßig an 127.0.0.1 und kann über HOST gezielt anders konfiguriert werden.",
+      "Das Produktionsbeispiel hält die API intern; der Zugriff läuft über den Web-Proxy.",
+      "Die WLAN-Anleitung erklärt, wie ein direkter API-Zugriff für lokale Geräte ausdrücklich aktiviert wird."
+    ]
+  },
+  {
     version: "0.11.11-beta",
     date: "2026-10-04",
     time: "15:08 +02:00",

@@ -8,7 +8,9 @@ async function bootstrap() {
   app.setGlobalPrefix("api");
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  await app.listen(process.env["PORT"] ? Number(process.env["PORT"]) : 4000);
+  const port = process.env["PORT"] ? Number(process.env["PORT"]) : 4000;
+  const host = process.env["HOST"]?.trim() || "127.0.0.1";
+  await app.listen(port, host);
 }
 
 bootstrap();

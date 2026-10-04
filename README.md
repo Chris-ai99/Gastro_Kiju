@@ -44,7 +44,11 @@ npx pnpm@10.22.0 --filter @kiju/api dev
 npx pnpm@10.22.0 --filter @kiju/web dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-3. Andere Geräte im WLAN rufen dann `http://<DEINE-IP>:3000` auf.
+Wenn Geräte die API direkt im WLAN erreichen sollen, in `apps/api/.env` zusätzlich
+`HOST=0.0.0.0` setzen. Im Serverbetrieb bleibt die API standardmäßig auf `127.0.0.1`;
+die Web-App leitet Anfragen intern weiter.
+
+5. Andere Geräte im WLAN rufen dann `http://<DEINE-IP>:3000` auf.
 
 Optional kann in `apps/web/.env` eine feste API-Adresse gesetzt werden:
 
