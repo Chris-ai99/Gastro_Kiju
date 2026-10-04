@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -129,19 +129,7 @@ const normalizePublicBasePath = (value?: string) => {
   return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
 };
 
-const waiterFloorplanImageSrc = `${normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"])}/kellner-haupt-bild.png`;
-
-type FloorplanHotspot = {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-type FloorplanSeatAnchor = {
-  left: number;
-  top: number;
-};
+const waiterRoomMapImageSrc = `${normalizePublicBasePath(process.env["NEXT_PUBLIC_BASE_PATH"])}/kiju-sitzplan-16x9.png`;
 
 type ReceiptPreviewState = {
   printMode: "receipt" | "reprint";
@@ -153,58 +141,33 @@ type ReceiptPreviewState = {
   receipt: ReceiptDocumentInput;
 };
 
-const waiterFloorplanHotspots: Record<string, FloorplanHotspot> = {
-  "table-1": { left: 2.4, top: 16.2, width: 11.4, height: 18.8 },
-  "table-2": { left: 2.4, top: 62.6, width: 11.4, height: 18.8 },
-  "table-3": { left: 29.8, top: 6.6, width: 12.5, height: 22.5 },
-  "table-4": { left: 48.7, top: 6.6, width: 12.5, height: 22.5 },
-  "table-5": { left: 80.2, top: 6.6, width: 12.8, height: 29.2 },
-  "table-6": { left: 80.2, top: 35.7, width: 12.8, height: 29.4 }
+type WaiterRoomTableKind = "indoor" | "beer" | "round";
+
+type WaiterRoomTableConfig = {
+  id: string;
+  tableId?: string;
+  number: string;
+  title: string;
+  kind: WaiterRoomTableKind;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 };
 
-const waiterFloorplanSeatAnchors: Record<string, FloorplanSeatAnchor[]> = {
-  "table-1": [
-    { left: 5.8, top: 14.8 },
-    { left: 11.4, top: 14.8 },
-    { left: 20.0, top: 25.2 },
-    { left: 5.6, top: 36.8 },
-    { left: 11.4, top: 36.8 }
-  ],
-  "table-2": [
-    { left: 5.8, top: 59.8 },
-    { left: 11.5, top: 59.8 },
-    { left: 18.0, top: 71.4 },
-    { left: 5.6, top: 83.2 },
-    { left: 11.4, top: 83.2 }
-  ],
-  "table-3": [
-    { left: 29, top: 11 },
-    { left: 40, top: 11 },
-    { left: 29, top: 24.8 },
-    { left: 40.2, top: 24.8 },
-    { left: 34.5, top: 36 }
-  ],
-  "table-4": [
-    { left: 50.3, top: 11 },
-    { left: 61.0, top: 11 },
-    { left: 50.3, top: 24.8 },
-    { left: 61.0, top: 24.8 },
-    { left: 55.7, top: 36 }
-  ],
-  "table-5": [
-    { left: 81.0, top: 14 },
-    { left: 92.6, top: 14 },
-    { left: 91.6, top: 28 },
-    { left: 81, top: 28 }
-  ],
-  "table-6": [
-    { left: 81.0, top: 43.8 },
-    { left: 92.1, top: 43.8 },
-    { left: 81.0, top: 57.9 },
-    { left: 92.1, top: 57.5 },
-    { left: 86.6, top: 75.6 }
-  ]
-};
+const waiterRoomTableConfigs: WaiterRoomTableConfig[] = [
+  { id: "room-table-1", tableId: "table-1", number: "1", title: "Tisch 1", kind: "indoor", left: 8.5, top: 25.5, width: 8.3, height: 9.5 },
+  { id: "room-table-2", tableId: "table-2", number: "2", title: "Tisch 2", kind: "indoor", left: 8.5, top: 13.2, width: 8.3, height: 9.5 },
+  { id: "room-table-3", tableId: "table-3", number: "3", title: "Tisch 3", kind: "indoor", left: 21, top: 10, width: 5.4, height: 12.2 },
+  { id: "room-table-4", tableId: "table-4", number: "4", title: "Tisch 4", kind: "indoor", left: 33.3, top: 10, width: 5.4, height: 12.2 },
+  { id: "room-table-5", tableId: "table-5", number: "5", title: "Tisch 5", kind: "indoor", left: 47, top: 9.6, width: 5.4, height: 10.8 },
+  { id: "room-table-6", tableId: "table-6", number: "6", title: "Tisch 6", kind: "indoor", left: 47, top: 23, width: 5.4, height: 11 },
+  { id: "room-table-7", tableId: "table-7", number: "7", title: "Biertisch 7", kind: "beer", left: 35.5, top: 79, width: 6, height: 16 },
+  { id: "room-table-8", tableId: "table-8", number: "8", title: "Biertisch 8", kind: "beer", left: 23.8, top: 79, width: 6, height: 16 },
+  { id: "room-table-9", tableId: "table-9", number: "9", title: "Biertisch 9", kind: "beer", left: 12.5, top: 79, width: 6, height: 16 },
+  { id: "room-table-10", tableId: "table-10", number: "10", title: "Rundtisch 10", kind: "round", left: 46.8, top: 69.5, width: 7.3, height: 13 },
+  { id: "room-table-11", tableId: "table-11", number: "11", title: "Rundtisch 11", kind: "round", left: 46.8, top: 83.4, width: 7.3, height: 13 }
+];
 
 const statusLabel: Record<string, string> = {
   idle: "Bereit",
@@ -618,7 +581,6 @@ const resolveHistoryPaymentTargets = (
 export const WaiterWorkspace = () => {
   const { state, currentUser, unreadNotifications, sharedSync, canUndoServiceHandover, actions } = useDemoApp();
   const serviceSectionRef = useRef<HTMLElement | null>(null);
-  const floorplanSectionRef = useRef<HTMLElement | null>(null);
   const orderWizardModalRef = useRef<HTMLDivElement | null>(null);
   const dashboard = useMemo(() => buildDashboardSummary(state), [state]);
   const defaultTableId =
@@ -637,7 +599,6 @@ export const WaiterWorkspace = () => {
   const [activeCourseGroup, setActiveCourseGroup] = useState(fallbackCourseGroup);
   const [categoryDialogInitialItemIds, setCategoryDialogInitialItemIds] = useState<string[]>([]);
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
-  const [showMobileFloorplan, setShowMobileFloorplan] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
   const [selectedPaymentUnits, setSelectedPaymentUnits] = useState<Record<string, boolean>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
@@ -695,8 +656,11 @@ export const WaiterWorkspace = () => {
   const waiterMenuEntries = dashboard.filter(
     (entry) => entry.table.active || entry.table.plannedOnly || entry.table.id === selectedTableId
   );
-  const waiterFloorplanEntries = waiterMenuEntries.filter(
-    (entry) => entry.table.active && waiterFloorplanHotspots[entry.table.id]
+  const pickupMenuEntries = waiterMenuEntries.filter(
+    (entry) =>
+      Boolean(entry.table.pickupName?.trim()) ||
+      /^Zum Abholen\s+\d+$/i.test(entry.table.name.trim()) ||
+      entry.table.note?.trim().toLowerCase().startsWith("zum abholen") === true
   );
   const selectedDashboardEntry =
     dashboard.find((entry) => entry.table.id === selectedTableId) ?? null;
@@ -1630,22 +1594,6 @@ export const WaiterWorkspace = () => {
     }
 
     openReceiptPreview(receiptMode, "receipt");
-  };
-
-  const toggleMobileFloorplan = () => {
-    setShowMobileFloorplan((current) => {
-      const next = !current;
-      if (next) {
-        window.requestAnimationFrame(() => {
-          floorplanSectionRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
-        });
-      }
-
-      return next;
-    });
   };
 
   const handleReceiptPreviewPrint = async (preview: ReceiptPreviewState, clearAfterSuccess: boolean) => {
@@ -3465,77 +3413,118 @@ export const WaiterWorkspace = () => {
           </section>
         ) : null}
 
-        {isWaiterView && !isOrderWizardOpen ? (
-          <button
-            type="button"
-            className="kiju-button kiju-button--secondary kiju-mobile-floorplan-toggle"
-            onClick={toggleMobileFloorplan}
-          >
-            <Map size={18} />
-            {showMobileFloorplan ? "Raumplan ausblenden" : "Raumplan anzeigen"}
-          </button>
-        ) : null}
+        {isWaiterView && currentStep === "table" && !isOrderWizardOpen && !isTableActionDialogOpen ? (
+          <section className="kiju-waiter-room-map" aria-label="Raumstruktur und Tischwahl">
+            <header className="kiju-waiter-room-map__header">
+              <div>
+                <span className="kiju-eyebrow">Raumstruktur</span>
+                <h2>Tisch auswählen</h2>
+                <p>Innenbereich und Außenbereich in einer klaren Ansicht.</p>
+              </div>
+              <div className="kiju-waiter-room-map__legend" aria-label="Bereiche">
+                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--inside">
+                  Innen
+                </span>
+                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--outside">
+                  Draußen
+                </span>
+              </div>
+            </header>
 
-        {isWaiterView && currentStep === "table" ? (
-          <section
-            ref={floorplanSectionRef}
-            className={`kiju-floorplan-stage ${showMobileFloorplan ? "is-mobile-open" : ""}`}
-          >
-            <div className="kiju-floorplan-hero">
+            <div className="kiju-waiter-room-map__canvas">
               <img
-                src={waiterFloorplanImageSrc}
-                alt="Kellner Hauptbild mit dem kompletten Gastraum und den Tischen 1 bis 6"
-                className="kiju-floorplan-hero__image"
+                src={waiterRoomMapImageSrc}
+                alt="Grundriss des KiJu-Gastraums mit Innenbereich, Außenbereich, Abholbereich und Funktionsräumen"
+                className="kiju-waiter-room-map__image"
                 loading="eager"
                 decoding="async"
-                fetchPriority="high"
               />
-              <div className="kiju-floorplan-hero__overlay">
-                {waiterFloorplanEntries.map((entry) => {
-                  const hotspot = waiterFloorplanHotspots[entry.table.id];
-                  const seatAnchors = usesSeatMode
-                    ? waiterFloorplanSeatAnchors[entry.table.id] ?? []
-                    : [];
-                  if (!hotspot) return null;
+              <div className="kiju-waiter-room-map__overlay">
+                {waiterRoomTableConfigs.map((config) => {
+                  const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
+                  if (config.tableId && !entry) return null;
+
+                  const isSelected = entry?.table.id === selectedTableId;
+                  const tableTypeLabel =
+                    config.kind === "beer"
+                      ? "Biertisch"
+                      : config.kind === "round"
+                        ? "Rundtisch"
+                        : "Tisch";
 
                   return (
-                    <div key={entry.table.id}>
-                      <button
+                    <button
+                      key={config.id}
                       type="button"
-                      className={`kiju-floorplan-hotspot ${entry.table.id === selectedTableId ? "is-selected" : ""}`}
-                      aria-label={`${entry.table.name} auswählen`}
+                      className={`kiju-waiter-room-table kiju-waiter-room-table--${config.kind}${
+                        isSelected ? " is-selected" : ""
+                      }`}
+                      data-table-number={config.number}
                       style={{
-                        left: `${hotspot.left}%`,
-                        top: `${hotspot.top}%`,
-                        width: `${hotspot.width}%`,
-                        height: `${hotspot.height}%`
+                        left: `${config.left}%`,
+                        top: `${config.top}%`,
+                        width: `${config.width}%`,
+                        height: `${config.height}%`
                       }}
-                      onClick={() => selectTable(entry.table.id, true)}
-                      />
-                      {seatAnchors.map((seatAnchor, index) => {
-                        const seat = entry.table.seats[index];
-                        if (!seat || !isSeatVisible(seat)) return null;
-
-                        return (
-                          <button
-                            key={seat.id}
-                            type="button"
-                            className={`kiju-floorplan-seat-hotspot ${seat.id === selectedSeatId ? "is-selected" : ""}`}
-                            aria-label={`${entry.table.name}, Platz ${index + 1} auswählen`}
-                            style={{
-                              left: `${seatAnchor.left}%`,
-                              top: `${seatAnchor.top}%`
-                            }}
-                            onClick={() => selectSeat(entry.table.id, seat.id, true)}
-                          >
-                            <span>{index + 1}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                      aria-label={`${config.title} auswählen`}
+                      onClick={() => {
+                        if (entry) selectTable(entry.table.id);
+                      }}
+                    >
+                      <strong>{config.number}</strong>
+                      <span className="kiju-waiter-room-table__kind">{tableTypeLabel}</span>
+                      <small>{entry ? statusLabel[entry.status] ?? "Status" : "Status"}</small>
+                    </button>
                   );
                 })}
               </div>
+            </div>
+            <div
+              className="kiju-waiter-room-number-picker"
+              role="group"
+              aria-label="Schnellauswahl der Tische und Abholbons"
+            >
+              {waiterRoomTableConfigs.map((config) => {
+                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
+                const isSelected = entry?.table.id === selectedTableId;
+
+                return (
+                  <button
+                    key={`quick-${config.id}`}
+                    type="button"
+                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--${config.kind}${
+                      isSelected ? " is-selected" : ""
+                    }`}
+                    aria-label={`${config.title} auswählen`}
+                    aria-pressed={isSelected}
+                    disabled={!entry}
+                    onClick={() => entry && selectTable(entry.table.id)}
+                  >
+                    {config.number}
+                  </button>
+                );
+              })}
+              {pickupMenuEntries.map((entry) => {
+                const rawNumber =
+                  entry.table.id.match(/table-(\d+)/i)?.[1] ?? entry.table.name.match(/(\d+)/)?.[1];
+                const number = rawNumber ? Number(rawNumber) : null;
+                const isSelected = entry.table.id === selectedTableId;
+
+                return (
+                  <button
+                    key={`quick-pickup-${entry.table.id}`}
+                    type="button"
+                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--pickup${
+                      isSelected ? " is-selected" : ""
+                    }`}
+                    aria-label={`Abholbon ${number ?? entry.table.name} für ${entry.table.pickupName?.trim() || "Abholung"} auswählen`}
+                    aria-pressed={isSelected}
+                    onClick={() => selectTable(entry.table.id)}
+                  >
+                    {number ?? entry.table.name}
+                  </button>
+                );
+              })}
             </div>
           </section>
         ) : !isWaiterView ? (
@@ -4173,17 +4162,6 @@ export const WaiterWorkspace = () => {
                     );
                   })}
                 </div>
-              ) : null}
-
-              {isWaiterView && !isOrderWizardOpen ? (
-                <button
-                  type="button"
-                  className="kiju-button kiju-button--secondary kiju-mobile-floorplan-toggle"
-                  onClick={toggleMobileFloorplan}
-                >
-                  <Map size={18} />
-                  {showMobileFloorplan ? "Raumplan ausblenden" : "Raumplan anzeigen"}
-                </button>
               ) : null}
 
               <div className="kiju-mobile-service-summary" aria-label="Aktueller Service-Stand">

@@ -77,6 +77,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.14-beta",
+    date: "2026-10-04",
+    time: "16:53 +02:00",
+    type: "Fix",
+    title: "Vollständigen Tischplan wiederhergestellt",
+    summary:
+      "Die Kellneransicht zeigt wieder den interaktiven Grundriss mit Innen- und Außenbereich.",
+    categories: ["Service", "Tischansicht", "Raumplan"],
+    changes: [
+      "Die vollständige Raumplan-Ansicht ersetzt wieder den alten Grundriss.",
+      "Tischwahl und Schnellauswahl verwenden die vorhandenen Tisch- und Abholbon-Daten."
+    ]
+  },
+  {
     version: "0.11.13-beta",
     date: "2026-10-04",
     time: "15:42 +02:00",

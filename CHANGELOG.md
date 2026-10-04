@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.14-beta
+- Datum: 2026-10-04
+- Uhrzeit: 16:53:37 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Die Kellneransicht verwendet wieder den vollständigen Tischplan mit Innen- und Außenbereich.
+- Änderungen:
+  Die korrekte Raumplan-Ansicht wurde als vollständiger Stand wiederhergestellt und ersetzt die alte Grundrissansicht.
+  Tischwahl und Schnellauswahl greifen wieder auf dieselben aktiven Tisch- und Abholbon-Daten zu.
+
 ## 0.11.13-beta
 - Datum: 2026-10-04
 - Uhrzeit: 15:42 +02:00
