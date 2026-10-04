@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.15-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:10 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der API-Build erstellt den Startdatei-Pfad, den der aktuelle VPS-Deploy-Empfänger benötigt.
+- Änderungen:
+  Nach dem NestJS-Build kompiliert TypeScript die API und ein Hilfsskript legt `dist/main.js` als Wrapper für den erzeugten Einstieg an.
+
 ## 0.12.14-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:04 +02:00
