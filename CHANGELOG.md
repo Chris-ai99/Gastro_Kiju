@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.15-beta
+- Datum: 2026-10-04
+- Uhrzeit: 17:10 +02:00
+- Typ: Wiederherstellung
+- Zusammenfassung:
+  Die vollständige Kellneransicht wurde auf den lokalen Stand vor dem Merge zurückgesetzt.
+- Änderungen:
+  Tischplan, Bestellübersicht, Abholbon-Auswahl und zugehörige Bedienabläufe stammen wieder aus dem letzten vollständigen Vor-Merge-Stand.
+
 ## 0.11.14-beta
 - Datum: 2026-10-04
 - Uhrzeit: 16:53:37 +02:00

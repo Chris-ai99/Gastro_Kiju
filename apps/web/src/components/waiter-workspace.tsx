@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -63,11 +63,7 @@ import {
   resolveProductName,
   useDemoApp
 } from "../lib/app-state";
-import {
-  buildPendingOrderSendSummary,
-  expandCheckoutUnitEntries,
-  isServiceBookedItem
-} from "../lib/order-overview";
+import { createPrintJob } from "../lib/print-client";
 import { RouteGuard } from "./route-guard";
 import { ServiceTopbarMenu } from "./service-topbar-menu";
 import { ThermalReceiptPaper } from "./thermal-receipt-paper";
@@ -80,11 +76,10 @@ const orderWizardSteps = [
 ] as const;
 const wizardSteps = ["Tisch", ...orderWizardSteps, "Abrechnung"] as const;
 type OrderWizardStepLabel = (typeof orderWizardSteps)[number];
-type WizardStepLabel = OrderWizardStepLabel | "Bestellübersicht" | "Abrechnung";
-type WaiterOrderStep = CourseKey | "overview" | "checkout";
+type WizardStepLabel = OrderWizardStepLabel | "Abrechnung";
+type WaiterOrderStep = CourseKey | "checkout";
 type WaiterStep = "table" | WaiterOrderStep;
 type CategoryDialogStage = "groups" | "products" | "review";
-type CategoryDialogReturnStep = "table" | "overview";
 type CourseGroupOption = {
   label: string;
   products: Product[];
@@ -104,7 +99,6 @@ const waiterStepLabels: Record<WaiterOrderStep, WizardStepLabel> = {
   starter: "Vorspeise",
   main: "Hauptspeise",
   dessert: "Nachtisch",
-  overview: "Bestellübersicht",
   checkout: "Abrechnung"
 };
 const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
@@ -112,7 +106,6 @@ const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
   Vorspeise: "starter",
   Hauptspeise: "main",
   Nachtisch: "dessert",
-  Bestellübersicht: "overview",
   Abrechnung: "checkout"
 };
 const serviceFeedbackTimeoutMs = 3000;
@@ -139,6 +132,14 @@ type ReceiptPreviewState = {
   tableSummary: string;
   sessionIds: string[];
   receipt: ReceiptDocumentInput;
+};
+
+const statusLabel: Record<string, string> = {
+  idle: "Bereit",
+  serving: "In Bedienung",
+  waiting: "Warten",
+  "ready-to-bill": "Verbuchen",
+  planned: "Geplant"
 };
 
 type WaiterRoomTableKind = "indoor" | "beer" | "round";
@@ -168,19 +169,6 @@ const waiterRoomTableConfigs: WaiterRoomTableConfig[] = [
   { id: "room-table-10", tableId: "table-10", number: "10", title: "Rundtisch 10", kind: "round", left: 46.8, top: 69.5, width: 7.3, height: 13 },
   { id: "room-table-11", tableId: "table-11", number: "11", title: "Rundtisch 11", kind: "round", left: 46.8, top: 83.4, width: 7.3, height: 13 }
 ];
-
-const statusLabel: Record<string, string> = {
-  idle: "Bereit",
-  serving: "In Bedienung",
-  waiting: "Warten",
-  "ready-to-bill": "Verbuchen",
-  planned: "Geplant"
-};
-
-const pickupTableNamePattern = /^Zum Abholen\s+\d+$/i;
-
-const getManualPickupTableDetail = (table: { name: string; note?: string }) =>
-  pickupTableNamePattern.test(table.name.trim()) ? table.note?.trim() ?? "" : "";
 
 const paymentMethodLabels: Record<"cash" | "card" | "voucher", string> = {
   cash: "Bar",
@@ -280,14 +268,7 @@ const getFoodCourseGroup = (course: CourseKey, productName: string) => {
 
   if (course === "main") {
     if (normalizedName.includes("pizza")) return "Pizza";
-    if (
-      normalizedName.includes("nudel") ||
-      normalizedName.includes("pasta") ||
-      normalizedName.includes("penne") ||
-      normalizedName.includes("tagliatelle")
-    ) {
-      return "Pasta";
-    }
+    if (normalizedName.includes("nudel") || normalizedName.includes("pasta")) return "Pasta";
     return fallbackCourseGroup;
   }
 
@@ -503,11 +484,7 @@ const resolveExtraIngredientLabels = (
   );
 };
 
-const resolveServiceCourseStatus = (
-  session: OrderSession,
-  course: CourseKey,
-  products: Product[]
-) => {
+const resolveServiceCourseStatus = (session: OrderSession, course: CourseKey) => {
   const items = session.items.filter((item) => item.category === course);
   if (items.length > 0 && items.every((item) => Boolean(item.servedAt))) {
     return {
@@ -516,7 +493,7 @@ const resolveServiceCourseStatus = (
     };
   }
 
-  return resolveCourseStatus(session, course, products);
+  return resolveCourseStatus(session, course);
 };
 
 const formatCourseStatusLabel = (
@@ -590,21 +567,17 @@ export const WaiterWorkspace = () => {
   const [currentStep, setCurrentStep] = useState<WaiterStep>("table");
   const [isTableActionDialogOpen, setIsTableActionDialogOpen] = useState(false);
   const [isOrderWizardOpen, setIsOrderWizardOpen] = useState(false);
+  const [isPickupNameDialogOpen, setIsPickupNameDialogOpen] = useState(false);
+  const [pickupNameDraft, setPickupNameDraft] = useState("");
   const [activeCategoryDialog, setActiveCategoryDialog] = useState<CourseKey | null>(null);
   const [categoryDialogStage, setCategoryDialogStage] = useState<CategoryDialogStage>("groups");
-  const [categoryDialogReturnStep, setCategoryDialogReturnStep] =
-    useState<CategoryDialogReturnStep>("table");
-  const [isSendAllConfirmationOpen, setIsSendAllConfirmationOpen] = useState(false);
-  const [isSecureTransferPending, setIsSecureTransferPending] = useState(false);
   const [activeCourseGroup, setActiveCourseGroup] = useState(fallbackCourseGroup);
   const [categoryDialogInitialItemIds, setCategoryDialogInitialItemIds] = useState<string[]>([]);
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
-  const [selectedPaymentUnits, setSelectedPaymentUnits] = useState<Record<string, boolean>>({});
+  const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
-  const [pickupCustomerName, setPickupCustomerName] = useState("");
-  const [pickupLocationName, setPickupLocationName] = useState("");
   const [receiptPreview, setReceiptPreview] = useState<ReceiptPreviewState | null>(null);
   const [serviceFeedback, setServiceFeedback] = useState<{
     tone: "success" | "alert" | "info";
@@ -645,14 +618,6 @@ export const WaiterWorkspace = () => {
   const selectedOrderTarget: OrderTarget =
     usesSeatMode && selectedSeatId ? { type: "seat", seatId: selectedSeatId } : tableOrderTarget;
   const activeCourse: CourseKey = isCourseStep(currentStep) ? currentStep : "drinks";
-  const activeOrderItems =
-    selectedSession?.items.filter((item) => !isOrderItemCanceled(item)) ?? [];
-  const pendingOrderSummary = buildPendingOrderSendSummary(selectedSession, state.products);
-  const activeOrderItemCount = activeOrderItems.reduce((sum, item) => sum + item.quantity, 0);
-  const activeOrderTotal = activeOrderItems.reduce(
-    (sum, item) => sum + calculateItemTotal(item, state.products),
-    0
-  );
   const waiterMenuEntries = dashboard.filter(
     (entry) => entry.table.active || entry.table.plannedOnly || entry.table.id === selectedTableId
   );
@@ -839,9 +804,7 @@ export const WaiterWorkspace = () => {
       : selectedTable?.seats.find((seat) => seat.id === selectedOrderTarget.seatId)?.label ??
         "Sitzplatz";
   const activeCourseTicketState =
-    !selectedSession
-      ? null
-      : resolveServiceCourseStatus(selectedSession, activeCourse, state.products);
+    !selectedSession ? null : resolveServiceCourseStatus(selectedSession, activeCourse);
   const activeCourseItemCount =
     selectedSession?.items
       .filter((item) => item.category === activeCourse && !isOrderItemCanceled(item))
@@ -852,15 +815,10 @@ export const WaiterWorkspace = () => {
     return kitchenWaitCourses
       .map((course) => {
         const itemCount = selectedSession.items
-          .filter(
-            (item) =>
-              item.category === course &&
-              !item.sentAt &&
-              !isServiceBookedItem(item, state.products)
-          )
+          .filter((item) => item.category === course && !item.sentAt)
           .reduce((sum, item) => sum + item.quantity, 0);
         const ticket = selectedSession.courseTickets[course];
-        const resolved = resolveServiceCourseStatus(selectedSession, course, state.products);
+        const resolved = resolveServiceCourseStatus(selectedSession, course);
 
         return {
           course,
@@ -876,19 +834,19 @@ export const WaiterWorkspace = () => {
           entry.status !== "completed" &&
           entry.status !== "skipped"
       );
-  }, [selectedSession, state.products]);
+  }, [selectedSession]);
   const syncStatusLabel =
-    sharedSync.failedCount > 0
-      ? `${sharedSync.failedCount} Vorgänge prüfen`
-      : sharedSync.usingSharedState || sharedSync.status === "online" || sharedSync.pendingCount > 0
-        ? "Geräte-Sync aktiv"
-        : "Lokal verfügbar";
+    sharedSync.status === "online"
+      ? "Geräte-Sync aktiv"
+      : sharedSync.status === "connecting"
+        ? "Synchronisiere..."
+        : "Nur lokaler Stand";
   const syncStatusTone =
-    sharedSync.failedCount > 0
+    sharedSync.status === "online"
+      ? "green"
+      : sharedSync.status === "connecting"
         ? "amber"
-        : sharedSync.usingSharedState || sharedSync.status === "online" || sharedSync.pendingCount > 0
-          ? "green"
-          : "slate";
+        : "red";
   const editableItems = useMemo(() => {
     if (!selectedSession) return [];
 
@@ -905,26 +863,13 @@ export const WaiterWorkspace = () => {
         !isOrderItemCanceled(item)
     );
   }, [activeCourse, selectedOrderTarget, selectedSession, usesSeatMode]);
-  const serviceBookedEditableItems = useMemo(
-    () => editableItems.filter((item) => isServiceBookedItem(item, state.products)),
-    [editableItems, state.products]
-  );
   const newEditableItems = useMemo(
-    () =>
-      editableItems.filter(
-        (item) => !item.sentAt && !isServiceBookedItem(item, state.products)
-      ),
-    [editableItems, state.products]
+    () => editableItems.filter((item) => !item.sentAt),
+    [editableItems]
   );
   const sentEditableItems = useMemo(
     () => editableItems.filter((item) => item.sentAt && !isOrderItemCanceled(item)),
     [editableItems]
-  );
-  const activeCourseServiceItemCount = serviceBookedEditableItems
-    .reduce((sum, item) => sum + item.quantity, 0);
-  const activeCoursePendingSendCount = pendingOrderSummary.byCourse[activeCourse].reduce(
-    (sum, item) => sum + item.quantity,
-    0
   );
   const categoryDialogInitialItemIdSet = useMemo(
     () => new Set(categoryDialogInitialItemIds),
@@ -939,7 +884,6 @@ export const WaiterWorkspace = () => {
     [categoryDialogInitialItemIdSet, newEditableItems]
   );
   const categoryDialogSentItems = sentEditableItems;
-  const categoryDialogServiceItems = serviceBookedEditableItems;
   const revisableSentItemCount = sentEditableItems.filter((item) => canReviseSentItem(item)).length;
   const tableTargetItems = useMemo(
     () => (usesSeatMode ? getTableTargetItems(selectedSession) : selectedSession?.items ?? []),
@@ -957,7 +901,7 @@ export const WaiterWorkspace = () => {
         const itemCount = selectedSession.items
           .filter((item) => item.category === course)
           .reduce((sum, item) => sum + item.quantity, 0);
-        const resolved = resolveCourseStatus(selectedSession, course, state.products);
+        const resolved = resolveCourseStatus(selectedSession, course);
 
         return {
           course,
@@ -967,7 +911,7 @@ export const WaiterWorkspace = () => {
         };
       })
       .filter((entry) => entry.itemCount > 0 || entry.status !== "not-recorded");
-  }, [selectedSession, state.products]);
+  }, [selectedSession]);
 
   const sessionTotal = calculateSessionTotal(selectedSession, state.products);
   const sessionBillableTotal = calculateSessionBillableTotal(selectedSession, state.products);
@@ -989,32 +933,36 @@ export const WaiterWorkspace = () => {
       unitTotal: Math.round(calculateItemTotal(item, state.products) / item.quantity)
     }))
   );
-  const checkoutOpenUnitEntries = expandCheckoutUnitEntries(checkoutOpenEntries);
-  const getSelectedPaymentQuantity = (itemId: string, openQuantity: number) =>
-    Array.from({ length: openQuantity }, (_, unitIndex) => `${itemId}:${unitIndex}`).filter(
-      (unitKey) => selectedPaymentUnits[unitKey]
-    ).length;
   const selectedPaymentLineItems = checkoutOpenEntries
     .map(({ item, openQuantity }) => ({
       itemId: item.id,
-      quantity: getSelectedPaymentQuantity(item.id, openQuantity)
+      quantity: Math.min(openQuantity, Math.max(0, selectedPaymentQuantities[item.id] ?? 0))
     }))
     .filter((lineItem) => lineItem.quantity > 0);
-  const selectedPaymentTotal = checkoutOpenUnitEntries.reduce(
-    (sum, entry) => sum + (selectedPaymentUnits[entry.unitKey] ? entry.unitTotal : 0),
-    0
-  );
+  const selectedPaymentTotal = checkoutOpenEntries.reduce((sum, entry) => {
+    const quantity = Math.min(
+      entry.openQuantity,
+      Math.max(0, selectedPaymentQuantities[entry.item.id] ?? 0)
+    );
+    return sum + entry.unitTotal * quantity;
+  }, 0);
   const selectedPaymentQuantityTotal = selectedPaymentLineItems.reduce(
     (sum, lineItem) => sum + lineItem.quantity,
     0
   );
-  const checkoutOpenQuantityTotal = checkoutOpenUnitEntries.length;
+  const checkoutOpenQuantityTotal = checkoutOpenEntries.reduce(
+    (sum, entry) => sum + entry.openQuantity,
+    0
+  );
   const areAllCheckoutPositionsSelected =
-    checkoutOpenUnitEntries.length > 0 &&
-    checkoutOpenUnitEntries.every(({ unitKey }) => selectedPaymentUnits[unitKey]);
+    checkoutOpenEntries.length > 0 &&
+    checkoutOpenEntries.every(
+      ({ item, openQuantity }) =>
+        Math.min(openQuantity, Math.max(0, selectedPaymentQuantities[item.id] ?? 0)) === openQuantity
+    );
   const checkoutOpenGroups = checkoutSessions
     .map(({ table, session }) => {
-      const entries = checkoutOpenUnitEntries.filter((entry) => entry.table.id === table.id);
+      const entries = checkoutOpenEntries.filter((entry) => entry.table.id === table.id);
       return {
         table,
         session,
@@ -1031,15 +979,12 @@ export const WaiterWorkspace = () => {
     selectedSession?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
   const openServiceDeliveryNotifications = unreadNotifications.filter(
     (notification) =>
-      notification.kind === "service-drinks" ||
-      notification.kind === "service-course-ready" ||
-      notification.kind === "self-order-payment"
+      notification.kind === "service-drinks" || notification.kind === "service-course-ready"
   );
   const acceptedServiceDeliveryNotifications = unreadNotifications.filter(
     (notification) =>
       (notification.kind === "service-drinks-accepted" ||
-        notification.kind === "service-course-ready-accepted" ||
-        notification.kind === "self-order-payment-accepted") &&
+        notification.kind === "service-course-ready-accepted") &&
       (!notification.acceptedByUserId || notification.acceptedByUserId === currentUser?.id)
   );
   const serviceDeliveryNotifications = [
@@ -1127,24 +1072,27 @@ export const WaiterWorkspace = () => {
 
   useEffect(() => {
     setReceiptPreview(null);
-    setSelectedPaymentUnits({});
+    setSelectedPaymentQuantities({});
     setLinkTableSelection(selectedTableId ? [selectedTableId] : []);
-    setIsSendAllConfirmationOpen(false);
   }, [selectedTableId]);
 
   useEffect(() => {
-    if (!isOrderWizardOpen && !isTableActionDialogOpen) return;
+    if (!isOrderWizardOpen && !isTableActionDialogOpen && !isPickupNameDialogOpen) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.requestAnimationFrame(() => {
-      orderWizardModalRef.current?.focus();
+      if (isPickupNameDialogOpen) {
+        document.getElementById("kiju-pickup-name")?.focus();
+      } else {
+        orderWizardModalRef.current?.focus();
+      }
     });
 
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOrderWizardOpen, isTableActionDialogOpen]);
+  }, [isOrderWizardOpen, isTableActionDialogOpen, isPickupNameDialogOpen]);
 
   useEffect(
     () => () => {
@@ -1202,20 +1150,17 @@ export const WaiterWorkspace = () => {
     setCurrentStep(step);
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
-    setCategoryDialogReturnStep("table");
     setCategoryDialogInitialItemIds([]);
-    setIsSendAllConfirmationOpen(false);
     setIsTableActionDialogOpen(false);
     setIsOrderWizardOpen(true);
   };
 
   const openTableActionForSelection = () => {
+    flushPendingSentItemNotes();
     setCurrentStep("table");
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
-    setCategoryDialogReturnStep("table");
     setCategoryDialogInitialItemIds([]);
-    setIsSendAllConfirmationOpen(false);
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(true);
   };
@@ -1231,54 +1176,21 @@ export const WaiterWorkspace = () => {
     setCurrentStep(course);
     setActiveCategoryDialog(course);
     setCategoryDialogStage("groups");
-    setCategoryDialogReturnStep("table");
     setActiveCourseGroup(initialGroup);
     setCategoryDialogInitialItemIds(initialItemIds);
     if (course === "drinks") {
       setActiveDrinkSubcategory(initialGroup);
     }
     setWaitPlannerOpen(false);
-  };
-
-  const openOrderOverview = () => {
-    flushPendingSentItemNotes();
-    setActiveCategoryDialog(null);
-    setCategoryDialogStage("groups");
-    setCategoryDialogInitialItemIds([]);
-    setIsSendAllConfirmationOpen(false);
-    setCurrentStep("overview");
-  };
-
-  const openOverviewCourseEditor = (course: CourseKey) => {
-    const nextProducts = getOrderableProducts(state.products, course);
-    const initialGroup =
-      buildCourseGroupOptions(course, nextProducts)[0]?.label ?? fallbackCourseGroup;
-    const initialItemIds =
-      selectedSession?.items
-        .filter((item) => item.category === course && !isOrderItemCanceled(item))
-        .map((item) => item.id) ?? [];
-
-    setCurrentStep(course);
-    setActiveCategoryDialog(course);
-    setCategoryDialogStage("review");
-    setCategoryDialogReturnStep("overview");
-    setActiveCourseGroup(initialGroup);
-    setCategoryDialogInitialItemIds(initialItemIds);
-    if (course === "drinks") {
-      setActiveDrinkSubcategory(initialGroup);
-    }
-    setWaitPlannerOpen(false);
-    setIsSendAllConfirmationOpen(false);
   };
 
   const closeCategoryDialog = () => {
-    if (isSecureTransferPending) return;
     flushPendingSentItemNotes();
     setActiveCategoryDialog(null);
     setCategoryDialogStage("groups");
     setCategoryDialogInitialItemIds([]);
     setWaitPlannerOpen(false);
-    setCurrentStep(categoryDialogReturnStep);
+    setCurrentStep("table");
   };
 
   const openCategoryProductGroup = (group: string) => {
@@ -1370,7 +1282,7 @@ export const WaiterWorkspace = () => {
     });
   };
 
-  const handleSendCourseToKitchen = async () => {
+  const handleSendCourseToKitchen = () => {
     if (!selectedTable) return;
 
     const result = actions.sendCourseToKitchen(selectedTable.id, activeCourse);
@@ -1388,22 +1300,14 @@ export const WaiterWorkspace = () => {
       return;
     }
 
-    setIsSecureTransferPending(true);
-    setServiceFeedback({
-      tone: "info",
-      title: "Wird sicher übertragen",
-      detail: "Die Bestellung bleibt geöffnet, bis der Server die Speicherung bestätigt."
-    });
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Noch nicht bestätigt",
-        detail: confirmation.message
-      });
-      return;
-    }
+    const syncHint =
+      activeCourse === "drinks"
+        ? sharedSync.status === "online"
+          ? "Der Bon ist für die Bar und andere Geräte jetzt im gemeinsamen Stand."
+          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein."
+        : sharedSync.status === "online"
+          ? "Der Bon ist für Küche und andere Geräte jetzt im gemeinsamen Stand."
+          : "Der Bon wurde lokal gespeichert. Für mehrere Geräte muss der gemeinsame Sync erreichbar sein.";
 
     setServiceFeedback({
       tone: "success",
@@ -1414,53 +1318,7 @@ export const WaiterWorkspace = () => {
         (activeCourse === "drinks"
           ? "Die Getränke wurden erfolgreich an die Bar gesendet."
           : "Die Positionen wurden erfolgreich an die Küche gesendet.")
-      } Die Speicherung wurde vom Server bestätigt.`
-    });
-  };
-
-  const handleSendAllPendingItems = async () => {
-    if (!selectedTable) return;
-
-    const result = actions.sendAllPendingItems(selectedTable.id);
-    if (!result.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Bestellung nicht gesendet",
-        detail: result.message ?? "Die offenen Positionen konnten nicht gesendet werden."
-      });
-      return;
-    }
-
-    setIsSecureTransferPending(true);
-    setServiceFeedback({
-      tone: "info",
-      title: "Wird sicher übertragen",
-      detail: "Alle offenen Positionen werden gespeichert. Der Dialog bleibt bis zur Bestätigung geöffnet."
-    });
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Bestellung nicht bestätigt",
-        detail: confirmation.message
-      });
-      return;
-    }
-
-    setIsSendAllConfirmationOpen(false);
-    const targetLabel =
-      result.targets.length === 2
-        ? "Bar und Küche"
-        : result.targets[0] === "bar"
-          ? "Bar"
-          : "Küche";
-    setServiceFeedback({
-      tone: "success",
-      title: "Bestellung vollständig gesendet",
-      detail: `${result.sentItemCount} ${
-        result.sentItemCount === 1 ? "Position wurde" : "Positionen wurden"
-      } an ${targetLabel} gesendet und vom Server bestätigt.`
+      } ${syncHint}`
     });
   };
 
@@ -1483,7 +1341,7 @@ export const WaiterWorkspace = () => {
     setWaitPlannerOpen((current) => !current);
   };
 
-  const confirmCourseWait = async () => {
+  const confirmCourseWait = () => {
     if (!selectedTable) return;
 
     const minutes = Number(waitMinutes);
@@ -1502,18 +1360,6 @@ export const WaiterWorkspace = () => {
         tone: "alert",
         title: "Wartezeit nicht gesetzt",
         detail: result.message ?? "Der Gang konnte nicht auf Warten gesetzt werden."
-      });
-      return;
-    }
-
-    setIsSecureTransferPending(true);
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Wartezeit nicht bestätigt",
-        detail: confirmation.message
       });
       return;
     }
@@ -1600,35 +1446,35 @@ export const WaiterWorkspace = () => {
     if (!selectedTable || !selectedSession) return;
     const tableName = preview.tableSummary;
 
-    const printRequest = {
+    if (preview.printMode === "reprint") {
+      actions.reprintReceipt(selectedTable.id, preview.sessionIds);
+    } else {
+      actions.printReceipt(selectedTable.id, preview.sessionIds);
+    }
+
+    const result = await createPrintJob({
       type: preview.printMode,
       receipt: preview.receipt,
       tableId: selectedTable.id,
       tableLabel: tableName
-    } as const;
-    setIsSecureTransferPending(true);
-    const result =
-      preview.printMode === "reprint"
-        ? await actions.reprintReceipt(selectedTable.id, preview.sessionIds, printRequest)
-        : await actions.printReceipt(selectedTable.id, preview.sessionIds, printRequest);
-    setIsSecureTransferPending(false);
-
-    setServiceFeedback({
-      tone: result?.ok ? "success" : "alert",
-      title:
-        result?.ok
-          ? preview.printMode === "reprint"
-            ? "Reprint sicher gespeichert"
-            : "Bon sicher gespeichert"
-          : preview.printMode === "reprint"
-            ? "Reprint nicht gespeichert"
-            : "Bon nicht gespeichert",
-      detail: result?.ok
-        ? `Der Druckauftrag für ${tableName} wurde dauerhaft auf dem Server eingereiht.`
-        : result?.message ?? "Der Druckauftrag konnte nicht sicher gespeichert werden."
     });
 
-    if (result?.ok && clearAfterSuccess) {
+    setServiceFeedback({
+      tone: result.ok ? "success" : "alert",
+      title:
+        result.ok
+          ? preview.printMode === "reprint"
+            ? "Reprint gesendet"
+            : "Bon gesendet"
+          : preview.printMode === "reprint"
+            ? "Reprint nicht gesendet"
+            : "Bon nicht gesendet",
+      detail: result.ok
+        ? `${tableName} wurde an den Netzwerkdrucker gesendet.`
+        : result.message ?? "Der Bon konnte nicht an den Netzwerkdrucker gesendet werden."
+    });
+
+    if (result.ok && clearAfterSuccess) {
       setReceiptPreview(null);
     }
   };
@@ -1650,44 +1496,48 @@ export const WaiterWorkspace = () => {
       openedAt,
       bedienung: resolveReceiptBedienung([session])
     });
-    setIsSecureTransferPending(true);
-    const result = await actions.reprintReceipt(session.tableId, [session.id], {
+    actions.reprintReceipt(session.tableId, [session.id]);
+
+    const result = await createPrintJob({
       type: "reprint",
       receipt,
       tableId: session.tableId,
       tableLabel: tableName
     });
-    setIsSecureTransferPending(false);
 
     setServiceFeedback({
-      tone: result?.ok ? "success" : "alert",
-      title: result?.ok ? "Reprint sicher gespeichert" : "Reprint nicht gespeichert",
-      detail: result?.ok
-        ? `Der Reprint für ${tableName} wurde dauerhaft auf dem Server eingereiht.`
-        : result?.message ?? "Der Reprint konnte nicht sicher gespeichert werden."
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Reprint gesendet" : "Reprint nicht gesendet",
+      detail: result.ok
+        ? `${tableName} wurde erneut an den Netzwerkdrucker gesendet.`
+        : result.message ?? "Der Reprint konnte nicht an den Netzwerkdrucker gesendet werden."
     });
   };
 
-  const togglePaymentUnit = (unitKey: string, checked: boolean) => {
-    setSelectedPaymentUnits((current) => ({
+  const setPaymentQuantity = (itemId: string, quantity: number, maxQuantity: number) => {
+    setSelectedPaymentQuantities((current) => ({
       ...current,
-      [unitKey]: checked
+      [itemId]: Math.min(maxQuantity, Math.max(0, Math.floor(quantity)))
     }));
   };
 
-  const selectAllPaymentItems = () => {
-    if (checkoutOpenUnitEntries.length === 0) return;
+  const togglePaymentItem = (itemId: string, checked: boolean, maxQuantity: number) => {
+    setPaymentQuantity(itemId, checked ? maxQuantity : 0, maxQuantity);
+  };
 
-    setSelectedPaymentUnits((current) => {
+  const selectAllPaymentItems = () => {
+    if (checkoutOpenEntries.length === 0) return;
+
+    setSelectedPaymentQuantities((current) => {
       const next = { ...current };
-      checkoutOpenUnitEntries.forEach(({ unitKey }) => {
-        next[unitKey] = true;
+      checkoutOpenEntries.forEach(({ item, openQuantity }) => {
+        next[item.id] = openQuantity;
       });
       return next;
     });
   };
 
-  const handleRecordPartialPayment = async () => {
+  const handleRecordPartialPayment = () => {
     if (!selectedTable) return;
 
     const result = actions.recordPartialPayment(
@@ -1697,37 +1547,19 @@ export const WaiterWorkspace = () => {
       selectedPaymentTotal === checkoutOpenTotal ? "Restzahlung" : "Teilzahlung"
     );
 
-    if (!result.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Zahlung nicht verbucht",
-        detail: result.message ?? "Bitte Auswahl prüfen."
-      });
-      return;
-    }
-
-    setIsSecureTransferPending(true);
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Zahlung nicht bestätigt",
-        detail: confirmation.message
-      });
-      return;
-    }
-
     setServiceFeedback({
-      tone: "success",
-      title: "Zahlung verbucht",
-      detail: "Die Zahlung wurde vom Server bestätigt."
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Zahlung verbucht" : "Zahlung nicht verbucht",
+      detail: result.message ?? (result.ok ? "Die ausgewählten Positionen sind bezahlt." : "Bitte Auswahl prüfen.")
     });
-    setSelectedPaymentUnits({});
-    setReceiptPreview(null);
+
+    if (result.ok) {
+      setSelectedPaymentQuantities({});
+      setReceiptPreview(null);
+    }
   };
 
-  const handleRecordInvoiceCancellation = async () => {
+  const handleRecordInvoiceCancellation = () => {
     if (!selectedTable || selectedPaymentLineItems.length === 0) return;
 
     const selectedQuantity = selectedPaymentLineItems.reduce(
@@ -1747,92 +1579,59 @@ export const WaiterWorkspace = () => {
       "Rechnungsstorno"
     );
 
-    if (!result.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Storno nicht gespeichert",
-        detail: result.message ?? "Bitte Auswahl prüfen."
-      });
-      return;
-    }
-
-    setIsSecureTransferPending(true);
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Storno nicht bestätigt",
-        detail: confirmation.message
-      });
-      return;
-    }
-
     setServiceFeedback({
-      tone: "success",
-      title: "Storno gespeichert",
-      detail: "Das Storno wurde vom Server bestätigt."
+      tone: result.ok ? "success" : "alert",
+      title: result.ok ? "Storno gespeichert" : "Storno nicht gespeichert",
+      detail:
+        result.message ??
+        (result.ok
+          ? "Die ausgewählten Positionen wurden storniert."
+          : "Bitte Auswahl prüfen.")
     });
-    setSelectedPaymentUnits({});
-    setReceiptPreview(null);
+
+    if (result.ok) {
+      setSelectedPaymentQuantities({});
+      setReceiptPreview(null);
+    }
   };
 
-  const handleClosePaidOrder = async () => {
+  const handleClosePaidOrder = () => {
     if (!selectedTable) return;
 
     const result = actions.closePaidOrder(selectedTable.id);
-    if (!result.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Noch nicht geschlossen",
-        detail: result.message ?? "Es sind noch Positionen offen."
-      });
-      return;
-    }
-
-    setIsSecureTransferPending(true);
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Abschluss nicht bestätigt",
-        detail: confirmation.message
-      });
-      return;
-    }
-
     const archivedCurrentTable = result.archivedTableIds?.includes(selectedTable.id) === true;
     setServiceFeedback({
-      tone: "success",
-      title: archivedCurrentTable ? "Abholtisch archiviert" : "Tisch geschlossen",
+      tone: result.ok ? "success" : "alert",
+      title: result.ok
+        ? archivedCurrentTable
+          ? "Abholtisch archiviert"
+          : "Tisch geschlossen"
+        : "Noch nicht geschlossen",
       detail:
         result.message ??
-        (archivedCurrentTable
+        (result.ok && archivedCurrentTable
           ? "Der Abholtisch wurde abgeschlossen und aus der Serviceansicht entfernt."
-          : "Der Abschluss wurde vom Server bestätigt.")
+          : result.ok
+          ? "Es sind keine offenen Positionen mehr vorhanden und der Tisch ist abgeschlossen."
+          : "Es sind noch Positionen offen.")
     });
 
-    if (archivedCurrentTable) {
+    if (result.ok && archivedCurrentTable) {
       setSelectedTableId(null);
       closeOrderWizard();
     }
   };
 
   const closeOrderWizard = () => {
-    if (isSecureTransferPending) return;
     flushPendingSentItemNotes();
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(false);
     setActiveCategoryDialog(null);
-    setCategoryDialogReturnStep("table");
-    setIsSendAllConfirmationOpen(false);
     setWaitPlannerOpen(false);
     setCurrentStep("table");
   };
 
   const goBack = () => {
-    if (isSecureTransferPending) return;
     if (currentStep === "table") {
       closeOrderWizard();
       return;
@@ -1845,12 +1644,6 @@ export const WaiterWorkspace = () => {
       } else {
         setCurrentStep("table");
       }
-      return;
-    }
-
-    if (currentStep === "overview") {
-      setIsSendAllConfirmationOpen(false);
-      setCurrentStep("table");
       return;
     }
 
@@ -1871,7 +1664,6 @@ export const WaiterWorkspace = () => {
   };
 
   const goNext = () => {
-    if (isSecureTransferPending) return;
     if (currentStep === "table") {
       if (!selectedTable) return;
       setCurrentStep("drinks");
@@ -1919,10 +1711,17 @@ export const WaiterWorkspace = () => {
         ? "Nachbestellung an Küche senden"
         : "Alles an Küche senden";
 
-  const handleCreatePickupTable = async () => {
-    const customerName = pickupCustomerName.trim().replace(/\s+/g, " ");
-    const locationName = pickupLocationName.trim().replace(/\s+/g, " ");
-    const result = actions.createPickupTable({ customerName, locationName });
+  const openPickupNameDialog = () => {
+    setPickupNameDraft("");
+    setIsPickupNameDialogOpen(true);
+  };
+
+  const handleCreatePickupTable = async (pickupName: string) => {
+    const normalizedPickupName = pickupName.trim();
+    const result = actions.createPickupTable({
+      customerName: normalizedPickupName,
+      locationName: "Abholung"
+    });
 
     if (!result.ok || !result.tableId || !result.tableName || !result.pickupNumber) {
       setServiceFeedback({
@@ -1933,31 +1732,31 @@ export const WaiterWorkspace = () => {
       return;
     }
 
-    setIsSecureTransferPending(true);
-    const confirmation = await result.confirmation;
-    setIsSecureTransferPending(false);
-    if (confirmation && !confirmation.ok) {
-      setServiceFeedback({
-        tone: "alert",
-        title: "Abholbon nicht bestätigt",
-        detail: confirmation.message
-      });
-      return;
-    }
-
     setSelectedTableId(result.tableId);
+    setIsPickupNameDialogOpen(false);
     setSelectedSeatId(usesSeatMode ? result.seatId ?? "" : "");
     setReceiptPreview(null);
-    setSelectedPaymentUnits({});
+    setSelectedPaymentQuantities({});
     setIsLinkTablesOpen(false);
-    setPickupCustomerName("");
-    setPickupLocationName("");
     openOrderWizard("table");
 
+    const printResult = await createPrintJob({
+      type: "pickup-ticket",
+      tableId: result.tableId,
+      tableLabel: result.tableName,
+      pickupNumber: result.pickupNumber,
+      customerName: normalizedPickupName,
+      locationName: "Abholung",
+      createdAt: result.createdAt
+    });
+
     setServiceFeedback({
-      tone: "success",
-      title: "Abholbon erstellt",
-      detail: `${result.tableName} für ${customerName} am Ort ${locationName} ist geöffnet und wurde gedruckt.`
+      tone: printResult.ok ? "success" : "alert",
+      title: printResult.ok ? "Abholbon erstellt" : "Abholbon erstellt, Druck prüfen",
+      detail: printResult.ok
+        ? `${result.tableName} ist geöffnet und der Kurzbon wurde an den Drucker gesendet.`
+        : printResult.message ??
+          `${result.tableName} ist geöffnet, aber der Kurzbon konnte nicht gedruckt werden.`
     });
   };
 
@@ -1993,19 +1792,12 @@ export const WaiterWorkspace = () => {
   const handleNotificationAction = (notification: (typeof unreadNotifications)[number]) => {
     if (
       isWaiterView &&
-      (notification.kind === "service-drinks" ||
-        notification.kind === "service-course-ready" ||
-        notification.kind === "self-order-payment")
+      (notification.kind === "service-drinks" || notification.kind === "service-course-ready")
     ) {
       actions.markNotificationRead(notification.id, "shared");
       setServiceFeedback({
         tone: "info",
-        title:
-          notification.kind === "service-drinks"
-            ? "Getränke angenommen"
-            : notification.kind === "self-order-payment"
-              ? "Bezahlung übernommen"
-              : "Speisen angenommen",
+        title: notification.kind === "service-drinks" ? "Getränke angenommen" : "Speisen angenommen",
         detail: "Alle im Service sehen jetzt, dass du dich darum kümmerst."
       });
       return;
@@ -2014,8 +1806,7 @@ export const WaiterWorkspace = () => {
     if (
       isWaiterView &&
       (notification.kind === "service-drinks-accepted" ||
-        notification.kind === "service-course-ready-accepted" ||
-        notification.kind === "self-order-payment-accepted")
+        notification.kind === "service-course-ready-accepted")
     ) {
       actions.markNotificationRead(notification.id, "shared");
       setServiceFeedback({
@@ -2023,8 +1814,6 @@ export const WaiterWorkspace = () => {
         title:
           notification.kind === "service-drinks-accepted"
             ? "Getränke ausgeliefert"
-            : notification.kind === "self-order-payment-accepted"
-              ? "Bezahlung erledigt"
             : "Speisen ausgeliefert",
         detail: "Der Auftrag wurde aus deiner Auslieferung entfernt."
       });
@@ -2330,26 +2119,12 @@ export const WaiterWorkspace = () => {
   };
 
   const renderActiveCourseItems = (emptyMessage: string) => {
-    if (
-      serviceBookedEditableItems.length === 0 &&
-      newEditableItems.length === 0 &&
-      sentEditableItems.length === 0
-    ) {
+    if (newEditableItems.length === 0 && sentEditableItems.length === 0) {
       return renderEditableItems([], emptyMessage);
     }
 
     return (
       <div className="kiju-order-editor__groups">
-        {serviceBookedEditableItems.length > 0 ? (
-          <section className="kiju-order-editor__group">
-            <div className="kiju-order-editor__group-title">
-              <strong>Im Service gebucht</strong>
-              <span>Keine Bestätigung nötig</span>
-            </div>
-            {renderEditableItems(serviceBookedEditableItems, emptyMessage)}
-          </section>
-        ) : null}
-
         {newEditableItems.length > 0 ? (
           <section className="kiju-order-editor__group">
             <div className="kiju-order-editor__group-title">
@@ -2383,24 +2158,13 @@ export const WaiterWorkspace = () => {
     if (
       categoryDialogNewItems.length === 0 &&
       categoryDialogExistingUnsentItems.length === 0 &&
-      categoryDialogSentItems.length === 0 &&
-      categoryDialogServiceItems.length === 0
+      categoryDialogSentItems.length === 0
     ) {
       return renderEditableItems([], emptyMessage);
     }
 
     return (
       <div className="kiju-order-editor__groups">
-        {categoryDialogServiceItems.length > 0 ? (
-          <section className="kiju-order-editor__group">
-            <div className="kiju-order-editor__group-title">
-              <strong>Im Service gebucht</strong>
-              <span>Keine Bestätigung nötig</span>
-            </div>
-            {renderEditableItems(categoryDialogServiceItems, emptyMessage)}
-          </section>
-        ) : null}
-
         {categoryDialogNewItems.length > 0 ? (
           <section className="kiju-order-editor__group">
             <div className="kiju-order-editor__group-title">
@@ -2468,31 +2232,31 @@ export const WaiterWorkspace = () => {
             <div className="kiju-checkout-table-group__header">
               <div>
                 <strong>{table.name}</strong>
-                <small>
-                  {entries.length} offene {entries.length === 1 ? "Position" : "Positionen"}
-                </small>
+                <small>{entries.length} offene Einträge</small>
               </div>
               <strong>{euro(openTotal)}</strong>
             </div>
 
             <div className="kiju-review-list kiju-wizard-payment-list">
-              {entries.map(({ item, openQuantity, unitTotal, unitIndex, unitKey }) => {
+              {entries.map(({ item, openQuantity, unitTotal }) => {
+                const selectedQuantity = selectedPaymentQuantities[item.id] ?? 0;
                 const modifierLabels = resolveItemModifierLabels(item, state.products);
 
                 return (
-                  <article key={`${table.id}-${unitKey}`} className="kiju-payment-line">
+                  <article key={`${table.id}-${item.id}`} className="kiju-payment-line">
                     <label>
                       <input
-                        name={`checkout-item-${unitKey}`}
+                        name={`checkout-item-${item.id}`}
                         type="checkbox"
-                        checked={Boolean(selectedPaymentUnits[unitKey])}
-                        onChange={(event) => togglePaymentUnit(unitKey, event.target.checked)}
+                        checked={selectedQuantity > 0}
+                        onChange={(event) =>
+                          togglePaymentItem(item.id, event.target.checked, openQuantity)
+                        }
                       />
                       <span>
                         <strong>{resolveProductName(state.products, item.productId)}</strong>
                         <small>
-                          {table.name} · {courseLabels[item.category]} · Portion {unitIndex + 1} von{" "}
-                          {openQuantity}
+                          {table.name} · {courseLabels[item.category]} · offen {openQuantity}
                         </small>
                         {modifierLabels.length > 0 || item.note ? (
                           <small>
@@ -2503,7 +2267,18 @@ export const WaiterWorkspace = () => {
                         ) : null}
                       </span>
                     </label>
-                    <strong>{euro(unitTotal)}</strong>
+                    <input
+                      name={`payment-quantity-${item.id}`}
+                      type="number"
+                      min={0}
+                      max={openQuantity}
+                      value={selectedQuantity}
+                      aria-label="Anzahl für Zahlung"
+                      onChange={(event) =>
+                        setPaymentQuantity(item.id, Number(event.target.value), openQuantity)
+                      }
+                    />
+                    <strong>{euro(unitTotal * selectedQuantity)}</strong>
                   </article>
                 );
               })}
@@ -2595,221 +2370,6 @@ export const WaiterWorkspace = () => {
       .filter((item) => item.category === course && !isOrderItemCanceled(item))
       .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
-  const resolveOverviewTargetLabel = (item: OrderItem) => {
-    const tableLabel = selectedTable?.name ?? "Tisch";
-    if (item.target.type === "table") return tableLabel;
-
-    const seatId = item.target.seatId;
-    const seatLabel =
-      selectedTable?.seats.find((seat) => seat.id === seatId)?.label ?? "Sitzplatz";
-    return `${tableLabel} · ${seatLabel}`;
-  };
-
-  const resolveOverviewCourseStatus = (items: OrderItem[]) => {
-    if (items.length === 0) {
-      return { label: "Keine Positionen", tone: "slate" as const };
-    }
-
-    const externallyPreparedItems = items.filter(
-      (item) => !isServiceBookedItem(item, state.products)
-    );
-    if (externallyPreparedItems.length === 0) {
-      return { label: "Im Service gebucht", tone: "green" as const };
-    }
-
-    const pendingCount = externallyPreparedItems.filter((item) => !item.sentAt).length;
-    if (pendingCount === 0) {
-      return { label: "Gesendet", tone: "green" as const };
-    }
-    if (pendingCount === externallyPreparedItems.length) {
-      return { label: "Noch nicht gesendet", tone: "amber" as const };
-    }
-
-    return { label: "Teilweise gesendet", tone: "navy" as const };
-  };
-
-  const renderOrderOverview = () => (
-    <section className="kiju-order-overview" aria-label="Bestellübersicht">
-      <div className="kiju-order-overview__summary">
-        <div>
-          <span>Gesamt</span>
-          <strong>{euro(activeOrderTotal)}</strong>
-        </div>
-        <div>
-          <span>Positionen</span>
-          <strong>{activeOrderItemCount}</strong>
-        </div>
-        <div>
-          <span>Noch zu senden</span>
-          <strong>{pendingOrderSummary.sentItemCount}</strong>
-        </div>
-      </div>
-
-      <div className="kiju-order-overview__groups">
-        {orderStepSequence.map((course) => {
-          const courseItems = activeOrderItems.filter((item) => item.category === course);
-          const courseQuantity = courseItems.reduce((sum, item) => sum + item.quantity, 0);
-          const courseTotal = courseItems.reduce(
-            (sum, item) => sum + calculateItemTotal(item, state.products),
-            0
-          );
-          const courseStatus = resolveOverviewCourseStatus(courseItems);
-
-          return (
-            <article key={course} className="kiju-order-overview-group">
-              <header className="kiju-order-overview-group__header">
-                <div>
-                  <span className="kiju-eyebrow">{courseLabels[course]}</span>
-                  <strong>
-                    {courseQuantity} {courseQuantity === 1 ? "Position" : "Positionen"} ·{" "}
-                    {euro(courseTotal)}
-                  </strong>
-                </div>
-                <div className="kiju-order-overview-group__actions">
-                  <StatusPill label={courseStatus.label} tone={courseStatus.tone} />
-                  <button
-                    type="button"
-                    className="kiju-button kiju-button--secondary"
-                    onClick={() => openOverviewCourseEditor(course)}
-                  >
-                    Bearbeiten
-                  </button>
-                </div>
-              </header>
-
-              {courseItems.length > 0 ? (
-                <div className="kiju-order-overview-group__items">
-                  {courseItems.map((item) => {
-                    const product = getProductById(state.products, item.productId);
-                    const extraIngredientLabels = resolveExtraIngredientLabels(
-                      item,
-                      product,
-                      extraIngredientsCatalog
-                    );
-                    const detailParts = [
-                      extraIngredientLabels.length > 0
-                        ? `Extras: ${extraIngredientLabels.join(", ")}`
-                        : null,
-                      item.note ? `Notiz: ${item.note}` : null
-                    ].filter((value): value is string => Boolean(value));
-
-                    return (
-                      <div key={item.id} className="kiju-order-overview-item">
-                        <div className="kiju-order-overview-item__main">
-                          <strong>
-                            {item.quantity} × {resolveProductName(state.products, item.productId)}
-                          </strong>
-                          <span>
-                            {resolveOverviewTargetLabel(item)} ·{" "}
-                            {euro(calculateItemTotal(item, state.products))}
-                          </span>
-                          {detailParts.length > 0 ? <small>{detailParts.join(" · ")}</small> : null}
-                        </div>
-                        <StatusPill
-                          label={
-                            isServiceBookedItem(item, state.products)
-                              ? "Im Service gebucht"
-                              : item.sentAt
-                                ? "Gesendet"
-                                : "Offen"
-                          }
-                          tone={
-                            isServiceBookedItem(item, state.products) || item.sentAt
-                              ? "green"
-                              : "amber"
-                          }
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="kiju-order-overview-group__empty">
-                  Noch keine Positionen erfasst.
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
-
-      <div className="kiju-order-overview__footer">
-        <div>
-          <strong>Alle offenen Positionen gemeinsam senden</strong>
-          <span>
-            Nur Artikel für Bar und Küche werden gesendet. Serviceartikel bleiben direkt gebucht.
-          </span>
-        </div>
-        <button
-          type="button"
-          className="kiju-button kiju-button--primary"
-          onClick={() => setIsSendAllConfirmationOpen(true)}
-          disabled={pendingOrderSummary.sentItemCount === 0 || isSecureTransferPending}
-        >
-          <ShoppingBag size={18} />
-          Alles senden
-        </button>
-      </div>
-
-      {isSendAllConfirmationOpen ? (
-        <div
-          className="kiju-order-overview-confirmation-backdrop"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="kiju-send-all-title"
-        >
-          <section className="kiju-order-overview-confirmation">
-            <div>
-              <span className="kiju-eyebrow">Sicherheitsprüfung</span>
-              <h3 id="kiju-send-all-title">Wirklich alles senden?</h3>
-              <p>
-                {pendingOrderSummary.sentItemCount} offene{" "}
-                {pendingOrderSummary.sentItemCount === 1 ? "Position wird" : "Positionen werden"}{" "}
-                jetzt verbindlich weitergegeben.
-              </p>
-            </div>
-            <div className="kiju-order-overview-confirmation__courses">
-              {pendingOrderSummary.affectedCourses.map((course) => {
-                const itemCount = pendingOrderSummary.byCourse[course].reduce(
-                  (sum, item) => sum + item.quantity,
-                  0
-                );
-
-                return (
-                  <div key={course}>
-                    <strong>{courseLabels[course]}</strong>
-                    <span>
-                      {itemCount} {itemCount === 1 ? "Position" : "Positionen"} ·{" "}
-                      {course === "drinks" ? "Bar" : "Küche"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="kiju-order-overview-confirmation__actions">
-              <button
-                type="button"
-                className="kiju-button kiju-button--secondary"
-                onClick={() => setIsSendAllConfirmationOpen(false)}
-                disabled={isSecureTransferPending}
-              >
-                Abbrechen
-              </button>
-              <button
-                type="button"
-                className="kiju-button kiju-button--primary"
-                onClick={handleSendAllPendingItems}
-                disabled={isSecureTransferPending}
-              >
-                {isSecureTransferPending ? "Wird übertragen ..." : "Jetzt alles senden"}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
-    </section>
-  );
-
   const renderCourseCategoryGrid = () => (
     <div className="kiju-category-start">
       <div className="kiju-category-start__header">
@@ -2819,9 +2379,7 @@ export const WaiterWorkspace = () => {
       <div className="kiju-course-choice-grid kiju-category-choice-grid" aria-label="Bestellkategorien">
         {orderStepSequence.map((course, index) => {
           const itemCount = getCourseItemQuantity(course);
-          const ticketState = selectedSession
-            ? resolveServiceCourseStatus(selectedSession, course, state.products)
-            : null;
+          const ticketState = selectedSession ? resolveServiceCourseStatus(selectedSession, course) : null;
 
           return (
             <button
@@ -2850,33 +2408,6 @@ export const WaiterWorkspace = () => {
             </button>
           );
         })}
-        <button
-          type="button"
-          className="kiju-course-choice kiju-category-choice kiju-category-choice--overview"
-          onClick={openOrderOverview}
-        >
-          <span className="kiju-category-choice__number">
-            <ShoppingBag size={20} />
-          </span>
-          <span className="kiju-category-choice__copy">
-            <strong>Bestellübersicht</strong>
-            <small>
-              {activeOrderItemCount === 0
-                ? "Noch keine Positionen"
-                : `${activeOrderItemCount} ${
-                    activeOrderItemCount === 1 ? "Position" : "Positionen"
-                  } · ${euro(activeOrderTotal)}`}
-            </small>
-          </span>
-          <StatusPill
-            label={
-              pendingOrderSummary.sentItemCount > 0
-                ? `${pendingOrderSummary.sentItemCount} offen`
-                : "Aktuell"
-            }
-            tone={pendingOrderSummary.sentItemCount > 0 ? "amber" : "green"}
-          />
-        </button>
       </div>
     </div>
   );
@@ -3153,7 +2684,7 @@ export const WaiterWorkspace = () => {
             <button
               type="button"
               className="kiju-button kiju-button--secondary"
-              onClick={closeCategoryDialog}
+              onClick={openTableActionForSelection}
             >
               <X size={16} />
               Schließen
@@ -3182,16 +2713,14 @@ export const WaiterWorkspace = () => {
 
             {categoryDialogStage === "review" ? (
               <div className="kiju-step-actions kiju-wizard-service-actions kiju-category-order-actions">
-                {waitableCourses.length > 0 ? (
-                  <button
-                    type="button"
-                    className="kiju-button kiju-button--secondary"
-                    onClick={openWaitPlanner}
-                  >
-                    <Clock3 size={18} />
-                    {serviceLabels.waiting}
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={openWaitPlanner}
+                >
+                  <Clock3 size={18} />
+                  {serviceLabels.waiting}
+                </button>
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
@@ -3199,28 +2728,23 @@ export const WaiterWorkspace = () => {
                 >
                   Gang überspringen
                 </button>
-                {activeCoursePendingSendCount > 0 ? (
-                  <button
-                    type="button"
+                <button
+                  type="button"
                   className="kiju-button kiju-button--primary"
                   onClick={handleSendCourseToKitchen}
-                  disabled={isSecureTransferPending}
-                  >
-                    {activeCourse === "drinks" ? (
-                      <>
-                        <Bell size={18} />
-                        {sendCourseActionLabel}
-                      </>
-                    ) : (
-                      <>
-                        <ChefHat size={18} />
-                        {sendCourseActionLabel}
-                      </>
-                    )}
-                  </button>
-                ) : activeCourseServiceItemCount > 0 ? (
-                  <StatusPill label="Direkt im Service gebucht" tone="green" />
-                ) : null}
+                >
+                  {activeCourse === "drinks" ? (
+                    <>
+                      <Bell size={18} />
+                      {sendCourseActionLabel}
+                    </>
+                  ) : (
+                    <>
+                      <ChefHat size={18} />
+                      {sendCourseActionLabel}
+                    </>
+                  )}
+                </button>
               </div>
             ) : null}
           </div>
@@ -3241,8 +2765,7 @@ export const WaiterWorkspace = () => {
             <span className="kiju-eyebrow">Kellner-Dashboard</span>
             <h1>Gastro KiJu</h1>
             <p>
-              Vollbild-Raumplan für den Service. Tisch antippen, nach unten springen und direkt am
-              Tisch weiterarbeiten.
+              Tisch auswählen und Bestellung, Service und Abrechnung direkt im Arbeitsbereich bearbeiten.
             </p>
           </div>
           <div className="kiju-topbar-actions">
@@ -3322,11 +2845,8 @@ export const WaiterWorkspace = () => {
                     ? "Getränke-Service"
                     : primaryServiceDeliveryNotification.kind === "service-course-ready"
                       ? "Küchenpass"
-                    : primaryServiceDeliveryNotification.kind === "self-order-payment"
-                      ? "Bezahlung"
                     : primaryServiceDeliveryNotification.kind === "service-drinks-accepted" ||
-                        primaryServiceDeliveryNotification.kind === "service-course-ready-accepted" ||
-                        primaryServiceDeliveryNotification.kind === "self-order-payment-accepted"
+                        primaryServiceDeliveryNotification.kind === "service-course-ready-accepted"
                       ? "Übernommen"
                       : "Serviceauftrag"}
                 </span>
@@ -3340,8 +2860,7 @@ export const WaiterWorkspace = () => {
               >
                 <CheckCircle2 size={18} />
                 {primaryServiceDeliveryNotification.kind === "service-drinks" ||
-                primaryServiceDeliveryNotification.kind === "service-course-ready" ||
-                primaryServiceDeliveryNotification.kind === "self-order-payment"
+                primaryServiceDeliveryNotification.kind === "service-course-ready"
                   ? "Annehmen"
                   : "Erledigt"}
               </button>
@@ -3389,8 +2908,7 @@ export const WaiterWorkspace = () => {
                       <strong>{notification.title}</strong>
                       <span>{notification.body}</span>
                       {notification.kind === "service-drinks-accepted" ||
-                      notification.kind === "service-course-ready-accepted" ||
-                      notification.kind === "self-order-payment-accepted" ? (
+                      notification.kind === "service-course-ready-accepted" ? (
                         <small>Angenommen von {notification.acceptedByName ?? "Service"}</small>
                       ) : null}
                     </div>
@@ -3401,8 +2919,7 @@ export const WaiterWorkspace = () => {
                     >
                       <CheckCircle2 size={18} />
                       {notification.kind === "service-drinks-accepted" ||
-                      notification.kind === "service-course-ready-accepted" ||
-                      notification.kind === "self-order-payment-accepted"
+                      notification.kind === "service-course-ready-accepted"
                         ? "Erledigt"
                         : "Annehmen"}
                     </button>
@@ -3413,121 +2930,7 @@ export const WaiterWorkspace = () => {
           </section>
         ) : null}
 
-        {isWaiterView && currentStep === "table" && !isOrderWizardOpen && !isTableActionDialogOpen ? (
-          <section className="kiju-waiter-room-map" aria-label="Raumstruktur und Tischwahl">
-            <header className="kiju-waiter-room-map__header">
-              <div>
-                <span className="kiju-eyebrow">Raumstruktur</span>
-                <h2>Tisch auswählen</h2>
-                <p>Innenbereich und Außenbereich in einer klaren Ansicht.</p>
-              </div>
-              <div className="kiju-waiter-room-map__legend" aria-label="Bereiche">
-                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--inside">
-                  Innen
-                </span>
-                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--outside">
-                  Draußen
-                </span>
-              </div>
-            </header>
-
-            <div className="kiju-waiter-room-map__canvas">
-              <img
-                src={waiterRoomMapImageSrc}
-                alt="Grundriss des KiJu-Gastraums mit Innenbereich, Außenbereich, Abholbereich und Funktionsräumen"
-                className="kiju-waiter-room-map__image"
-                loading="eager"
-                decoding="async"
-              />
-              <div className="kiju-waiter-room-map__overlay">
-                {waiterRoomTableConfigs.map((config) => {
-                  const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
-                  if (config.tableId && !entry) return null;
-
-                  const isSelected = entry?.table.id === selectedTableId;
-                  const tableTypeLabel =
-                    config.kind === "beer"
-                      ? "Biertisch"
-                      : config.kind === "round"
-                        ? "Rundtisch"
-                        : "Tisch";
-
-                  return (
-                    <button
-                      key={config.id}
-                      type="button"
-                      className={`kiju-waiter-room-table kiju-waiter-room-table--${config.kind}${
-                        isSelected ? " is-selected" : ""
-                      }`}
-                      data-table-number={config.number}
-                      style={{
-                        left: `${config.left}%`,
-                        top: `${config.top}%`,
-                        width: `${config.width}%`,
-                        height: `${config.height}%`
-                      }}
-                      aria-label={`${config.title} auswählen`}
-                      onClick={() => {
-                        if (entry) selectTable(entry.table.id);
-                      }}
-                    >
-                      <strong>{config.number}</strong>
-                      <span className="kiju-waiter-room-table__kind">{tableTypeLabel}</span>
-                      <small>{entry ? statusLabel[entry.status] ?? "Status" : "Status"}</small>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div
-              className="kiju-waiter-room-number-picker"
-              role="group"
-              aria-label="Schnellauswahl der Tische und Abholbons"
-            >
-              {waiterRoomTableConfigs.map((config) => {
-                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
-                const isSelected = entry?.table.id === selectedTableId;
-
-                return (
-                  <button
-                    key={`quick-${config.id}`}
-                    type="button"
-                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--${config.kind}${
-                      isSelected ? " is-selected" : ""
-                    }`}
-                    aria-label={`${config.title} auswählen`}
-                    aria-pressed={isSelected}
-                    disabled={!entry}
-                    onClick={() => entry && selectTable(entry.table.id)}
-                  >
-                    {config.number}
-                  </button>
-                );
-              })}
-              {pickupMenuEntries.map((entry) => {
-                const rawNumber =
-                  entry.table.id.match(/table-(\d+)/i)?.[1] ?? entry.table.name.match(/(\d+)/)?.[1];
-                const number = rawNumber ? Number(rawNumber) : null;
-                const isSelected = entry.table.id === selectedTableId;
-
-                return (
-                  <button
-                    key={`quick-pickup-${entry.table.id}`}
-                    type="button"
-                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--pickup${
-                      isSelected ? " is-selected" : ""
-                    }`}
-                    aria-label={`Abholbon ${number ?? entry.table.name} für ${entry.table.pickupName?.trim() || "Abholung"} auswählen`}
-                    aria-pressed={isSelected}
-                    onClick={() => selectTable(entry.table.id)}
-                  >
-                    {number ?? entry.table.name}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ) : !isWaiterView ? (
+        {!isWaiterView ? (
           <section className="kiju-metric-grid">
             <MetricCard
               label="Aktive Tische"
@@ -3571,92 +2974,128 @@ export const WaiterWorkspace = () => {
           </section>
         ) : null}
 
-        {isWaiterView && currentStep === "table" ? (
-          <section className="kiju-table-overview-panel" aria-label="Tischübersicht">
-            <SectionCard
-              title="Tischübersicht"
-              eyebrow="Alle Service-Tische"
-              action={
-                <StatusPill
-                  label={`${waiterMenuEntries.length} Tische`}
-                  tone="navy"
-                />
-              }
-            >
-              <div className="kiju-table-menu kiju-table-menu--compact">
-                {waiterMenuEntries.map((entry) => {
-                  const manualPickupDetail = getManualPickupTableDetail(entry.table);
+        {isWaiterView && currentStep === "table" && !isOrderWizardOpen && !isTableActionDialogOpen ? (
+          <section className="kiju-waiter-room-map" aria-label="Raumstruktur und Tischwahl">
+            <header className="kiju-waiter-room-map__header">
+              <div>
+                <span className="kiju-eyebrow">Raumstruktur</span>
+                <h2>Tisch auswählen</h2>
+                <p>Innenbereich und Außenbereich in einer klaren Ansicht.</p>
+              </div>
+              <div className="kiju-waiter-room-map__legend" aria-label="Bereiche">
+                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--inside">
+                  Innen
+                </span>
+                <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--outside">
+                  Draußen
+                </span>
+              </div>
+            </header>
 
-                  return (
-                    <button
-                      key={entry.table.id}
-                      type="button"
-                      className={`kiju-table-menu__button ${
-                        entry.table.id === selectedTableId ? "is-selected" : ""
-                      }`}
-                      onClick={() => selectTable(entry.table.id)}
-                    >
-                      <strong>{entry.table.name}</strong>
-                      <small>
-                        {entry.session?.selfOrder
-                          ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName} · `
-                          : manualPickupDetail
-                            ? `${manualPickupDetail} · `
-                            : ""}
-                        {statusLabel[entry.status] ?? "Status"} · {euro(entry.total)}
-                      </small>
-                    </button>
-                  );
+            <div className="kiju-waiter-room-map__canvas">
+              <img
+                src={waiterRoomMapImageSrc}
+                 alt="Grundriss des KiJu-Gastraums mit Innenbereich, Außenbereich, Abholbereich und Funktionsräumen"
+                className="kiju-waiter-room-map__image"
+                loading="eager"
+                decoding="async"
+              />
+              <div className="kiju-waiter-room-map__overlay">
+                {waiterRoomTableConfigs.map((config) => {
+                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
+                if (config.tableId && !entry) return null;
+
+                const isSelected = entry?.table.id === selectedTableId;
+                const tableTypeLabel =
+                  config.kind === "beer"
+                    ? "Biertisch"
+                    : config.kind === "round"
+                      ? "Rundtisch"
+                      : "Tisch";
+
+                return (
+                  <button
+                    key={config.id}
+                    type="button"
+                    className={`kiju-waiter-room-table kiju-waiter-room-table--${config.kind}${
+                      isSelected ? " is-selected" : ""
+                    }`}
+                    data-table-number={config.number}
+                    style={{
+                      left: `${config.left}%`,
+                      top: `${config.top}%`,
+                      width: `${config.width}%`,
+                      height: `${config.height}%`
+                    }}
+                    aria-label={`${config.title} auswählen`}
+                    onClick={() => {
+                      if (entry) selectTable(entry.table.id);
+                    }}
+                  >
+                    <strong>{config.number}</strong>
+                    <span className="kiju-waiter-room-table__kind">{tableTypeLabel}</span>
+                    <small>{entry ? statusLabel[entry.status] ?? "Status" : "Status"}</small>
+                  </button>
+                );
                 })}
               </div>
-              <form
-                className="kiju-pickup-create-panel"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void handleCreatePickupTable();
-                }}
-              >
-                <div className="kiju-pickup-create-panel__header">
-                  <div>
-                    <strong>Abholbon erstellen</strong>
-                    <span>Name und Ort sind Pflicht und werden auf dem Abholbon gedruckt.</span>
-                  </div>
-                  <StatusPill label="Pflichtdaten" tone="amber" />
-                </div>
-                <div className="kiju-pickup-create-panel__fields">
-                  <label className="kiju-inline-field">
-                    <span>Name</span>
-                    <input
-                      value={pickupCustomerName}
-                      onChange={(event) => setPickupCustomerName(event.target.value)}
-                      placeholder="Name des Kunden"
-                      minLength={2}
-                      maxLength={80}
-                      required
-                    />
-                  </label>
-                  <label className="kiju-inline-field">
-                    <span>Ort</span>
-                    <input
-                      value={pickupLocationName}
-                      onChange={(event) => setPickupLocationName(event.target.value)}
-                      placeholder="Zum Beispiel Tresen oder Terrasse"
-                      minLength={2}
-                      maxLength={80}
-                      required
-                    />
-                  </label>
-                </div>
+            </div>
+            <div className="kiju-waiter-room-number-picker" role="group" aria-label="Schnellauswahl der Tische und Abholbons">
+              {waiterRoomTableConfigs.map((config) => {
+                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
+                const isSelected = entry?.table.id === selectedTableId;
+
+                return (
+                  <button
+                    key={`quick-${config.id}`}
+                    type="button"
+                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--${config.kind}${
+                      isSelected ? " is-selected" : ""
+                    }`}
+                    aria-label={`${config.title} auswählen`}
+                    aria-pressed={isSelected}
+                    disabled={!entry}
+                    onClick={() => entry && selectTable(entry.table.id)}
+                  >
+                    {config.number}
+                  </button>
+                );
+              })}
+              {pickupMenuEntries.map((entry) => {
+                const rawNumber = entry.table.id.match(/table-(\d+)/i)?.[1] ?? entry.table.name.match(/(\d+)/)?.[1];
+                const number = rawNumber ? Number(rawNumber) : null;
+                const isSelected = entry.table.id === selectedTableId;
+
+                return (
+                  <button
+                    key={`quick-pickup-${entry.table.id}`}
+                    type="button"
+                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--pickup${
+                      isSelected ? " is-selected" : ""
+                    }`}
+                    aria-label={`Abholbon ${number ?? entry.table.name} für ${entry.table.pickupName?.trim() || "Abholung"} auswählen`}
+                    aria-pressed={isSelected}
+                    onClick={() => selectTable(entry.table.id)}
+                  >
+                    {number ?? entry.table.name}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {isWaiterView && currentStep === "table" && !isOrderWizardOpen && !isTableActionDialogOpen ? (
+          <section className="kiju-waiter-table-toolbar" aria-label="Weitere Tischaktionen">
+            <div className="kiju-step-actions">
                 <button
-                  type="submit"
+                  type="button"
                   className="kiju-button kiju-button--primary"
-                  disabled={isSecureTransferPending}
+                  onClick={openPickupNameDialog}
                 >
                   <ShoppingBag size={18} />
                   Abholbon erstellen
                 </button>
-              </form>
-              <div className="kiju-step-actions">
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
@@ -3745,7 +3184,6 @@ export const WaiterWorkspace = () => {
                   ) : null}
                 </div>
               ) : null}
-            </SectionCard>
           </section>
         ) : null}
 
@@ -3804,11 +3242,13 @@ export const WaiterWorkspace = () => {
             <div className="kiju-table-action-dialog" tabIndex={-1}>
               <div>
                 <span className="kiju-eyebrow">Tisch ausgewählt</span>
-                <h2 id="kiju-table-action-title">{selectedTable.name}</h2>
+                <h2 id="kiju-table-action-title">
+                  {selectedTable.pickupName?.trim()
+                    ? `${selectedTable.name} · ${selectedTable.pickupName.trim()}`
+                    : selectedTable.name}
+                </h2>
                 <p>
-                  {selectedSession?.selfOrder
-                    ? `${selectedSession.selfOrder.customerName} · ${selectedSession.selfOrder.guestCount} Personen · ${selectedSession.selfOrder.locationName}`
-                    : linkedTableGroup
+                  {linkedTableGroup
                     ? `Gekoppelt: ${linkedTableGroup.label}`
                     : "Was möchtest du als Nächstes machen?"}
                 </p>
@@ -3849,7 +3289,7 @@ export const WaiterWorkspace = () => {
                 className="kiju-button kiju-button--secondary"
                 onClick={closeOrderWizard}
               >
-                Zurück zum Raumplan
+                Zurück zur Tischauswahl
               </button>
             </div>
           </section>
@@ -3889,8 +3329,6 @@ export const WaiterWorkspace = () => {
                           ? "Getränke-Service"
                           : primaryServiceDeliveryNotification.kind === "service-course-ready"
                             ? "Küchenpass"
-                            : primaryServiceDeliveryNotification.kind === "self-order-payment"
-                              ? "Bezahlung"
                             : "Übernommen"}
                       </span>
                       <strong>{primaryServiceDeliveryNotification.title}</strong>
@@ -3908,8 +3346,7 @@ export const WaiterWorkspace = () => {
                     >
                       <CheckCircle2 size={18} />
                       {primaryServiceDeliveryNotification.kind === "service-drinks" ||
-                      primaryServiceDeliveryNotification.kind === "service-course-ready" ||
-                      primaryServiceDeliveryNotification.kind === "self-order-payment"
+                      primaryServiceDeliveryNotification.kind === "service-course-ready"
                         ? "Annehmen"
                         : "Erledigt"}
                     </button>
@@ -3991,11 +3428,7 @@ export const WaiterWorkspace = () => {
                             <strong>Auswahl</strong>
                             <span>{euro(selectedPaymentTotal)}</span>
                             <small>
-                              {selectedPaymentQuantityTotal}{" "}
-                              {selectedPaymentQuantityTotal === 1
-                                ? "Position"
-                                : "Positionen"}{" "}
-                              ausgewählt
+                              {selectedPaymentQuantityTotal}x in {selectedPaymentLineItems.length} Einträgen
                             </small>
                           </div>
                         </div>
@@ -4004,7 +3437,7 @@ export const WaiterWorkspace = () => {
                             type="button"
                             className="kiju-button kiju-button--primary"
                             onClick={handleRecordPartialPayment}
-                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
+                            disabled={selectedPaymentLineItems.length === 0}
                           >
                             Auswahl bezahlt
                           </button>
@@ -4012,7 +3445,7 @@ export const WaiterWorkspace = () => {
                             type="button"
                             className="kiju-button kiju-button--danger"
                             onClick={handleRecordInvoiceCancellation}
-                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
+                            disabled={selectedPaymentLineItems.length === 0}
                           >
                             Auswahl stornieren
                           </button>
@@ -4020,7 +3453,7 @@ export const WaiterWorkspace = () => {
                             type="button"
                             className="kiju-button kiju-button--danger"
                             onClick={handleClosePaidOrder}
-                            disabled={checkoutOpenTotal > 0 || isSecureTransferPending}
+                            disabled={checkoutOpenTotal > 0}
                           >
                             {serviceLabels.closeOrder}
                           </button>
@@ -4078,8 +3511,6 @@ export const WaiterWorkspace = () => {
                       {renderReceiptDraftPreviewPanel()}
                     </div>
                   </div>
-                ) : currentStep === "overview" ? (
-                  renderOrderOverview()
                 ) : (
                   renderCourseCategoryGrid()
                 )}
@@ -4090,17 +3521,9 @@ export const WaiterWorkspace = () => {
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
-                  onClick={
-                    currentStep === "checkout" || currentStep === "overview"
-                      ? goBack
-                      : closeOrderWizard
-                  }
+                  onClick={currentStep === "checkout" ? goBack : closeOrderWizard}
                 >
-                  {currentStep === "checkout"
-                    ? "Zurück"
-                    : currentStep === "overview"
-                      ? "Zurück zu Kategorien"
-                      : "Zum Raumplan"}
+                  {currentStep === "checkout" ? "Zurück" : "Zurück zur Tischauswahl"}
                 </button>
                 <div className="kiju-wizard-footer__actions">
                   {currentStep === "checkout" ? (
@@ -4137,30 +3560,22 @@ export const WaiterWorkspace = () => {
             >
               {currentStep === "table" && waiterMenuEntries.length > 0 ? (
                 <div className="kiju-table-menu" role="tablist" aria-label="Tischauswahl">
-                  {waiterMenuEntries.map((entry) => {
-                    const manualPickupDetail = getManualPickupTableDetail(entry.table);
-
-                    return (
-                      <button
-                        key={entry.table.id}
-                        type="button"
-                        className={`kiju-table-menu__button ${entry.table.id === selectedTableId ? "is-selected" : ""}`}
-                        onClick={() => selectTable(entry.table.id)}
-                      >
-                        <strong>{entry.table.name}</strong>
-                        <small>
-                          {entry.session?.selfOrder
-                            ? `${entry.session.selfOrder.customerName} · ${entry.session.selfOrder.guestCount} Personen · ${entry.session.selfOrder.locationName}`
-                            : manualPickupDetail
-                              ? manualPickupDetail
-                              : serviceOrderMode === "seat"
-                                ? `${getVisibleSeats(entry.table.seats).length} sichtbare Plätze`
-                                : "Tischmodus"}{" "}
-                          · {statusLabel[entry.status] ?? "Status"}
-                        </small>
-                      </button>
-                    );
-                  })}
+                  {waiterMenuEntries.map((entry) => (
+                    <button
+                      key={entry.table.id}
+                      type="button"
+                      className={`kiju-table-menu__button ${entry.table.id === selectedTableId ? "is-selected" : ""}`}
+                      onClick={() => selectTable(entry.table.id)}
+                    >
+                      <strong>{entry.table.name}</strong>
+                      <small>
+                        {serviceOrderMode === "seat"
+                          ? `${getVisibleSeats(entry.table.seats).length} sichtbare Plätze`
+                          : "Tischmodus"}{" "}
+                        · {statusLabel[entry.status] ?? "Status"}
+                      </small>
+                    </button>
+                  ))}
                 </div>
               ) : null}
 
@@ -4282,21 +3697,21 @@ export const WaiterWorkspace = () => {
                           <button
                             className="kiju-button kiju-button--primary"
                             onClick={handleRecordPartialPayment}
-                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
+                            disabled={selectedPaymentLineItems.length === 0}
                           >
                             Auswahl bezahlt
                           </button>
                           <button
                             className="kiju-button kiju-button--danger"
                             onClick={handleRecordInvoiceCancellation}
-                            disabled={selectedPaymentLineItems.length === 0 || isSecureTransferPending}
+                            disabled={selectedPaymentLineItems.length === 0}
                           >
                             Auswahl stornieren
                           </button>
                           <button
                             className="kiju-button kiju-button--danger"
                             onClick={handleClosePaidOrder}
-                            disabled={checkoutOpenTotal > 0 || isSecureTransferPending}
+                            disabled={checkoutOpenTotal > 0}
                           >
                             {serviceLabels.closeOrder}
                           </button>
@@ -4501,42 +3916,35 @@ export const WaiterWorkspace = () => {
                       ) : null}
 
                       <div className="kiju-step-actions">
-                        {waitableCourses.length > 0 ? (
-                          <button
-                            className="kiju-button kiju-button--secondary"
-                            onClick={openWaitPlanner}
-                          >
-                            <Clock3 size={18} />
-                            {serviceLabels.waiting}
-                          </button>
-                        ) : null}
+                        <button
+                          className="kiju-button kiju-button--secondary"
+                          onClick={openWaitPlanner}
+                        >
+                          <Clock3 size={18} />
+                          {serviceLabels.waiting}
+                        </button>
                         <button
                           className="kiju-button kiju-button--secondary"
                           onClick={() => actions.skipCourse(selectedTable.id, activeCourse)}
                         >
                           Gang überspringen
                         </button>
-                        {activeCoursePendingSendCount > 0 ? (
-                          <button
-                            className="kiju-button kiju-button--primary"
-                            onClick={handleSendCourseToKitchen}
-                            disabled={isSecureTransferPending}
-                          >
-                            {activeCourse === "drinks" ? (
-                              <>
-                                <Bell size={18} />
-                                {sendCourseActionLabel}
-                              </>
-                            ) : (
-                              <>
-                                <ChefHat size={18} />
-                                {sendCourseActionLabel}
-                              </>
-                            )}
-                          </button>
-                        ) : activeCourseServiceItemCount > 0 ? (
-                          <StatusPill label="Direkt im Service gebucht" tone="green" />
-                        ) : null}
+                        <button
+                          className="kiju-button kiju-button--primary"
+                          onClick={handleSendCourseToKitchen}
+                        >
+                          {activeCourse === "drinks" ? (
+                            <>
+                              <Bell size={18} />
+                              {sendCourseActionLabel}
+                            </>
+                          ) : (
+                            <>
+                              <ChefHat size={18} />
+                              {sendCourseActionLabel}
+                            </>
+                          )}
+                        </button>
                       </div>
                     </>
                   ) : (
@@ -4743,6 +4151,58 @@ export const WaiterWorkspace = () => {
                 </button>
               </div>
             </div>
+          </section>
+        ) : null}
+
+        {isPickupNameDialogOpen ? (
+          <section
+            className="kiju-service-section kiju-order-wizard-overlay kiju-pickup-name-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kiju-pickup-name-title"
+          >
+            <form
+              className="kiju-pickup-name-dialog"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (pickupNameDraft.trim()) void handleCreatePickupTable(pickupNameDraft);
+              }}
+            >
+              <div>
+                <span className="kiju-eyebrow">Abholung</span>
+                <h2 id="kiju-pickup-name-title">Abholbon erstellen</h2>
+                <p>Wie heißt die Person, die die Bestellung abholt?</p>
+              </div>
+              <label className="kiju-pickup-name-field" htmlFor="kiju-pickup-name">
+                <span>Name der abholenden Person</span>
+                <input
+                  id="kiju-pickup-name"
+                  name="pickup-name"
+                  type="text"
+                  value={pickupNameDraft}
+                  maxLength={60}
+                  autoComplete="name"
+                  required
+                  onChange={(event) => setPickupNameDraft(event.target.value)}
+                />
+              </label>
+              <div className="kiju-pickup-name-dialog__actions">
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={() => setIsPickupNameDialogOpen(false)}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="submit"
+                  className="kiju-button kiju-button--primary"
+                  disabled={!pickupNameDraft.trim()}
+                >
+                  Abholbon erstellen
+                </button>
+              </div>
+            </form>
           </section>
         ) : null}
       </main>

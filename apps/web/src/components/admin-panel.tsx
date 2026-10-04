@@ -77,6 +77,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.11.15-beta",
+    date: "2026-10-04",
+    time: "17:10 +02:00",
+    type: "Wiederherstellung",
+    title: "Vollständige Kellneransicht wiederhergestellt",
+    summary:
+      "Die Kellneransicht entspricht wieder dem vollständigen lokalen Stand vor dem Merge.",
+    categories: ["Service", "Tischansicht", "Bestellübersicht"],
+    changes: [
+      "Der gesamte Kellner-Arbeitsbereich wurde auf den letzten vollständigen Vor-Merge-Stand zurückgesetzt.",
+      "Innen- und Außenbereich, Tischplan, Bestellübersicht und Abholbon-Abläufe sind wieder gemeinsam enthalten."
+    ]
+  },
+  {
     version: "0.11.14-beta",
     date: "2026-10-04",
     time: "16:53 +02:00",
