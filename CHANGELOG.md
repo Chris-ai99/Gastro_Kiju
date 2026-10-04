@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.16-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:16 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der VPS-Deploy wendet Datenbankmigrationen vor dem Neustart der API an.
+- Änderungen:
+  `prisma migrate deploy` erhält die Datenbankadresse aus der laufenden API-Dienstumgebung, ohne sie im Deploy-Protokoll auszugeben.
+
 ## 0.12.15-beta
 - Datum: 2026-10-04
 - Uhrzeit: 20:10 +02:00

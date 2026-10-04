@@ -133,6 +133,20 @@ if [[ -d "${release_dir}/apps/web/public" ]]; then
   runuser -u kiju-wawi -- cp -a "${release_dir}/apps/web/public" "${standalone_web_dir}/public"
 fi
 
+api_pid="$(systemctl show --property=MainPID --value "${API_SERVICE}")"
+[[ "${api_pid}" =~ ^[1-9][0-9]*$ && -r "/proc/${api_pid}/environ" ]] \
+  || die "Der laufende API-Prozess für die Datenbankmigration ist nicht erreichbar."
+database_url="$(tr '\0' '\n' < "/proc/${api_pid}/environ" | sed -n 's/^DATABASE_URL=//p')"
+[[ -n "${database_url}" ]] || die "DATABASE_URL fehlt in der API-Dienstumgebung."
+echo "Wende ausstehende Datenbankmigrationen an."
+runuser -u kiju-wawi -- env \
+  HOME=/home/kiju-wawi \
+  PATH="${PATH}" \
+  DATABASE_URL="${database_url}" \
+  bash -c 'cd "$1" && pnpm --filter @kiju/api prisma:migrate:deploy' \
+  _ "${release_dir}"
+unset database_url
+
 [[ -L "${APP_ROOT}/api-current" ]] || die "Der API-Release-Link fehlt."
 [[ -L "${APP_ROOT}/current" ]] || die "Der Web-Release-Link fehlt."
 old_api_target="$(readlink "${APP_ROOT}/api-current")"
