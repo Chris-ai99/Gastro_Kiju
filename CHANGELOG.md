@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.14-beta
+- Datum: 2026-10-04
+- Uhrzeit: 20:04 +02:00
+- Typ: Fix
+- Zusammenfassung:
+  Der VPS-Deploy erzeugt den API-Starteinstieg bei Bedarf direkt mit TypeScript.
+- Änderungen:
+  Wenn NestJS keinen API-Einstieg im Build-Verzeichnis ablegt, kompiliert der Deploy die API mit `tsc` und sucht anschließend erneut nach `main.js`.
+
 ## 0.12.13-beta
 - Datum: 2026-10-04
 - Uhrzeit: 19:57 +02:00

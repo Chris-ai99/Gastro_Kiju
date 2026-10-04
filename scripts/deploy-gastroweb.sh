@@ -111,6 +111,12 @@ standalone_web_dir="${release_dir}/apps/web/.next/standalone/apps/web"
 api_dist_dir="${release_dir}/apps/api/dist"
 api_runtime_entry="${api_dist_dir}/main.js"
 if [[ ! -f "${api_runtime_entry}" ]]; then
+  echo "Nest hat keinen API-Starteinstieg im erwarteten Verzeichnis erzeugt; kompiliere die API direkt mit TypeScript."
+  runuser -u kiju-wawi -- env \
+    HOME=/home/kiju-wawi \
+    PATH="${PATH}" \
+    bash -c 'cd "$1/apps/api" && pnpm exec tsc --project tsconfig.json --incremental false' \
+    _ "${release_dir}"
   api_entry="$(find "${api_dist_dir}" -type f -name 'main.js' -print -quit)"
   [[ -n "${api_entry}" ]] || die "Der API-Build fehlt."
   api_entry_relative="${api_entry#"${api_dist_dir}/"}"
