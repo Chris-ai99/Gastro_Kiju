@@ -508,14 +508,27 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
     </div>
   );
 
-  const renderTicketCard = (ticket: PassTicket) => {
-    const canMarkCompleted = ticket.status === "ready";
+  const renderTicketCard = (ticket: PassTicket, options?: { archived?: boolean }) => {
+    const isArchived = options?.archived === true;
+    const canMarkCompleted = !isArchived && ticket.status === "ready";
     const canReleaseWait = config.showWaitControls && ticket.status === "countdown";
-    const canToggleKitchenUnits = station === "kitchen" && ticket.status === "ready";
+    const canToggleKitchenUnits =
+      !isArchived && station === "kitchen" && ticket.status === "ready";
+    const displayedItemCount = isArchived
+      ? ticket.lines.reduce((sum, line) => sum + line.quantity, 0)
+      : ticket.itemCount;
+    const displayedItemCountLabel =
+      station === "kitchen"
+        ? isArchived
+          ? `${displayedItemCount} ${displayedItemCount === 1 ? "Portion" : "Portionen"}`
+          : formatKitchenCount(displayedItemCount)
+        : `${displayedItemCount} Posten`;
     return (
       <article
         key={ticket.id}
-        className={`kiju-pass-ticket is-${ticket.status} wait-${ticket.waitAttention}`}
+        className={`kiju-pass-ticket is-${ticket.status} wait-${ticket.waitAttention}${
+          isArchived ? " is-archived" : ""
+        }`}
       >
         <header className="kiju-pass-ticket__header">
           <strong>Ticket {ticket.ticketNumber}</strong>
@@ -649,10 +662,10 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
           <div className="kiju-pass-ticket__footer-copy">
             <small>
               {ticket.tableName} ·{" "}
-              {station === "kitchen" ? formatKitchenCount(ticket.itemCount) : `${ticket.itemCount} Posten`}
+              {displayedItemCountLabel}
             </small>
           </div>
-          {ticket.status !== "countdown" ? (
+          {!isArchived && ticket.status !== "countdown" ? (
             <button
               type="button"
               className="kiju-pass-ticket__action"
@@ -665,6 +678,20 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
               }
             >
               <CheckCheck size={18} />
+            </button>
+          ) : null}
+          {isArchived && ticket.canReopen ? (
+            <button
+              type="button"
+              className="kiju-kitchen-wallboard__archive-action"
+              onClick={() => {
+                actions.reopenKitchenBatch(ticket.tableId, ticket.id);
+                setShowArchived(false);
+              }}
+              aria-label={`${ticket.courseLabel} für ${ticket.tableName} zurückholen`}
+            >
+              <RotateCcw size={14} />
+              Zurückholen
             </button>
           ) : null}
           {canReleaseWait ? (
@@ -736,30 +763,7 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
               </p>
             ) : (
               <div className="kiju-kitchen-wallboard__archive-list">
-                {archivedTickets.map((ticket) => (
-                  <article key={ticket.id} className="kiju-kitchen-wallboard__archive-item">
-                    <div className="kiju-kitchen-wallboard__archive-copy">
-                      <strong>
-                        {ticket.tableName} · {ticket.courseLabel}
-                      </strong>
-                      <span>{formatClock(ticket.completedAt)}</span>
-                    </div>
-                    {ticket.canReopen ? (
-                      <button
-                        type="button"
-                        className="kiju-kitchen-wallboard__archive-action"
-                        onClick={() => {
-                          actions.reopenKitchenBatch(ticket.tableId, ticket.id);
-                          setShowArchived(false);
-                        }}
-                        aria-label={`${ticket.courseLabel} für ${ticket.tableName} zurückholen`}
-                      >
-                        <RotateCcw size={14} />
-                        Zurückholen
-                      </button>
-                    ) : null}
-                  </article>
-                ))}
+                {archivedTickets.map((ticket) => renderTicketCard(ticket, { archived: true }))}
               </div>
             )}
           </section>

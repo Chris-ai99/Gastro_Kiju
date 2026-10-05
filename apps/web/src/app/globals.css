@@ -7519,6 +7519,24 @@ button.kiju-admin-link-pill {
   gap: 0.25rem;
 }
 
+.kiju-kitchen-wallboard__archive-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+  max-height: min(70vh, 720px);
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.kiju-kitchen-wallboard__archive-list .kiju-pass-ticket {
+  min-height: 0;
+  box-shadow: none;
+}
+
+.kiju-pass-ticket.is-archived {
+  border-color: #aab4c2;
+  background: #f1f5f9;
+}
+
 .kiju-kitchen-wallboard__archive-item {
   font-size: 0.82rem;
   padding: 0.35rem 0.4rem;

@@ -65,7 +65,7 @@ import {
   useDemoApp
 } from "../lib/app-state";
 import { createPrintJob } from "../lib/print-client";
-import { buildPendingOrderSendSummary } from "../lib/order-overview";
+import { buildPendingOrderSendSummary, isServiceBookedItem } from "../lib/order-overview";
 import { RouteGuard } from "./route-guard";
 import { ServiceTopbarMenu } from "./service-topbar-menu";
 import { ThermalReceiptPaper } from "./thermal-receipt-paper";
@@ -96,6 +96,7 @@ type OrderOverviewLine = {
   quantity: number;
   totalCents: number;
   pendingQuantity: number;
+  pendingTarget: "bar" | "kitchen" | null;
   note?: string;
   target: OrderTarget;
 };
@@ -127,7 +128,13 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
         category: item.category,
         quantity: itemQuantity,
         totalCents: calculateItemTotal(item, products),
-        pendingQuantity: item.sentAt ? 0 : itemQuantity,
+        pendingQuantity: item.sentAt || isServiceBookedItem(item, products) ? 0 : itemQuantity,
+        pendingTarget:
+          item.sentAt || isServiceBookedItem(item, products)
+            ? null
+            : item.category === "drinks"
+              ? "bar"
+              : "kitchen",
         note: item.note,
         target: item.target
       });
@@ -138,7 +145,10 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
     if (!line) return;
     line.quantity += itemQuantity;
     line.totalCents += calculateItemTotal(item, products);
-    if (!item.sentAt) line.pendingQuantity += itemQuantity;
+    if (!item.sentAt && !isServiceBookedItem(item, products)) {
+      line.pendingQuantity += itemQuantity;
+      line.pendingTarget = line.pendingTarget ?? (item.category === "drinks" ? "bar" : "kitchen");
+    }
   });
 
   return lines;
@@ -2706,11 +2716,12 @@ export const WaiterWorkspace = () => {
             const lineDetails = [target.type === "table" ? null : targetLabel, line.note ? `Notiz: ${line.note}` : null]
               .filter(Boolean)
               .join(" · ");
+            const pendingTargetLabel = line.pendingTarget === "bar" ? "Bar" : "Küche";
             const pendingStatusLabel =
               line.pendingQuantity === line.quantity
-                ? "Nicht gesendet"
+                ? `Nicht an ${pendingTargetLabel} gesendet`
                 : line.pendingQuantity > 0
-                  ? `${line.pendingQuantity} offen`
+                  ? `${line.pendingQuantity} offen · nicht an ${pendingTargetLabel} gesendet`
                   : null;
 
             return (
@@ -4396,7 +4407,7 @@ export const WaiterWorkspace = () => {
           </section>
           ) : null}
 
-          {!isWaiterView || !isOrderWizardOpen ? (
+          {!isWaiterView ? (
           <AccordionSection
             title={selectedTable ? "Tischzusammenfassung" : "Tischstatus"}
             eyebrow="Live für den gewählten Tisch"

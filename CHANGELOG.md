@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.14.06-beta
+- Datum: 2026-10-05
+- Uhrzeit: 16:04 +02:00
+- Typ: Fix / Küche und Bar
+- Zusammenfassung:
+  Alte Bons werden in Küche und Bar wieder vollständig lesbar angezeigt.
+- Änderungen:
+  Der Bereich „Alte Bons“ zeigt jetzt alle Positionen eines abgeschlossenen Bons mit Menge, Ziel, Zusätzen und Notizen.
+  Abgeschlossene Bons werden übersichtlich als vollständige Bonkarten statt nur als Kurzzeile dargestellt.
+  Die Küchenaktion „Zurückholen“ bleibt direkt am jeweiligen alten Bon verfügbar.
+
+## 0.14.05-beta
+- Datum: 2026-10-05
+- Uhrzeit: 15:54 +02:00
+- Typ: Verbesserung / Oberfläche
+- Zusammenfassung:
+  Die doppelte Tischstatus-Karte verschwindet aus der Kellnerübersicht.
+- Änderungen:
+  Die untere Tischzusammenfassung beziehungsweise der Tischstatus wird in der Kellneransicht nicht mehr zusätzlich angezeigt.
+  Die zentrale Tischwahl, der Raumplan und die Bestellübersicht bleiben unverändert bedienbar.
+  Offene Getränke und Speisen nennen in der Bestellübersicht jetzt ausdrücklich Bar oder Küche als noch fehlenden Versandempfänger.
+
 ## 0.14.04-beta
 - Datum: 2026-10-05
 - Uhrzeit: 15:44 +02:00

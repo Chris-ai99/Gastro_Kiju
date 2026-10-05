@@ -77,6 +77,37 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.06-beta",
+    date: "2026-10-05",
+    time: "16:04 +02:00",
+    type: "Fix / Küche und Bar",
+    title: "Alte Bons vollständig anzeigen",
+    summary:
+      "Abgeschlossene Bons in Küche und Bar zeigen wieder ihre vollständigen Positionen statt nur eine Kurzzeile.",
+    categories: ["Küche", "Bar", "Bons"],
+    changes: [
+      "Alte Bons zeigen Positionen, Mengen, Ziele, Zusätze und Notizen vollständig an.",
+      "Die abgeschlossenen Bons werden als kompakte, gut lesbare Bonkarten dargestellt.",
+      "In der Küche bleibt Zurückholen direkt am jeweiligen alten Bon verfügbar."
+    ]
+  },
+  {
+    version: "0.14.05-beta",
+    date: "2026-10-05",
+    time: "15:54 +02:00",
+    type: "Verbesserung / Oberfläche",
+    title: "Doppelten Tischstatus entfernt",
+    summary:
+      "Die zusätzliche Tischzusammenfassung unter der Kellnerübersicht wird nicht mehr angezeigt.",
+    categories: ["Service", "Tische", "Übersicht"],
+    changes: [
+      "Die untere Tischstatus-Karte entfällt in der Kellneransicht.",
+      "Die zentrale Tischwahl, der Raumplan und das Bestellfenster bleiben vollständig nutzbar.",
+      "Andere Rollen behalten ihre bestehende Tischzusammenfassung.",
+      "Offene Getränke werden als nicht an die Bar gesendet und offene Speisen als nicht an die Küche gesendet markiert."
+    ]
+  },
+  {
     version: "0.14.04-beta",
     date: "2026-10-05",
     time: "15:44 +02:00",
