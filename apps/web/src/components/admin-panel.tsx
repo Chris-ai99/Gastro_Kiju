@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.03-beta",
+    date: "2026-10-05",
+    time: "15:22 +02:00",
+    type: "Verbesserung / Oberfläche",
+    title: "Bestellübersicht als kompakter Bon",
+    summary:
+      "Die Übersicht zeigt die Bestellung platzsparend als klare Zeilen und öffnet die Artikelauswahl erst bei Bedarf.",
+    categories: ["Service", "Bestellung", "Mobil"],
+    changes: [
+      "Die doppelte Überschrift Übersicht für … entfällt; der Servicekopf nennt den ausgewählten Tisch bereits.",
+      "Jeder Artikel steht eng in einer Zeile mit Menge, Name und Preis; zusätzliche Sitzplatz- oder Notizinfos bleiben inline.",
+      "Die Kategorien werden erst nach dem Klick auf Artikel hinzufügen eingeblendet."
+    ]
+  },
+  {
     version: "0.14.02-beta",
     date: "2026-10-05",
     time: "15:11 +02:00",

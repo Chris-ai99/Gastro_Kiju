@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.03-beta
+- Datum: 2026-10-05
+- Uhrzeit: 15:22 +02:00
+- Typ: Verbesserung / Oberfläche
+- Zusammenfassung:
+  Die Bestellübersicht ist auf schnelle, kompakte Bon-Lesbarkeit reduziert.
+- Änderungen:
+  Die doppelte Überschrift „Übersicht für …“ entfällt, weil der Servicekopf den Tisch bereits nennt.
+  Artikel werden als eng gesetzte Einzelzeilen mit Menge, Name und Preis angezeigt; optionale Sitzplatz- oder Notizdetails bleiben inline.
+  Die Kategorieauswahl bleibt zunächst verborgen und wird erst über „Artikel hinzufügen“ eingeblendet.
+
 ## 0.14.02-beta
 - Datum: 2026-10-05
 - Uhrzeit: 15:11 +02:00

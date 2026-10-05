@@ -95,8 +95,6 @@ type OrderOverviewLine = {
   category: CourseKey;
   quantity: number;
   totalCents: number;
-  pendingQuantity: number;
-  sentQuantity: number;
   note?: string;
   target: OrderTarget;
 };
@@ -120,7 +118,6 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
     const key = getOrderOverviewLineKey(item);
     const existingIndex = lineIndexes.get(key);
     const itemQuantity = Math.max(0, item.quantity);
-    const itemIsPending = !item.sentAt;
 
     if (existingIndex === undefined) {
       lineIndexes.set(key, lines.length);
@@ -129,8 +126,6 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
         category: item.category,
         quantity: itemQuantity,
         totalCents: calculateItemTotal(item, products),
-        pendingQuantity: itemIsPending ? itemQuantity : 0,
-        sentQuantity: itemIsPending ? 0 : itemQuantity,
         note: item.note,
         target: item.target
       });
@@ -141,11 +136,6 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
     if (!line) return;
     line.quantity += itemQuantity;
     line.totalCents += calculateItemTotal(item, products);
-    if (itemIsPending) {
-      line.pendingQuantity += itemQuantity;
-    } else {
-      line.sentQuantity += itemQuantity;
-    }
   });
 
   return lines;
@@ -654,6 +644,7 @@ export const WaiterWorkspace = () => {
   const [currentStep, setCurrentStep] = useState<WaiterStep>("table");
   const [isTableActionDialogOpen, setIsTableActionDialogOpen] = useState(false);
   const [isOrderWizardOpen, setIsOrderWizardOpen] = useState(false);
+  const [showOrderAddOptions, setShowOrderAddOptions] = useState(false);
   const [isPickupNameDialogOpen, setIsPickupNameDialogOpen] = useState(false);
   const [pickupNameDraft, setPickupNameDraft] = useState("");
   const [activeCategoryDialog, setActiveCategoryDialog] = useState<CourseKey | null>(null);
@@ -1251,6 +1242,7 @@ export const WaiterWorkspace = () => {
   const openOrderWizard = (step: WaiterStep) => {
     setCurrentStep(step);
     setActiveCategoryDialog(null);
+    setShowOrderAddOptions(false);
     setCategoryDialogStage("groups");
     setCategoryDialogInitialItemIds([]);
     setIsTableActionDialogOpen(false);
@@ -1284,6 +1276,7 @@ export const WaiterWorkspace = () => {
   const closeCategoryDialog = () => {
     flushPendingSentItemNotes();
     setActiveCategoryDialog(null);
+    setShowOrderAddOptions(false);
     setCategoryDialogStage("groups");
     setCategoryDialogInitialItemIds([]);
     setWaitPlannerOpen(false);
@@ -1786,6 +1779,7 @@ export const WaiterWorkspace = () => {
     setIsOrderWizardOpen(false);
     setIsTableActionDialogOpen(false);
     setActiveCategoryDialog(null);
+    setShowOrderAddOptions(false);
     setWaitPlannerOpen(false);
     setCurrentStep("table");
   };
@@ -2679,24 +2673,17 @@ export const WaiterWorkspace = () => {
 
   const renderOrderOverview = () => (
     <div className="kiju-order-overview">
-      <section className="kiju-wizard-panel kiju-order-overview__hero">
-        <div className="kiju-wizard-panel__header">
-          <div>
-            <span className="kiju-eyebrow">Bestellung</span>
-            <strong>Übersicht für {selectedTable?.name ?? "diesen Tisch"}</strong>
-            <small>
-              {sessionItemCount} Artikel · {euro(sessionTotal)} gesamt
-            </small>
-          </div>
-          <StatusPill
-            label={
-              pendingOrderSendSummary.sentItemCount > 0
-                ? `${pendingOrderSendSummary.sentItemCount} offen`
-                : "Alles gesendet"
-            }
-            tone={pendingOrderSendSummary.sentItemCount > 0 ? "amber" : "green"}
-          />
-        </div>
+      <section className="kiju-order-overview__totals" aria-label="Bestellsumme">
+        <span>{sessionItemCount} Artikel</span>
+        <strong>{euro(sessionTotal)}</strong>
+        <StatusPill
+          label={
+            pendingOrderSendSummary.sentItemCount > 0
+              ? `${pendingOrderSendSummary.sentItemCount} offen`
+              : "Alles gesendet"
+          }
+          tone={pendingOrderSendSummary.sentItemCount > 0 ? "amber" : "green"}
+        />
       </section>
 
       <section className="kiju-order-overview__items" aria-label="Bestellte Artikel">
@@ -2707,37 +2694,29 @@ export const WaiterWorkspace = () => {
             return (
               <div className="kiju-wizard-panel kiju-order-overview__empty">
                 <strong>Noch keine Artikel erfasst</strong>
-                <span>Füge unten den ersten Artikel für diesen Tisch hinzu.</span>
+                <span>Tippe unten auf „Artikel hinzufügen“, um den ersten Artikel zu erfassen.</span>
               </div>
             );
           }
 
           return lines.map((line, index) => {
-            const statusLabel =
-              line.pendingQuantity > 0 && line.sentQuantity > 0
-                ? `${line.pendingQuantity} offen · ${line.sentQuantity} gesendet`
-                : line.pendingQuantity > 0
-                  ? `${line.pendingQuantity} offen`
-                  : "Gesendet";
-            const statusTone = line.pendingQuantity > 0 ? "amber" : "green";
             const target = line.target;
             const targetLabel =
               target.type === "table"
                 ? "Tisch"
                 : selectedTable?.seats.find((seat) => seat.id === target.seatId)?.label ??
                   "Sitzplatz";
+            const lineDetails = [target.type === "table" ? null : targetLabel, line.note ? `Notiz: ${line.note}` : null]
+              .filter(Boolean)
+              .join(" · ");
 
             return (
-              <article key={`${line.productId}-${index}`} className="kiju-wizard-panel kiju-order-overview__item">
+              <article key={`${line.productId}-${index}`} className="kiju-order-overview__item">
                 <div className="kiju-order-overview__item-main">
                   <strong>{line.quantity}× {resolveProductName(state.products, line.productId)}</strong>
-                  <small>{targetLabel}</small>
-                  {line.note ? <span>Notiz: {line.note}</span> : null}
+                  {lineDetails ? <small>{lineDetails}</small> : null}
                 </div>
-                <div className="kiju-order-overview__item-meta">
-                  <StatusPill label={statusLabel} tone={statusTone} />
-                  <strong>{euro(line.totalCents)}</strong>
-                </div>
+                <strong className="kiju-order-overview__item-price">{euro(line.totalCents)}</strong>
               </article>
             );
           });
@@ -2749,7 +2728,7 @@ export const WaiterWorkspace = () => {
         className="kiju-order-overview__add"
         aria-label="Artikel hinzufügen"
       >
-        {renderCourseCategoryGrid()}
+        {showOrderAddOptions ? renderCourseCategoryGrid() : null}
       </section>
     </div>
   );
@@ -3956,12 +3935,15 @@ export const WaiterWorkspace = () => {
                       <button
                         type="button"
                         className="kiju-button kiju-button--primary"
-                        onClick={() =>
-                          document.getElementById("kiju-order-overview-add")?.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start"
-                          })
-                        }
+                        onClick={() => {
+                          setShowOrderAddOptions(true);
+                          window.requestAnimationFrame(() => {
+                            document.getElementById("kiju-order-overview-add")?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start"
+                            });
+                          });
+                        }}
                       >
                         <Plus size={18} />
                         Artikel hinzufügen
