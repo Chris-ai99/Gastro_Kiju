@@ -2697,39 +2697,6 @@ export const WaiterWorkspace = () => {
             tone={pendingOrderSendSummary.sentItemCount > 0 ? "amber" : "green"}
           />
         </div>
-        <div className="kiju-order-overview__actions">
-          <button
-            type="button"
-            className="kiju-button kiju-button--primary"
-            onClick={() =>
-              document.getElementById("kiju-order-overview-add")?.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
-              })
-            }
-          >
-            <Plus size={18} />
-            Artikel hinzufügen
-          </button>
-          <button
-            type="button"
-            className="kiju-button kiju-button--secondary"
-            onClick={() => void handleSendAllPendingItems()}
-            disabled={pendingOrderSendSummary.sentItemCount === 0 || isSendPending}
-          >
-            <ChefHat size={18} />
-            {isSendPending ? "Wird gesendet …" : "Alles senden"}
-          </button>
-          <button
-            type="button"
-            className="kiju-button kiju-button--secondary"
-            onClick={() => setCurrentStep("checkout")}
-            disabled={checkoutSessions.length === 0}
-          >
-            <Receipt size={18} />
-            Abrechnen
-          </button>
-        </div>
       </section>
 
       <section className="kiju-order-overview__items" aria-label="Bestellte Artikel">
@@ -3971,7 +3938,11 @@ export const WaiterWorkspace = () => {
 
               </div>
 
-              <div className="kiju-wizard-footer kiju-wizard-footer--simple">
+              <div
+                className={`kiju-wizard-footer kiju-wizard-footer--simple${
+                  currentStep === "overview" ? " kiju-wizard-footer--overview" : ""
+                }`}
+              >
                 <button
                   type="button"
                   className="kiju-button kiju-button--secondary"
@@ -3980,7 +3951,41 @@ export const WaiterWorkspace = () => {
                   {currentStep === "checkout" ? "Zurück" : "Zurück zur Tischauswahl"}
                 </button>
                 <div className="kiju-wizard-footer__actions">
-                  {currentStep === "checkout" ? (
+                  {currentStep === "overview" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--primary"
+                        onClick={() =>
+                          document.getElementById("kiju-order-overview-add")?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                          })
+                        }
+                      >
+                        <Plus size={18} />
+                        Artikel hinzufügen
+                      </button>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => void handleSendAllPendingItems()}
+                        disabled={pendingOrderSendSummary.sentItemCount === 0 || isSendPending}
+                      >
+                        <ChefHat size={18} />
+                        {isSendPending ? "Wird gesendet …" : "Alles senden"}
+                      </button>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => setCurrentStep("checkout")}
+                        disabled={checkoutSessions.length === 0}
+                      >
+                        <Receipt size={18} />
+                        Abrechnen
+                      </button>
+                    </>
+                  ) : currentStep === "checkout" ? (
                     <button
                       type="button"
                       className="kiju-button kiju-button--primary"

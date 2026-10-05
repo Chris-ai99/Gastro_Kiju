@@ -1957,16 +1957,6 @@ button {
   color: var(--muted);
 }
 
-.kiju-order-overview__actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-}
-
-.kiju-order-overview__actions .kiju-button {
-  min-height: 46px;
-}
-
 .kiju-order-overview__items {
   display: grid;
   gap: 0.75rem;
@@ -6286,14 +6276,7 @@ button.kiju-admin-link-pill {
   .kiju-order-wizard-body {
     max-height: none;
     overflow-y: auto;
-  }
-
-  .kiju-order-overview__actions {
-    grid-template-columns: 1fr;
-  }
-
-  .kiju-order-overview__actions .kiju-button {
-    width: 100%;
+    padding-bottom: 12rem;
   }
 
   .kiju-order-overview__item {
@@ -6343,6 +6326,20 @@ button.kiju-admin-link-pill {
     margin: 0;
     padding: 0.75rem;
     border-radius: 0;
+  }
+
+  .kiju-order-wizard-modal .kiju-wizard-footer--overview {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .kiju-order-wizard-modal .kiju-wizard-footer--overview > .kiju-button,
+  .kiju-order-wizard-modal .kiju-wizard-footer--overview .kiju-button {
+    width: 100%;
+  }
+
+  .kiju-order-wizard-modal .kiju-wizard-footer--overview .kiju-wizard-footer__actions {
+    grid-template-columns: 1fr;
   }
 
   .kiju-order-wizard-modal .kiju-wizard-footer .kiju-button {

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.02-beta
+- Datum: 2026-10-05
+- Uhrzeit: 15:11 +02:00
+- Typ: Fix / Oberfläche
+- Zusammenfassung:
+  Die Bestellaktionen stehen wieder in der unteren Bedienleiste und bleiben auf kleinen Bildschirmen bedienbar.
+- Änderungen:
+  Artikel hinzufügen, Alles senden und Abrechnen sind nicht mehr doppelt im Kopf der Übersicht, sondern wieder gemeinsam unten erreichbar.
+  Der Bestellbereich erhält auf kleinen Bildschirmen zusätzlichen unteren Abstand, damit Artikelauswahl und Inhalte nicht von der festen Bedienleiste verdeckt werden.
+
 ## 0.14.01-beta
 - Datum: 2026-10-05
 - Uhrzeit: 14:58 +02:00

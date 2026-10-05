@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.02-beta",
+    date: "2026-10-05",
+    time: "15:11 +02:00",
+    type: "Fix / Oberfläche",
+    title: "Bestellaktionen unten wieder erreichbar",
+    summary:
+      "Die Hauptaktionen stehen wieder gemeinsam in der unteren Bedienleiste und überdecken auf kleinen Geräten keine Artikelauswahl mehr.",
+    categories: ["Service", "Bestellung", "Mobil"],
+    changes: [
+      "Artikel hinzufügen, Alles senden und Abrechnen werden nicht mehr zusätzlich oben angezeigt.",
+      "Die untere Bedienleiste enthält die drei Hauptaktionen wieder gemeinsam mit der Zurück-Aktion.",
+      "Zusätzlicher Abstand am Ende der mobilen Bestellfläche verhindert, dass die feste Bedienleiste Inhalte verdeckt."
+    ]
+  },
+  {
     version: "0.14.01-beta",
     date: "2026-10-05",
     time: "14:58 +02:00",
