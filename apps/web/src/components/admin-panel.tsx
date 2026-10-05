@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.01-beta",
+    date: "2026-10-05",
+    time: "14:58 +02:00",
+    type: "Verbesserung / Oberfläche",
+    title: "Bestellübersicht kompakter dargestellt",
+    summary:
+      "Die Artikel erscheinen chronologisch in einer flachen Liste; gleiche Artikel werden mit ihrer Gesamtmenge zusammengefasst.",
+    categories: ["Service", "Bestellung", "Übersicht"],
+    changes: [
+      "Die bisherige Gruppierung nach Getränken, Vorspeise, Hauptspeise und Nachtisch entfällt in der Übersicht.",
+      "Identische Artikel mit gleichem Ziel, Hinweis und gleichen Zusätzen werden als eine Mengenzeile wie 2× Cola angezeigt.",
+      "Artikel hinzufügen, Alles senden und Abrechnen stehen nur noch einmal oben in der Übersicht."
+    ]
+  },
+  {
     version: "0.14.00-beta",
     date: "2026-10-05",
     time: "14:29 +02:00",

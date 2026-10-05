@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.01-beta
+- Datum: 2026-10-05
+- Uhrzeit: 14:58 +02:00
+- Typ: Verbesserung / Oberfläche
+- Zusammenfassung:
+  Die Bestellübersicht ist kompakter und folgt der tatsächlichen Bestellreihenfolge.
+- Änderungen:
+  Artikel werden nicht mehr nach Gängen gruppiert, sondern chronologisch in einer flachen Liste angezeigt.
+  Gleiche Artikel mit identischem Ziel, Hinweis und gleichen Zusätzen werden zu einer Mengenzeile wie „2× Cola“ zusammengefasst.
+  Die Hauptaktionen Artikel hinzufügen, Alles senden und Abrechnen erscheinen in der Übersicht nur noch einmal im oberen Bereich.
+
 ## 0.14.00-beta
 - Datum: 2026-10-05
 - Uhrzeit: 14:29 +02:00

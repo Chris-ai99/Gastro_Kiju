@@ -1967,17 +1967,48 @@ button {
   min-height: 46px;
 }
 
-.kiju-order-overview__courses {
+.kiju-order-overview__items {
   display: grid;
   gap: 0.75rem;
 }
 
-.kiju-order-overview__course {
-  gap: 0.65rem;
+.kiju-order-overview__item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 0.95rem;
 }
 
-.kiju-order-overview__course-items {
+.kiju-order-overview__item-main {
   min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.kiju-order-overview__item-main strong,
+.kiju-order-overview__item-main small,
+.kiju-order-overview__item-main span {
+  overflow-wrap: anywhere;
+}
+
+.kiju-order-overview__item-main small,
+.kiju-order-overview__item-main span {
+  color: var(--muted);
+}
+
+.kiju-order-overview__item-meta {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.kiju-order-overview__empty {
+  gap: 0.25rem;
+}
+
+.kiju-order-overview__empty span {
+  color: var(--muted);
 }
 
 .kiju-order-overview__add {
@@ -6263,6 +6294,16 @@ button.kiju-admin-link-pill {
 
   .kiju-order-overview__actions .kiju-button {
     width: 100%;
+  }
+
+  .kiju-order-overview__item {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .kiju-order-overview__item-meta {
+    justify-items: start;
+    white-space: normal;
   }
 
   .kiju-order-wizard-modal .kiju-waiter-wizard-bar {
