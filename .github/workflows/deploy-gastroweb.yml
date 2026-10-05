@@ -11,6 +11,14 @@ on:
         options:
           - "Nicht deployen"
           - "Ja, jetzt deployen"
+      sync_access_code:
+        description: "Betriebscode auf dem VPS aktualisieren"
+        required: true
+        type: choice
+        default: "Nein"
+        options:
+          - "Nein"
+          - "Ja, synchronisieren"
 
 permissions:
   contents: read
@@ -33,6 +41,8 @@ jobs:
       - name: Serverzugang sicher vorbereiten
         env:
           KIJU_DEPLOY_SSH_KEY: ${{ secrets.KIJU_DEPLOY_SSH_KEY }}
+          KIJU_INTERNAL_ACCESS_CODE: ${{ secrets.KIJU_INTERNAL_ACCESS_CODE }}
+          SYNC_ACCESS_CODE: ${{ inputs.sync_access_code }}
         shell: bash
         run: |
           set -euo pipefail
@@ -44,15 +54,28 @@ jobs:
           install -m 700 -d "${HOME}/.ssh"
           key_file="${RUNNER_TEMP}/kiju-gastroweb-deploy-key"
           known_hosts_file="${RUNNER_TEMP}/kiju-gastroweb-known-hosts"
-          archive_file="${RUNNER_TEMP}/kiju-gastroweb-${GITHUB_SHA}.tar.gz"
-          trap 'rm -f "${key_file}" "${known_hosts_file}" "${archive_file}"' EXIT
+          archive_tar="${RUNNER_TEMP}/kiju-gastroweb-${GITHUB_SHA}.tar"
+          archive_file="${archive_tar}.gz"
+          runtime_dir="${RUNNER_TEMP}/kiju-gastroweb-runtime"
+          trap 'rm -f "${key_file}" "${known_hosts_file}" "${archive_tar}" "${archive_file}"; rm -rf "${runtime_dir}"' EXIT
           printf '%s\n' "${KIJU_DEPLOY_SSH_KEY}" > "${key_file}"
           unset KIJU_DEPLOY_SSH_KEY
           chmod 600 "${key_file}"
           printf '%s\n' '31.70.91.152 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIP7GFI/8WGI9bSwk44aGTMte/wKo3oAmZGVXKlh24QX' > "${known_hosts_file}"
           chmod 600 "${known_hosts_file}"
 
-          git archive --format=tar "${GITHUB_SHA}" | gzip -1 > "${archive_file}"
+          git archive --format=tar "${GITHUB_SHA}" > "${archive_tar}"
+          if [[ "${SYNC_ACCESS_CODE}" == "Ja, synchronisieren" ]]; then
+            if [[ -z "${KIJU_INTERNAL_ACCESS_CODE}" ]]; then
+              echo "GitHub-Secret KIJU_INTERNAL_ACCESS_CODE fehlt." >&2
+              exit 1
+            fi
+            install -m 700 -d "${runtime_dir}/.deploy"
+            printf '%s\n' "${KIJU_INTERNAL_ACCESS_CODE}" > "${runtime_dir}/.deploy/kiju-internal-access-code"
+            chmod 600 "${runtime_dir}/.deploy/kiju-internal-access-code"
+            tar --append --file="${archive_tar}" --directory="${runtime_dir}" .deploy/kiju-internal-access-code
+          fi
+          gzip -1 "${archive_tar}"
           test -s "${archive_file}"
           ssh -T \
             -i "${key_file}" \

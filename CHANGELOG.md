@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.04-beta
+- Datum: 2026-10-05
+- Typ: Deployment / Betrieb
+- Zusammenfassung:
+  Der Betriebscode kann bei ausdrücklicher Freigabe über GitHub Actions auf den VPS synchronisiert werden.
+- Änderungen:
+  Das optionale GitHub-Secret `KIJU_INTERNAL_ACCESS_CODE` wird nur bei Auswahl von `Ja, synchronisieren` übertragen und serverseitig in `/etc/gastro-kiju/api.env` aktualisiert.
+  `KIJU_SESSION_SECRET` und `DATABASE_URL` bleiben weiterhin ausschließlich auf dem VPS.
+
 ## 0.13.03-beta
 - Datum: 2026-10-05
 - Typ: Fix / Deployment

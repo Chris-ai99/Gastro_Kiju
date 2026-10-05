@@ -12,6 +12,7 @@ readonly WEB_API_HEALTH_URL="http://127.0.0.1:3110/gastro/api/health"
 readonly API_HEALTH_URL="http://127.0.0.1:4000/api/health"
 readonly MAX_ARCHIVE_BYTES=536870912
 readonly REQUIRED_PNPM="10.22.0"
+readonly RUNTIME_ACCESS_CODE_ARCHIVE_PATH=".deploy/kiju-internal-access-code"
 
 on_error() {
   local status="$1"
@@ -46,6 +47,36 @@ die() {
   exit 1
 }
 
+sync_internal_access_code() {
+  local runtime_file="$1"
+  local env_file="/etc/gastro-kiju/api.env"
+  local next_env_file="${temporary_dir}/api.env.next"
+  local access_code
+
+  [[ -f "${env_file}" ]] || die "Die API-Umgebungsdatei fehlt: ${env_file}"
+  access_code="$(cat "${runtime_file}")"
+  [[ "${access_code}" =~ ^[A-Za-z0-9._-]{8,128}$ ]] \
+    || die "Der übertragene Betriebscode muss 8 bis 128 sichere Zeichen enthalten."
+
+  awk -v code="${access_code}" '
+    BEGIN { updated = 0 }
+    /^KIJU_INTERNAL_ACCESS_CODE=/ {
+      print "KIJU_INTERNAL_ACCESS_CODE=" code
+      updated = 1
+      next
+    }
+    { print }
+    END {
+      if (!updated) print "KIJU_INTERNAL_ACCESS_CODE=" code
+    }
+  ' "${env_file}" > "${next_env_file}"
+  chown --reference="${env_file}" "${next_env_file}"
+  chmod 600 "${next_env_file}"
+  mv -f -- "${next_env_file}" "${env_file}"
+  unset access_code
+  echo "Betriebscode auf dem VPS aktualisiert."
+}
+
 original_command="${SSH_ORIGINAL_COMMAND:-}"
 if [[ ! "${original_command}" =~ ^deploy[[:space:]]([0-9a-f]{40})$ ]]; then
   die "Nur ein bestätigter Deploy-Aufruf mit vollständiger Commit-ID ist erlaubt."
@@ -62,6 +93,7 @@ release_dir=""
 switch_started="0"
 old_api_target=""
 old_web_target=""
+runtime_access_code_file=""
 trap 'rm -rf -- "${temporary_dir}"' EXIT
 trap 'on_error "$?" "$LINENO"' ERR
 
@@ -81,6 +113,14 @@ while IFS= read -r archive_path || [[ -n "${archive_path}" ]]; do
   esac
 done < "${archive_list}"
 
+runtime_access_code_file="${temporary_dir}/kiju-internal-access-code"
+if tar -xOzf "${archive_file}" "${RUNTIME_ACCESS_CODE_ARCHIVE_PATH}" > "${runtime_access_code_file}" 2>/dev/null; then
+  chmod 600 "${runtime_access_code_file}"
+else
+  rm -f -- "${runtime_access_code_file}"
+  runtime_access_code_file=""
+fi
+
 release_name="$(date -u +%Y%m%dT%H%M%S)-${revision:0:7}"
 release_dir="${RELEASES_DIR}/${release_name}"
 [[ ! -e "${release_dir}" ]] || release_dir="${release_dir}-$$"
@@ -88,7 +128,8 @@ install -d -o kiju-wawi -g kiju-wawi -m 0750 "${release_dir}"
 chmod 0755 "${temporary_dir}"
 chmod 0644 "${archive_file}"
 runuser -u kiju-wawi -- tar --extract --gzip --file="${archive_file}" \
-  --directory="${release_dir}" --no-same-owner --no-same-permissions
+  --directory="${release_dir}" --no-same-owner --no-same-permissions \
+  --exclude="${RUNTIME_ACCESS_CODE_ARCHIVE_PATH}"
 printf '%s\n' "${revision}" > "${release_dir}/REVISION"
 chown kiju-wawi:kiju-wawi "${release_dir}/REVISION"
 
@@ -152,6 +193,10 @@ unset database_url
 [[ -L "${APP_ROOT}/current" ]] || die "Der Web-Release-Link fehlt."
 old_api_target="$(readlink "${APP_ROOT}/api-current")"
 old_web_target="$(readlink "${APP_ROOT}/current")"
+
+if [[ -n "${runtime_access_code_file}" ]]; then
+  sync_internal_access_code "${runtime_access_code_file}"
+fi
 
 switch_started="1"
 atomic_symlink "${APP_ROOT}/api-current" "${release_dir}"
