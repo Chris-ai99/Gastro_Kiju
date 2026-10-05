@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.04-beta
+- Datum: 2026-10-05
+- Uhrzeit: 15:44 +02:00
+- Typ: Verbesserung / Oberfläche
+- Zusammenfassung:
+  Die Tischwahl auf Tablet und Desktop ist auf zwei klare Bereiche reduziert.
+- Änderungen:
+  Die zusätzliche nummerierte Schnellauswahl unter dem Raumplan entfällt.
+  Statuskacheln und Raumplan bleiben als zentrale Tischwahl erhalten; die mobile nummerierte Tischübersicht bleibt unverändert.
+  Noch nicht gesendete Positionen werden in der kompakten Bestellübersicht farblich und mit einem Hinweis markiert.
+
 ## 0.14.03-beta
 - Datum: 2026-10-05
 - Uhrzeit: 15:22 +02:00

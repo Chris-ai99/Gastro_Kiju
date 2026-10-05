@@ -77,6 +77,22 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.04-beta",
+    date: "2026-10-05",
+    time: "15:44 +02:00",
+    type: "Verbesserung / Oberfläche",
+    title: "Tischwahl auf Tablet und Desktop vereinfacht",
+    summary:
+      "Die zusätzliche nummerierte Tischleiste unter dem Raumplan ist entfernt; Statuskacheln und Raumplan bleiben direkt nutzbar.",
+    categories: ["Service", "Tische", "Tablet", "Desktop"],
+    changes: [
+      "Die doppelte Schnellauswahl unter dem Raumplan wird nicht mehr angezeigt.",
+      "Tische können weiterhin über die Statuskacheln oder direkt im Raumplan ausgewählt werden.",
+      "Die mobile nummerierte Tischübersicht bleibt unverändert.",
+      "Nicht gesendete Positionen werden in der Bestellübersicht farblich und mit dem Hinweis Nicht gesendet beziehungsweise mit ihrer offenen Menge markiert."
+    ]
+  },
+  {
     version: "0.14.03-beta",
     date: "2026-10-05",
     time: "15:22 +02:00",

@@ -95,6 +95,7 @@ type OrderOverviewLine = {
   category: CourseKey;
   quantity: number;
   totalCents: number;
+  pendingQuantity: number;
   note?: string;
   target: OrderTarget;
 };
@@ -126,6 +127,7 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
         category: item.category,
         quantity: itemQuantity,
         totalCents: calculateItemTotal(item, products),
+        pendingQuantity: item.sentAt ? 0 : itemQuantity,
         note: item.note,
         target: item.target
       });
@@ -136,6 +138,7 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
     if (!line) return;
     line.quantity += itemQuantity;
     line.totalCents += calculateItemTotal(item, products);
+    if (!item.sentAt) line.pendingQuantity += itemQuantity;
   });
 
   return lines;
@@ -700,12 +703,6 @@ export const WaiterWorkspace = () => {
   const activeCourse: CourseKey = isCourseStep(currentStep) ? currentStep : "drinks";
   const waiterMenuEntries = dashboard.filter(
     (entry) => entry.table.active || entry.table.plannedOnly || entry.table.id === selectedTableId
-  );
-  const pickupMenuEntries = waiterMenuEntries.filter(
-    (entry) =>
-      Boolean(entry.table.pickupName?.trim()) ||
-      /^Zum Abholen\s+\d+$/i.test(entry.table.name.trim()) ||
-      entry.table.note?.trim().toLowerCase().startsWith("zum abholen") === true
   );
   const selectedDashboardEntry =
     dashboard.find((entry) => entry.table.id === selectedTableId) ?? null;
@@ -2709,11 +2706,23 @@ export const WaiterWorkspace = () => {
             const lineDetails = [target.type === "table" ? null : targetLabel, line.note ? `Notiz: ${line.note}` : null]
               .filter(Boolean)
               .join(" · ");
+            const pendingStatusLabel =
+              line.pendingQuantity === line.quantity
+                ? "Nicht gesendet"
+                : line.pendingQuantity > 0
+                  ? `${line.pendingQuantity} offen`
+                  : null;
 
             return (
-              <article key={`${line.productId}-${index}`} className="kiju-order-overview__item">
+              <article
+                key={`${line.productId}-${index}`}
+                className={"kiju-order-overview__item" + (line.pendingQuantity > 0 ? " is-pending" : "")}
+              >
                 <div className="kiju-order-overview__item-main">
                   <strong>{line.quantity}× {resolveProductName(state.products, line.productId)}</strong>
+                  {pendingStatusLabel ? (
+                    <span className="kiju-order-overview__item-status">{pendingStatusLabel}</span>
+                  ) : null}
                   {lineDetails ? <small>{lineDetails}</small> : null}
                 </div>
                 <strong className="kiju-order-overview__item-price">{euro(line.totalCents)}</strong>
@@ -3435,48 +3444,6 @@ export const WaiterWorkspace = () => {
                 );
                 })}
               </div>
-            </div>
-            <div className="kiju-waiter-room-number-picker" role="group" aria-label="Schnellauswahl der Tische und Abholbons">
-              {waiterRoomTableConfigs.map((config) => {
-                const entry = waiterMenuEntries.find((item) => item.table.id === config.tableId);
-                const isSelected = entry?.table.id === selectedTableId;
-
-                return (
-                  <button
-                    key={`quick-${config.id}`}
-                    type="button"
-                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--${config.kind}${
-                      isSelected ? " is-selected" : ""
-                    }`}
-                    aria-label={`${config.title} auswählen`}
-                    aria-pressed={isSelected}
-                    disabled={!entry}
-                    onClick={() => entry && selectTable(entry.table.id)}
-                  >
-                    {config.number}
-                  </button>
-                );
-              })}
-              {pickupMenuEntries.map((entry) => {
-                const rawNumber = entry.table.id.match(/table-(\d+)/i)?.[1] ?? entry.table.name.match(/(\d+)/)?.[1];
-                const number = rawNumber ? Number(rawNumber) : null;
-                const isSelected = entry.table.id === selectedTableId;
-
-                return (
-                  <button
-                    key={`quick-pickup-${entry.table.id}`}
-                    type="button"
-                    className={`kiju-waiter-room-number-picker__button kiju-waiter-room-number-picker__button--pickup${
-                      isSelected ? " is-selected" : ""
-                    }`}
-                    aria-label={`Abholbon ${number ?? entry.table.name} für ${entry.table.pickupName?.trim() || "Abholung"} auswählen`}
-                    aria-pressed={isSelected}
-                    onClick={() => selectTable(entry.table.id)}
-                  >
-                    {number ?? entry.table.name}
-                  </button>
-                );
-              })}
             </div>
           </section>
         ) : null}

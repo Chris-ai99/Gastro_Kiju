@@ -1653,49 +1653,6 @@ button {
   background: rgba(175, 111, 10, 0.88);
 }
 
-.kiju-waiter-room-number-picker {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.kiju-waiter-room-number-picker__button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0.35rem 0.2rem;
-  border: 1px solid rgba(203, 213, 225, 0.92);
-  border-radius: 0.45rem;
-  background: var(--surface-strong);
-  color: var(--deep-navy);
-  font-size: 1.05rem;
-  font-weight: 900;
-  box-shadow: 0 0.25rem 0.65rem rgba(15, 23, 42, 0.1);
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.kiju-waiter-room-number-picker__button:hover,
-.kiju-waiter-room-number-picker__button:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(30, 64, 175, 0.48);
-  box-shadow: 0 0.45rem 0.9rem rgba(15, 23, 42, 0.14);
-}
-
-.kiju-waiter-room-number-picker__button.is-selected {
-  border-color: #b7791f;
-  background: #fff7df;
-  box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.2);
-}
-
-.kiju-waiter-room-number-picker__button--pickup {
-  border-color: rgba(180, 115, 16, 0.72);
-  background: rgba(255, 247, 223, 0.96);
-}
-
-.kiju-waiter-room-number-picker__button:disabled {
-  cursor: not-allowed;
-  opacity: 0.46;
-}
-
 .kiju-waiter-room-table__furniture {
   position: absolute;
   inset: -0.45rem;
@@ -1989,6 +1946,11 @@ button {
   background: var(--surface-strong);
 }
 
+.kiju-order-overview__item.is-pending {
+  background: rgba(255, 251, 235, 0.9);
+  box-shadow: inset 3px 0 0 rgba(217, 119, 6, 0.88);
+}
+
 .kiju-order-overview__item + .kiju-order-overview__item {
   border-top: 1px solid rgba(148, 163, 184, 0.24);
 }
@@ -2013,6 +1975,14 @@ button {
   text-overflow: ellipsis;
   color: var(--muted);
   font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.kiju-order-overview__item-status {
+  flex: 0 0 auto;
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 900;
   white-space: nowrap;
 }
 
@@ -6001,10 +5971,6 @@ button.kiju-admin-link-pill {
     display: none;
   }
 
-  .kiju-waiter-room-number-picker {
-    display: none;
-  }
-
   .kiju-waiter-availability-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -7927,6 +7893,15 @@ html[data-theme="dark"] .kiju-category-choice--overview,
 html[data-theme="dark"] .kiju-order-overview__footer {
   border-color: rgba(34, 211, 238, 0.36);
   background: rgba(8, 47, 73, 0.42);
+}
+
+html[data-theme="dark"] .kiju-order-overview__item.is-pending {
+  background: rgba(120, 53, 15, 0.32);
+  box-shadow: inset 3px 0 0 rgba(251, 191, 36, 0.88);
+}
+
+html[data-theme="dark"] .kiju-order-overview__item-status {
+  color: #fbbf24;
 }
 
 html[data-theme="dark"] .kiju-order-overview-group__header,
