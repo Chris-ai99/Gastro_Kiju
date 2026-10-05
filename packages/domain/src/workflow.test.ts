@@ -17,7 +17,8 @@ import {
   calculateItemTotal,
   getCheckoutTableIds,
   getOpenTotalForTables,
-  getSessionForTable
+  getSessionForTable,
+  resolveTableAvailability
 } from "./workflow.ts";
 
 describe("domain workflow", () => {
@@ -39,8 +40,18 @@ describe("domain workflow", () => {
   it("returns one card per configured table in the dashboard", () => {
     const summary = buildDashboardSummary(demoAppState);
 
-    expect(summary).toHaveLength(7);
+    expect(summary).toHaveLength(11);
     expect(summary[0]?.table.name).toBe("Tisch 1");
+    expect(summary[0]?.availability).toBe("occupied");
+    expect(summary[1]?.availability).toBe("free");
+  });
+
+  it("marks a table free once its active session is closed", () => {
+    const state = structuredClone(demoAppState);
+    const session = state.sessions.find((entry) => entry.tableId === "table-1")!;
+    session.status = "closed";
+
+    expect(resolveTableAvailability(getSessionForTable(state.sessions, "table-1"))).toBe("free");
   });
 
   it("hides archived tables from the dashboard summary", () => {
@@ -49,7 +60,7 @@ describe("domain workflow", () => {
 
     const summary = buildDashboardSummary(state);
 
-    expect(summary).toHaveLength(6);
+    expect(summary).toHaveLength(10);
     expect(summary.some((entry) => entry.table.id === state.tables[0]!.id)).toBe(false);
   });
 

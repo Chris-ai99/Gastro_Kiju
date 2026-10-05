@@ -1270,6 +1270,164 @@ button {
   background: #d99a23;
 }
 
+.kiju-waiter-availability-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 150px)) minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.kiju-waiter-availability-summary__item,
+.kiju-waiter-availability-summary__hint {
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  gap: 0.12rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(203, 213, 225, 0.84);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.kiju-waiter-availability-summary__item strong {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.kiju-waiter-availability-summary__item span,
+.kiju-waiter-availability-summary__hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.kiju-waiter-availability-summary__item--free {
+  border-color: rgba(22, 163, 74, 0.35);
+  background: rgba(240, 253, 244, 0.9);
+}
+
+.kiju-waiter-availability-summary__item--free strong {
+  color: #15803d;
+}
+
+.kiju-waiter-availability-summary__item--occupied {
+  border-color: rgba(217, 119, 6, 0.38);
+  background: rgba(255, 251, 235, 0.92);
+}
+
+.kiju-waiter-availability-summary__item--occupied strong {
+  color: #b45309;
+}
+
+.kiju-waiter-table-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.65rem;
+}
+
+.kiju-waiter-table-card {
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(203, 213, 225, 0.88);
+  border-left: 5px solid rgba(22, 163, 74, 0.75);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.kiju-waiter-table-card--occupied {
+  border-left-color: rgba(217, 119, 6, 0.86);
+}
+
+.kiju-waiter-table-card--pickup {
+  border-style: dashed;
+}
+
+.kiju-waiter-table-card.is-selected {
+  border-color: rgba(202, 138, 4, 0.9);
+  border-left-color: rgba(202, 138, 4, 0.95);
+  box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.14), 0 12px 24px rgba(15, 23, 42, 0.1);
+}
+
+.kiju-waiter-table-card__select {
+  min-width: 0;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.kiju-waiter-table-card__select:hover,
+.kiju-waiter-table-card__select:focus-visible {
+  background: rgba(226, 232, 240, 0.38);
+}
+
+.kiju-waiter-table-card__number {
+  min-width: 2.7rem;
+  min-height: 2.7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(15, 61, 117, 0.1);
+  color: var(--deep-navy);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.kiju-waiter-table-card--occupied .kiju-waiter-table-card__number {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+}
+
+.kiju-waiter-table-card--pickup .kiju-waiter-table-card__number {
+  background: rgba(217, 154, 35, 0.18);
+  color: #854d0e;
+}
+
+.kiju-waiter-table-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.kiju-waiter-table-card__copy strong,
+.kiju-waiter-table-card__copy small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kiju-waiter-table-card__copy small {
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.kiju-waiter-table-card__pickup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0 0.45rem 0.35rem;
+}
+
+.kiju-waiter-table-card__pickup-actions small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.kiju-waiter-table-card__pickup-actions .kiju-button {
+  min-height: 44px;
+}
+
 .kiju-waiter-room-map__canvas {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -1428,6 +1586,15 @@ button {
 .kiju-waiter-room-table.is-selected {
   border-color: #ffd166;
   box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.72), 0 0.8rem 1.4rem rgba(15, 23, 42, 0.24);
+}
+
+.kiju-waiter-room-table.is-free {
+  border-color: rgba(134, 239, 172, 0.92);
+}
+
+.kiju-waiter-room-table.is-occupied {
+  border-color: rgba(253, 186, 116, 0.96);
+  background: rgba(146, 64, 14, 0.86);
 }
 
 .kiju-waiter-room-table strong,
@@ -1775,6 +1942,46 @@ button {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: 0.9rem 1.15rem;
+}
+
+.kiju-order-overview {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kiju-order-overview__hero {
+  gap: 0.9rem;
+}
+
+.kiju-order-overview__hero small {
+  color: var(--muted);
+}
+
+.kiju-order-overview__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.kiju-order-overview__actions .kiju-button {
+  min-height: 46px;
+}
+
+.kiju-order-overview__courses {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kiju-order-overview__course {
+  gap: 0.65rem;
+}
+
+.kiju-order-overview__course-items {
+  min-width: 0;
+}
+
+.kiju-order-overview__add {
+  scroll-margin-top: 0.75rem;
 }
 
 .kiju-wizard-panel,
@@ -5740,11 +5947,55 @@ button.kiju-admin-link-pill {
   }
 
   .kiju-waiter-room-map__canvas {
-    aspect-ratio: 16 / 9;
+    display: none;
   }
 
   .kiju-waiter-room-number-picker {
-    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    display: none;
+  }
+
+  .kiju-waiter-availability-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kiju-waiter-availability-summary__hint {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+
+  .kiju-waiter-table-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .kiju-waiter-table-card {
+    padding: 0.3rem;
+  }
+
+  .kiju-waiter-table-card__select {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.45rem;
+    padding: 0.3rem;
+  }
+
+  .kiju-waiter-table-card__select .kiju-pill {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .kiju-waiter-table-card__copy small {
+    font-size: 0.76rem;
+  }
+
+  .kiju-waiter-table-card__pickup-actions {
+    display: grid;
+    justify-content: stretch;
+    padding: 0 0.3rem 0.3rem;
+  }
+
+  .kiju-waiter-table-card__pickup-actions .kiju-button {
+    width: 100%;
   }
 
   .kiju-service-drink-popup-stack {
@@ -6006,6 +6257,14 @@ button.kiju-admin-link-pill {
     overflow-y: auto;
   }
 
+  .kiju-order-overview__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-order-overview__actions .kiju-button {
+    width: 100%;
+  }
+
   .kiju-order-wizard-modal .kiju-waiter-wizard-bar {
     display: grid;
     gap: 0.75rem;
@@ -6036,6 +6295,9 @@ button.kiju-admin-link-pill {
   }
 
   .kiju-order-wizard-modal .kiju-wizard-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: 0;
     padding: 0.75rem;

@@ -44,6 +44,7 @@ import {
   type OrderTarget,
   type PaymentLineItem,
   type Product,
+  type TableLayout,
   type TableSeat
 } from "@kiju/domain";
 import {
@@ -64,6 +65,7 @@ import {
   useDemoApp
 } from "../lib/app-state";
 import { createPrintJob } from "../lib/print-client";
+import { buildPendingOrderSendSummary } from "../lib/order-overview";
 import { RouteGuard } from "./route-guard";
 import { ServiceTopbarMenu } from "./service-topbar-menu";
 import { ThermalReceiptPaper } from "./thermal-receipt-paper";
@@ -76,8 +78,8 @@ const orderWizardSteps = [
 ] as const;
 const wizardSteps = ["Tisch", ...orderWizardSteps, "Abrechnung"] as const;
 type OrderWizardStepLabel = (typeof orderWizardSteps)[number];
-type WizardStepLabel = OrderWizardStepLabel | "Abrechnung";
-type WaiterOrderStep = CourseKey | "checkout";
+type WizardStepLabel = OrderWizardStepLabel | "Übersicht" | "Abrechnung";
+type WaiterOrderStep = "overview" | CourseKey | "checkout";
 type WaiterStep = "table" | WaiterOrderStep;
 type CategoryDialogStage = "groups" | "products" | "review";
 type CourseGroupOption = {
@@ -95,6 +97,7 @@ const orderStepSequence: CourseKey[] = [
   "dessert"
 ];
 const waiterStepLabels: Record<WaiterOrderStep, WizardStepLabel> = {
+  overview: "Übersicht",
   drinks: "Getränke",
   starter: "Vorspeise",
   main: "Hauptspeise",
@@ -102,6 +105,7 @@ const waiterStepLabels: Record<WaiterOrderStep, WizardStepLabel> = {
   checkout: "Abrechnung"
 };
 const waiterStepByLabel: Record<WizardStepLabel, WaiterOrderStep> = {
+  Übersicht: "overview",
   Getränke: "drinks",
   Vorspeise: "starter",
   Hauptspeise: "main",
@@ -140,6 +144,28 @@ const statusLabel: Record<string, string> = {
   waiting: "Warten",
   "ready-to-bill": "Verbuchen",
   planned: "Geplant"
+};
+
+const availabilityLabel: Record<"free" | "occupied", string> = {
+  free: "Frei",
+  occupied: "Belegt"
+};
+
+const availabilityTone: Record<"free" | "occupied", "green" | "amber"> = {
+  free: "green",
+  occupied: "amber"
+};
+
+const isPickupTableEntry = (table: Pick<TableLayout, "name" | "note">) =>
+  /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
+  table.note?.trim().toLowerCase().startsWith("abholung") === true ||
+  table.note?.trim().toLowerCase().startsWith("zum abholen") === true;
+
+const getTableNumberLabel = (table: Pick<TableLayout, "id" | "name">) => {
+  const pickupNumber = table.name.trim().match(/^Zum Abholen\s+(\d+)$/i)?.[1];
+  if (pickupNumber) return `A${pickupNumber}`;
+
+  return table.id.match(/table-(\d+)/i)?.[1] ?? table.name.match(/(\d+)/)?.[1] ?? "–";
 };
 
 type WaiterRoomTableKind = "indoor" | "beer" | "round";
@@ -576,6 +602,7 @@ export const WaiterWorkspace = () => {
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
   const [isSecureTransferPending, setIsSecureTransferPending] = useState(false);
+  const [isSendPending, setIsSendPending] = useState(false);
   const [selectedPaymentQuantities, setSelectedPaymentQuantities] = useState<Record<string, number>>({});
   const [linkTableSelection, setLinkTableSelection] = useState<string[]>([]);
   const [isLinkTablesOpen, setIsLinkTablesOpen] = useState(false);
@@ -630,6 +657,11 @@ export const WaiterWorkspace = () => {
   );
   const selectedDashboardEntry =
     dashboard.find((entry) => entry.table.id === selectedTableId) ?? null;
+  const activeWaiterMenuEntries = waiterMenuEntries.filter((entry) => entry.table.active);
+  const occupiedTableCount = activeWaiterMenuEntries.filter(
+    (entry) => entry.availability === "occupied"
+  ).length;
+  const freeTableCount = Math.max(0, activeWaiterMenuEntries.length - occupiedTableCount);
   const linkedTableGroup = selectedTableId ? getLinkedTableGroupForTable(state, selectedTableId) : undefined;
   const activeLinkedTableGroups = state.linkedTableGroups.filter((group) => group.active);
   const checkoutTableIds = selectedTableId ? getCheckoutTableIds(state, selectedTableId) : [];
@@ -982,6 +1014,10 @@ export const WaiterWorkspace = () => {
   const canReprintFullReceipt = checkoutSessions.some(({ session }) => Boolean(session.receipt.printedAt));
   const sessionItemCount =
     selectedSession?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+  const pendingOrderSendSummary = useMemo(
+    () => buildPendingOrderSendSummary(selectedSession, state.products),
+    [selectedSession, state.products]
+  );
   const openServiceDeliveryNotifications = unreadNotifications.filter(
     (notification) =>
       notification.kind === "service-drinks" || notification.kind === "service-course-ready"
@@ -1162,12 +1198,7 @@ export const WaiterWorkspace = () => {
 
   const openTableActionForSelection = () => {
     flushPendingSentItemNotes();
-    setCurrentStep("table");
-    setActiveCategoryDialog(null);
-    setCategoryDialogStage("groups");
-    setCategoryDialogInitialItemIds([]);
-    setIsOrderWizardOpen(false);
-    setIsTableActionDialogOpen(true);
+    openOrderWizard("overview");
   };
 
   const openCategoryDialog = (course: CourseKey) => {
@@ -1195,7 +1226,7 @@ export const WaiterWorkspace = () => {
     setCategoryDialogStage("groups");
     setCategoryDialogInitialItemIds([]);
     setWaitPlannerOpen(false);
-    setCurrentStep("table");
+    setCurrentStep(isWaiterView ? "overview" : "table");
   };
 
   const openCategoryProductGroup = (group: string) => {
@@ -1705,12 +1736,22 @@ export const WaiterWorkspace = () => {
     }
 
     if (currentStep === "checkout") {
+      if (isWaiterView) {
+        setCurrentStep("overview");
+        return;
+      }
+
       setIsOrderWizardOpen(false);
       if (selectedTableId && getCheckoutOpenTotalForTable(selectedTableId) > 0) {
         setIsTableActionDialogOpen(true);
       } else {
         setCurrentStep("table");
       }
+      return;
+    }
+
+    if (currentStep === "overview") {
+      closeOrderWizard();
       return;
     }
 
@@ -1819,7 +1860,7 @@ export const WaiterWorkspace = () => {
     setReceiptPreview(null);
     setSelectedPaymentQuantities({});
     setIsLinkTablesOpen(false);
-    openOrderWizard("table");
+    openOrderWizard("overview");
 
     const printResult = await createPrintJob({
       type: "pickup-ticket",
@@ -1838,6 +1879,88 @@ export const WaiterWorkspace = () => {
         ? `${result.tableName} ist geöffnet und der Kurzbon wurde an den Drucker gesendet.`
         : printResult.message ??
           `${result.tableName} ist geöffnet, aber der Kurzbon konnte nicht gedruckt werden.`
+    });
+  };
+
+  const handleArchivePickupTable = async (tableId: string) => {
+    const table = state.tables.find((entry) => entry.id === tableId);
+    if (!table || !isPickupTableEntry(table)) return;
+
+    if (getSessionForTable(state.sessions, tableId)) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abholtisch noch offen",
+        detail: "Bitte zuerst die offene Bestellung abschließen."
+      });
+      return;
+    }
+
+    if (!window.confirm(`${table.name} wirklich aus der aktiven Übersicht entfernen?`)) return;
+
+    const result = actions.archivePickupTable(tableId);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Abholtisch nicht entfernt",
+        detail: result.message ?? "Der Abholtisch konnte nicht archiviert werden."
+      });
+      return;
+    }
+
+    const confirmation = await result.confirmation;
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Archivierung nicht bestätigt",
+        detail: confirmation.message
+      });
+      return;
+    }
+
+    if (selectedTableId === tableId) {
+      setSelectedTableId(null);
+      closeOrderWizard();
+    }
+
+    setServiceFeedback({
+      tone: "success",
+      title: "Abholtisch entfernt",
+      detail: `${table.name} wurde archiviert. Die Historie bleibt erhalten.`
+    });
+  };
+
+  const handleSendAllPendingItems = async () => {
+    if (!selectedTable || isSendPending) return;
+
+    const result = actions.sendAllPendingItems(selectedTable.id);
+    if (!result.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Noch nicht gesendet",
+        detail: result.message ?? "Die offenen Positionen konnten nicht gesendet werden."
+      });
+      return;
+    }
+
+    setIsSendPending(true);
+    const confirmation = await result.confirmation;
+    setIsSendPending(false);
+
+    if (confirmation && !confirmation.ok) {
+      setServiceFeedback({
+        tone: "alert",
+        title: "Nicht gespeichert",
+        detail: confirmation.message
+      });
+      return;
+    }
+
+    setServiceFeedback({
+      tone: "success",
+      title: "Bestellung gesendet",
+      detail:
+        result.message ??
+        `${result.sentItemCount} ${result.sentItemCount === 1 ? "Position wurde" : "Positionen wurden"} an Bar und Küche verteilt.`
     });
   };
 
@@ -2493,6 +2616,122 @@ export const WaiterWorkspace = () => {
     </div>
   );
 
+  const renderOrderOverview = () => (
+    <div className="kiju-order-overview">
+      <section className="kiju-wizard-panel kiju-order-overview__hero">
+        <div className="kiju-wizard-panel__header">
+          <div>
+            <span className="kiju-eyebrow">Bestellung</span>
+            <strong>Übersicht für {selectedTable?.name ?? "diesen Tisch"}</strong>
+            <small>
+              {sessionItemCount} {sessionItemCount === 1 ? "Artikel" : "Artikel"} · {euro(sessionTotal)} gesamt
+            </small>
+          </div>
+          <StatusPill
+            label={
+              pendingOrderSendSummary.sentItemCount > 0
+                ? `${pendingOrderSendSummary.sentItemCount} offen`
+                : "Alles gesendet"
+            }
+            tone={pendingOrderSendSummary.sentItemCount > 0 ? "amber" : "green"}
+          />
+        </div>
+        <div className="kiju-order-overview__actions">
+          <button
+            type="button"
+            className="kiju-button kiju-button--primary"
+            onClick={() =>
+              document.getElementById("kiju-order-overview-add")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              })
+            }
+          >
+            <Plus size={18} />
+            Artikel hinzufügen
+          </button>
+          <button
+            type="button"
+            className="kiju-button kiju-button--secondary"
+            onClick={() => void handleSendAllPendingItems()}
+            disabled={pendingOrderSendSummary.sentItemCount === 0 || isSendPending}
+          >
+            <ChefHat size={18} />
+            {isSendPending ? "Wird gesendet …" : "Alles senden"}
+          </button>
+          <button
+            type="button"
+            className="kiju-button kiju-button--secondary"
+            onClick={() => setCurrentStep("checkout")}
+            disabled={checkoutSessions.length === 0}
+          >
+            <Receipt size={18} />
+            Abrechnen
+          </button>
+        </div>
+      </section>
+
+      <section className="kiju-order-overview__courses" aria-label="Bestellte Positionen nach Gang">
+        {orderStepSequence.map((course) => {
+          const items =
+            selectedSession?.items.filter(
+              (item) => item.category === course && !isOrderItemCanceled(item)
+            ) ?? [];
+          const ticketState = selectedSession
+            ? resolveServiceCourseStatus(selectedSession, course)
+            : null;
+          const pendingCount = pendingOrderSendSummary.byCourse[course].reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+
+          return (
+            <section key={course} className="kiju-wizard-panel kiju-order-overview__course">
+              <div className="kiju-wizard-panel__header">
+                <div>
+                  <span className="kiju-eyebrow">{courseLabels[course]}</span>
+                  <strong>
+                    {items.reduce((sum, item) => sum + item.quantity, 0)} {items.length === 1 ? "Position" : "Positionen"}
+                  </strong>
+                </div>
+                <StatusPill
+                  label={
+                    pendingCount > 0
+                      ? `${pendingCount} noch nicht gesendet`
+                      : ticketState
+                        ? formatCourseStatusLabel(ticketState, course)
+                        : "Noch nichts erfasst"
+                  }
+                  tone={
+                    pendingCount > 0
+                      ? "red"
+                      : ticketState
+                        ? getTicketStatusTone(ticketState.status, items.length)
+                        : "slate"
+                  }
+                />
+              </div>
+              <div className="kiju-order-overview__course-items">
+                {renderEditableItems(
+                  items,
+                  `Für ${courseLabels[course]} wurde noch nichts erfasst.`
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </section>
+
+      <section
+        id="kiju-order-overview-add"
+        className="kiju-order-overview__add"
+        aria-label="Artikel hinzufügen"
+      >
+        {renderCourseCategoryGrid()}
+      </section>
+    </div>
+  );
+
   const renderCategoryGroupSelection = () => (
     <section className="kiju-wizard-panel kiju-category-group-stage">
       <div className="kiju-wizard-panel__header">
@@ -3056,12 +3295,12 @@ export const WaiterWorkspace = () => {
         ) : null}
 
         {isWaiterView && currentStep === "table" && !isOrderWizardOpen && !isTableActionDialogOpen ? (
-          <section className="kiju-waiter-room-map" aria-label="Raumstruktur und Tischwahl">
+          <section className="kiju-waiter-room-map" aria-label="Tischübersicht und Tischwahl">
             <header className="kiju-waiter-room-map__header">
               <div>
-                <span className="kiju-eyebrow">Raumstruktur</span>
+                <span className="kiju-eyebrow">Tischübersicht</span>
                 <h2>Tisch auswählen</h2>
-                <p>Innenbereich und Außenbereich in einer klaren Ansicht.</p>
+                <p>Freie und belegte Tische erkennst du sofort.</p>
               </div>
               <div className="kiju-waiter-room-map__legend" aria-label="Bereiche">
                 <span className="kiju-waiter-room-map__legend-item kiju-waiter-room-map__legend-item--inside">
@@ -3072,6 +3311,77 @@ export const WaiterWorkspace = () => {
                 </span>
               </div>
             </header>
+
+            <div className="kiju-waiter-availability-summary" aria-label="Tischbelegung">
+              <div className="kiju-waiter-availability-summary__item kiju-waiter-availability-summary__item--free">
+                <strong>{freeTableCount}</strong>
+                <span>Frei</span>
+              </div>
+              <div className="kiju-waiter-availability-summary__item kiju-waiter-availability-summary__item--occupied">
+                <strong>{occupiedTableCount}</strong>
+                <span>Belegt</span>
+              </div>
+              <div className="kiju-waiter-availability-summary__hint">
+                <span>Belegt bedeutet: Es gibt eine aktive Bestellung.</span>
+              </div>
+            </div>
+
+            <div className="kiju-waiter-table-status-grid" aria-label="Status aller Tische">
+              {waiterMenuEntries.map((entry) => {
+                const isPickup = isPickupTableEntry(entry.table);
+                const isOccupied = entry.availability === "occupied";
+                const statusText = isOccupied
+                  ? statusLabel[entry.status] ?? "Bestellung offen"
+                  : entry.table.plannedOnly
+                    ? "Geplant"
+                    : "Bereit für neue Gäste";
+
+                return (
+                  <article
+                    key={`status-${entry.table.id}`}
+                    className={`kiju-waiter-table-card kiju-waiter-table-card--${entry.availability}${
+                      isPickup ? " kiju-waiter-table-card--pickup" : ""
+                    }${entry.table.id === selectedTableId ? " is-selected" : ""}`}
+                  >
+                    <button
+                      type="button"
+                      className="kiju-waiter-table-card__select"
+                      onClick={() => selectTable(entry.table.id)}
+                      aria-label={`${entry.table.name}: ${availabilityLabel[entry.availability]} auswählen`}
+                    >
+                      <span className="kiju-waiter-table-card__number">
+                        {getTableNumberLabel(entry.table)}
+                      </span>
+                      <span className="kiju-waiter-table-card__copy">
+                        <strong>{entry.table.name}</strong>
+                        <small>
+                          {statusText} · {entry.guests} {entry.guests === 1 ? "Gast" : "Gäste"} · {euro(entry.total)}
+                        </small>
+                      </span>
+                      <StatusPill
+                        label={availabilityLabel[entry.availability]}
+                        tone={availabilityTone[entry.availability]}
+                      />
+                    </button>
+                    {isPickup ? (
+                      <div className="kiju-waiter-table-card__pickup-actions">
+                        {isOccupied ? (
+                          <small>Erst abschließen, dann entfernen.</small>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="kiju-button kiju-button--danger"
+                          onClick={() => void handleArchivePickupTable(entry.table.id)}
+                          disabled={isOccupied}
+                        >
+                          Abholtisch entfernen
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
 
             <div className="kiju-waiter-room-map__canvas">
               <img
@@ -3100,7 +3410,7 @@ export const WaiterWorkspace = () => {
                     type="button"
                     className={`kiju-waiter-room-table kiju-waiter-room-table--${config.kind}${
                       isSelected ? " is-selected" : ""
-                    }`}
+                    }${entry?.availability ? ` is-${entry.availability}` : ""}`}
                     data-table-number={config.number}
                     style={{
                       left: `${config.left}%`,
@@ -3108,14 +3418,18 @@ export const WaiterWorkspace = () => {
                       width: `${config.width}%`,
                       height: `${config.height}%`
                     }}
-                    aria-label={`${config.title} auswählen`}
+                    aria-label={`${config.title}: ${entry ? availabilityLabel[entry.availability] : "nicht aktiv"} auswählen`}
                     onClick={() => {
                       if (entry) selectTable(entry.table.id);
                     }}
                   >
                     <strong>{config.number}</strong>
                     <span className="kiju-waiter-room-table__kind">{tableTypeLabel}</span>
-                    <small>{entry ? statusLabel[entry.status] ?? "Status" : "Status"}</small>
+                    <small>
+                      {entry
+                        ? `${availabilityLabel[entry.availability]} · ${statusLabel[entry.status] ?? "Status"}`
+                        : "Nicht aktiv"}
+                    </small>
                   </button>
                 );
                 })}
@@ -3348,7 +3662,7 @@ export const WaiterWorkspace = () => {
                 <button
                   type="button"
                   className="kiju-table-action-choice"
-                  onClick={() => openOrderWizard("table")}
+                  onClick={() => openOrderWizard("overview")}
                 >
                   <ChefHat size={24} />
                   <strong>Bestellen</strong>
@@ -3594,6 +3908,8 @@ export const WaiterWorkspace = () => {
                       {renderReceiptDraftPreviewPanel()}
                     </div>
                   </div>
+                ) : currentStep === "overview" ? (
+                  renderOrderOverview()
                 ) : (
                   renderCourseCategoryGrid()
                 )}
@@ -3609,7 +3925,26 @@ export const WaiterWorkspace = () => {
                   {currentStep === "checkout" ? "Zurück" : "Zurück zur Tischauswahl"}
                 </button>
                 <div className="kiju-wizard-footer__actions">
-                  {currentStep === "checkout" ? (
+                  {currentStep === "overview" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => void handleSendAllPendingItems()}
+                        disabled={pendingOrderSendSummary.sentItemCount === 0 || isSendPending}
+                      >
+                        {isSendPending ? "Wird gesendet …" : "Alles senden"}
+                      </button>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--primary"
+                        onClick={() => setCurrentStep("checkout")}
+                        disabled={checkoutSessions.length === 0}
+                      >
+                        Abrechnen
+                      </button>
+                    </>
+                  ) : currentStep === "checkout" ? (
                     <button
                       type="button"
                       className="kiju-button kiju-button--primary"

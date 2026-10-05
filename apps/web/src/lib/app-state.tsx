@@ -256,6 +256,11 @@ type DemoActions = {
     message?: string;
     confirmation?: Promise<CommitResult>;
   };
+  archivePickupTable: (tableId: string) => {
+    ok: boolean;
+    message?: string;
+    confirmation?: Promise<CommitResult>;
+  };
   createSelfOrderLocation: (name: string) => {
     ok: boolean;
     location?: SelfOrderLocation;
@@ -3931,6 +3936,44 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     [commit, state]
   );
 
+  const archivePickupTable = useCallback(
+    (tableId: string) => {
+      const next = structuredClone(state);
+      const table = next.tables.find((entry) => entry.id === tableId);
+      if (!table) {
+        return { ok: false, message: "Abholtisch konnte nicht gefunden werden." };
+      }
+
+      if (!isPickupTable(table)) {
+        return { ok: false, message: "Nur Abholtische können aus dem Service archiviert werden." };
+      }
+
+      if (getSessionForTable(next.sessions, tableId)) {
+        return {
+          ok: false,
+          message: "Bitte zuerst die offene Bestellung abschließen, bevor der Abholtisch entfernt wird."
+        };
+      }
+
+      const archivedAt = new Date().toISOString();
+      table.active = false;
+      table.plannedOnly = false;
+      table.archivedAt = archivedAt;
+
+      withNotification(next, {
+        title: "Abholtisch entfernt",
+        body: `${table.name} wurde aus der aktiven Serviceansicht entfernt und archiviert.`,
+        tone: "success",
+        tableId
+      }, currentUserId);
+      emitOperatorFeedback();
+      const confirmation = commit(next, undefined, "table.update");
+
+      return { ok: true, confirmation };
+    },
+    [commit, currentUserId, state]
+  );
+
   const createSelfOrderLocation = useCallback(
     (name: string) => {
       const normalizedName = name.trim().replace(/\s+/g, " ");
@@ -4655,6 +4698,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         deleteUser,
         createTable,
         createPickupTable,
+        archivePickupTable,
         createSelfOrderLocation,
         updateSelfOrderLocation,
         deleteSelfOrderLocation,
@@ -4688,6 +4732,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       createProduct,
       createTable,
       createPickupTable,
+      archivePickupTable,
       createSelfOrderLocation,
       createUser,
       cycleKitchenItemUnitStatus,

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.00-beta
+- Datum: 2026-10-05
+- Uhrzeit: 14:29 +02:00
+- Typ: Verbesserung / Oberfläche
+- Zusammenfassung:
+  Die Serviceoberfläche zeigt die Tischbelegung eindeutiger und führt nach der Tischwahl direkt in die Bestellübersicht.
+- Änderungen:
+  Tischkarten zeigen freie und belegte Tische mit Bestellstatus, Artikelanzahl und Betrag.
+  Auf Handys wird der Raumplan durch eine nummerierte Tischübersicht ersetzt; Tablet und Desktop behalten den Raumplan zusätzlich.
+  Abholtische können nach erfolgreichem Abschluss archiviert und aus der aktiven Ansicht entfernt werden, ohne die Historie zu löschen.
+  Die Bestellübersicht bietet direkt Artikel hinzufügen, Alles senden und Abrechnen.
+
 ## 0.13.04-beta
 - Datum: 2026-10-05
 - Typ: Deployment / Betrieb

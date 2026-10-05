@@ -77,6 +77,22 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.00-beta",
+    date: "2026-10-05",
+    time: "14:29 +02:00",
+    type: "Verbesserung / Oberfläche",
+    title: "Tischbelegung und Bestellübersicht vereinfacht",
+    summary:
+      "Die Serviceansicht zeigt freie und belegte Tische klarer und öffnet nach der Tischwahl direkt die laufende Bestellübersicht.",
+    categories: ["Service", "Tische", "Mobil", "Bestellübersicht"],
+    changes: [
+      "Tische zeigen jetzt eindeutig Frei oder Belegt sowie Bestellstatus, Artikelanzahl und Betrag.",
+      "Auf Handys ersetzt eine nummerierte Tischübersicht den Raumplan; Tablet und Desktop behalten den Raumplan zusätzlich.",
+      "Abholtische können nach dem Abschluss aus der aktiven Übersicht entfernt und nachvollziehbar archiviert werden.",
+      "Die Bestellübersicht ist der direkte Einstieg und bietet Artikel hinzufügen, Alles senden und Abrechnen als klare Hauptaktionen."
+    ]
+  },
+  {
     version: "0.13.00-beta",
     date: "2026-10-04",
     time: "21:00 +02:00",

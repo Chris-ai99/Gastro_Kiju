@@ -64,6 +64,11 @@ export const resolveSessionStatus = (
   return session.status;
 };
 
+export type TableAvailability = "free" | "occupied";
+
+export const resolveTableAvailability = (session?: OrderSession): TableAvailability =>
+  session ? "occupied" : "free";
+
 export const calculateItemTotal = (item: OrderItem, products: Product[]) => {
   if (isOrderItemCanceled(item)) return 0;
 
@@ -247,6 +252,7 @@ export const buildDashboardSummary = (state: AppState) =>
       table,
       session,
       status: resolveSessionStatus(table, session),
+      availability: resolveTableAvailability(session),
       total: calculateSessionTotal(session, state.products),
       guests: calculateGuestCount(session)
     };
