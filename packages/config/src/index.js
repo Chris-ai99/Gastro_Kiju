@@ -16,7 +16,6 @@ const joinBasePath = (basePath, path) => {
     }
     return normalizedPath === "/" ? `${basePath}/` : `${basePath}${normalizedPath}`;
 };
-const runtimeScope = globalThis;
 exports.theme = {
     colors: {
         deepNavy: "#1E3A8A",
@@ -47,7 +46,9 @@ exports.appMetadata = {
     description: "Tablet-first Gastro-Service-System für Bestellungen, Küchenwellen, Admin und Tagesabschluss."
 };
 exports.deploymentConfig = {
-    basePath: normalizeBasePath(runtimeScope.process?.env?.["NEXT_PUBLIC_BASE_PATH"])
+    // Keep the public base path statically referenced so Next.js inlines it in
+    // the browser bundle as well as the server bundle.
+    basePath: normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH)
 };
 const resolveAppUrl = (path = "/") => joinBasePath(exports.deploymentConfig.basePath, path);
 exports.resolveAppUrl = resolveAppUrl;

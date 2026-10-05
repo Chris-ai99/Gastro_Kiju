@@ -17,6 +17,13 @@ const joinBasePath = (basePath: string, path: string) => {
   return normalizedPath === "/" ? `${basePath}/` : `${basePath}${normalizedPath}`;
 };
 
+declare const process: {
+  env: {
+    NEXT_PUBLIC_BASE_PATH?: string;
+    NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL?: string;
+  };
+};
+
 export const normalizeSelfOrderPublicBaseUrl = (value?: string) => {
   if (!value) return "";
 
@@ -32,12 +39,6 @@ export const normalizeSelfOrderPublicBaseUrl = (value?: string) => {
   } catch {
     return "";
   }
-};
-
-const runtimeScope = globalThis as typeof globalThis & {
-  process?: {
-    env?: Record<string, string | undefined>;
-  };
 };
 
 export const theme = {
@@ -73,7 +74,9 @@ export const appMetadata = {
 } as const;
 
 export const deploymentConfig = {
-  basePath: normalizeBasePath(runtimeScope.process?.env?.["NEXT_PUBLIC_BASE_PATH"])
+  // NEXT_PUBLIC_* values must be referenced statically so Next.js inlines the
+  // configured base path into the browser bundle as well as the server bundle.
+  basePath: normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH)
 } as const;
 
 export const resolveAppUrl = (path = "/") => joinBasePath(deploymentConfig.basePath, path);
@@ -85,7 +88,7 @@ export const resolveApiUrl = (path = "", basePath = deploymentConfig.basePath) =
 
 export const selfOrderPublicConfig = {
   baseUrl: normalizeSelfOrderPublicBaseUrl(
-    runtimeScope.process?.env?.["NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL"]
+    process.env.NEXT_PUBLIC_SELF_ORDER_PUBLIC_BASE_URL
   )
 } as const;
 

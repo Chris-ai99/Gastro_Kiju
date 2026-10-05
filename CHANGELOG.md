@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.03-beta
+- Datum: 2026-10-05
+- Typ: Fix / Deployment
+- Zusammenfassung:
+  Die interne Oberfläche verwendet den konfigurierten `/gastro`-Pfad auch im Browser.
+- Änderungen:
+  Die öffentliche Base-Path-Konfiguration wird beim Next.js-Build statisch in das Browser-Bundle übernommen.
+  Dadurch erreichen Session-, State-, Transaktions- und Live-Anfragen den VPS über `/gastro/api/...` statt über den nicht vorhandenen Pfad `/api/...`.
+
 ## 0.13.02-beta
 - Datum: 2026-10-04
 - Uhrzeit: 22:10 +02:00
