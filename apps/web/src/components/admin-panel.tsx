@@ -77,6 +77,22 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.07-beta",
+    date: "2026-10-05",
+    time: "16:28 +02:00",
+    type: "Verbesserung / Bestellübersicht",
+    title: "Offene Bestellpositionen direkt bearbeiten",
+    summary:
+      "Die kompakte Bestellübersicht macht gesendete und offene Mengen sowie den aktuellen Bearbeitungsstatus eindeutig sichtbar.",
+    categories: ["Service", "Bestellung", "Mobil"],
+    changes: [
+      "Gesamt-, gesendete und offene Artikelmengen werden getrennt angezeigt; zusammengefasste Artikel bleiben als eine Bonzeile lesbar.",
+      "Noch nicht gesendete Positionen können direkt in der Übersicht in der Menge, Notiz und Extra-Zutaten geändert oder gelöscht werden.",
+      "Jede Position zeigt ihren Versand- oder Bearbeitungsstatus für Bar, Küche, Service und Lieferung.",
+      "Abschließen nach der Artikelauswahl führt direkt zurück zur neuen Bestellübersicht."
+    ]
+  },
+  {
     version: "0.14.06-beta",
     date: "2026-10-05",
     time: "16:04 +02:00",

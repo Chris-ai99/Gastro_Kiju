@@ -97,6 +97,10 @@ type OrderOverviewLine = {
   totalCents: number;
   pendingQuantity: number;
   pendingTarget: "bar" | "kitchen" | null;
+  sentQuantity: number;
+  itemIds: string[];
+  pendingItemIds: string[];
+  serviceBooked: boolean;
   note?: string;
   target: OrderTarget;
 };
@@ -120,6 +124,8 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
     const key = getOrderOverviewLineKey(item);
     const existingIndex = lineIndexes.get(key);
     const itemQuantity = Math.max(0, item.quantity);
+    const serviceBooked = isServiceBookedItem(item, products);
+    const isPending = !item.sentAt && !serviceBooked;
 
     if (existingIndex === undefined) {
       lineIndexes.set(key, lines.length);
@@ -128,13 +134,12 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
         category: item.category,
         quantity: itemQuantity,
         totalCents: calculateItemTotal(item, products),
-        pendingQuantity: item.sentAt || isServiceBookedItem(item, products) ? 0 : itemQuantity,
-        pendingTarget:
-          item.sentAt || isServiceBookedItem(item, products)
-            ? null
-            : item.category === "drinks"
-              ? "bar"
-              : "kitchen",
+        pendingQuantity: isPending ? itemQuantity : 0,
+        pendingTarget: isPending ? (item.category === "drinks" ? "bar" : "kitchen") : null,
+        sentQuantity: item.sentAt ? itemQuantity : 0,
+        itemIds: [item.id],
+        pendingItemIds: isPending ? [item.id] : [],
+        serviceBooked,
         note: item.note,
         target: item.target
       });
@@ -145,7 +150,13 @@ const buildOrderOverviewLines = (items: OrderItem[], products: Product[]) => {
     if (!line) return;
     line.quantity += itemQuantity;
     line.totalCents += calculateItemTotal(item, products);
-    if (!item.sentAt && !isServiceBookedItem(item, products)) {
+    line.itemIds.push(item.id);
+    line.serviceBooked = line.serviceBooked && serviceBooked;
+    if (item.sentAt) {
+      line.sentQuantity += itemQuantity;
+    }
+    if (isPending) {
+      line.pendingItemIds.push(item.id);
       line.pendingQuantity += itemQuantity;
       line.pendingTarget = line.pendingTarget ?? (item.category === "drinks" ? "bar" : "kitchen");
     }
@@ -690,6 +701,7 @@ export const WaiterWorkspace = () => {
   const [extraIngredientsItemId, setExtraIngredientsItemId] = useState<string | null>(null);
   const [extraIngredientDraftIds, setExtraIngredientDraftIds] = useState<string[]>([]);
   const [sentItemNoteDrafts, setSentItemNoteDrafts] = useState<Record<string, string>>({});
+  const [editingOverviewLineId, setEditingOverviewLineId] = useState<string | null>(null);
   const addedProductFeedbackTimerRef = useRef<number | null>(null);
   const sentItemNoteTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingSentItemNotesRef = useRef<
@@ -1073,6 +1085,22 @@ export const WaiterWorkspace = () => {
   const canReprintFullReceipt = checkoutSessions.some(({ session }) => Boolean(session.receipt.printedAt));
   const sessionItemCount =
     selectedSession?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+  const orderOverviewLines = useMemo(
+    () => buildOrderOverviewLines(selectedSession?.items ?? [], state.products),
+    [selectedSession, state.products]
+  );
+  const orderOverviewItemCount = orderOverviewLines.reduce(
+    (sum, line) => sum + line.quantity,
+    0
+  );
+  const orderOverviewSentQuantity = orderOverviewLines.reduce(
+    (sum, line) => sum + line.sentQuantity,
+    0
+  );
+  const orderOverviewPendingQuantity = orderOverviewLines.reduce(
+    (sum, line) => sum + line.pendingQuantity,
+    0
+  );
   const pendingOrderSendSummary = useMemo(
     () => buildPendingOrderSendSummary(selectedSession, state.products),
     [selectedSession, state.products]
@@ -1174,6 +1202,7 @@ export const WaiterWorkspace = () => {
     setReceiptPreview(null);
     setSelectedPaymentQuantities({});
     setLinkTableSelection(selectedTableId ? [selectedTableId] : []);
+    setEditingOverviewLineId(null);
   }, [selectedTableId]);
 
   useEffect(() => {
@@ -1287,7 +1316,7 @@ export const WaiterWorkspace = () => {
     setCategoryDialogStage("groups");
     setCategoryDialogInitialItemIds([]);
     setWaitPlannerOpen(false);
-    setCurrentStep(isWaiterView ? "overview" : "table");
+    setCurrentStep("overview");
   };
 
   const openCategoryProductGroup = (group: string) => {
@@ -1297,11 +1326,6 @@ export const WaiterWorkspace = () => {
     }
     setWaitPlannerOpen(false);
     setCategoryDialogStage("products");
-  };
-
-  const openCategoryReview = () => {
-    setWaitPlannerOpen(false);
-    setCategoryDialogStage("review");
   };
 
   const scrollToServiceSection = () => {
@@ -2163,6 +2187,24 @@ export const WaiterWorkspace = () => {
     actions.removeItem(selectedTable.id, item.id);
   };
 
+  const handleOverviewPendingQuantityChange = (item: OrderItem, delta: number) => {
+    if (!selectedTable || item.sentAt || isOrderItemCanceled(item) || isServiceBookedItem(item, state.products)) {
+      return;
+    }
+
+    const nextQuantity = Math.max(1, item.quantity + delta);
+    if (nextQuantity === item.quantity) return;
+
+    actions.updateItem(selectedTable.id, item.id, { quantity: nextQuantity });
+  };
+
+  const handleOverviewPendingRemoval = (item: OrderItem) => {
+    if (!selectedTable || item.sentAt || isOrderItemCanceled(item)) return;
+
+    handleItemRemoval(item);
+    setEditingOverviewLineId(null);
+  };
+
   const handleOpenExtraIngredientsDialog = (item: OrderItem) => {
     setExtraIngredientsItemId(item.id);
     setExtraIngredientDraftIds(
@@ -2681,8 +2723,13 @@ export const WaiterWorkspace = () => {
   const renderOrderOverview = () => (
     <div className="kiju-order-overview">
       <section className="kiju-order-overview__totals" aria-label="Bestellsumme">
-        <span>{sessionItemCount} Artikel</span>
-        <strong>{euro(sessionTotal)}</strong>
+        <div className="kiju-order-overview__totals-counts">
+          <strong>{orderOverviewItemCount} Artikel gesamt</strong>
+          <span>
+            {orderOverviewSentQuantity} gesendet · {orderOverviewPendingQuantity} offen
+          </span>
+        </div>
+        <strong className="kiju-order-overview__total-price">{euro(sessionTotal)}</strong>
         <StatusPill
           label={
             pendingOrderSendSummary.sentItemCount > 0
@@ -2694,53 +2741,161 @@ export const WaiterWorkspace = () => {
       </section>
 
       <section className="kiju-order-overview__items" aria-label="Bestellte Artikel">
-        {(() => {
-          const lines = buildOrderOverviewLines(selectedSession?.items ?? [], state.products);
-
-          if (lines.length === 0) {
-            return (
-              <div className="kiju-wizard-panel kiju-order-overview__empty">
-                <strong>Noch keine Artikel erfasst</strong>
-                <span>Tippe unten auf „Artikel hinzufügen“, um den ersten Artikel zu erfassen.</span>
-              </div>
-            );
-          }
-
-          return lines.map((line, index) => {
+        {orderOverviewLines.length === 0 ? (
+          <div className="kiju-wizard-panel kiju-order-overview__empty">
+            <strong>Noch keine Artikel erfasst</strong>
+            <span>Tippe unten auf „Artikel hinzufügen“, um den ersten Artikel zu erfassen.</span>
+          </div>
+        ) : (
+          orderOverviewLines.map((line, index) => {
+            const lineId = `${line.productId}-${line.category}-${index}`;
+            const pendingItem = line.pendingItemIds
+              .map((itemId) => selectedSession?.items.find((item) => item.id === itemId))
+              .find((item): item is OrderItem => Boolean(item));
+            const representativeItem = line.itemIds
+              .map((itemId) => selectedSession?.items.find((item) => item.id === itemId))
+              .find((item): item is OrderItem => Boolean(item));
+            const itemForDetails = pendingItem ?? representativeItem;
             const target = line.target;
             const targetLabel =
               target.type === "table"
                 ? "Tisch"
                 : selectedTable?.seats.find((seat) => seat.id === target.seatId)?.label ??
                   "Sitzplatz";
-            const lineDetails = [target.type === "table" ? null : targetLabel, line.note ? `Notiz: ${line.note}` : null]
+            const modifierLabels = itemForDetails
+              ? resolveItemModifierLabels(itemForDetails, state.products)
+              : [];
+            const lineDetails = [
+              target.type === "table" ? null : targetLabel,
+              ...modifierLabels,
+              line.note ? `Notiz: ${line.note}` : null
+            ]
               .filter(Boolean)
               .join(" · ");
-            const pendingTargetLabel = line.pendingTarget === "bar" ? "Bar" : "Küche";
-            const pendingStatusLabel =
-              line.pendingQuantity === line.quantity
-                ? `Nicht an ${pendingTargetLabel} gesendet`
-                : line.pendingQuantity > 0
-                  ? `${line.pendingQuantity} offen · nicht an ${pendingTargetLabel} gesendet`
-                  : null;
+            const courseStatus = selectedSession
+              ? resolveServiceCourseStatus(selectedSession, line.category)
+              : null;
+            const sentStatusLabel =
+              courseStatus?.status === "not-recorded"
+                ? line.category === "drinks"
+                  ? "An Bar gesendet"
+                  : "An Küche gesendet"
+                : formatCourseStatusLabel(courseStatus, line.category);
+            const statusLabel = line.serviceBooked
+              ? "Service gebucht"
+              : line.pendingQuantity > 0
+                ? line.sentQuantity > 0
+                  ? `${line.pendingQuantity} offen · ${formatCourseStatusLabel(courseStatus, line.category)}`
+                  : `Noch nicht an ${line.pendingTarget === "bar" ? "Bar" : "Küche"} gesendet`
+                : sentStatusLabel;
+            const statusTone = line.pendingQuantity > 0
+              ? "is-pending"
+              : line.serviceBooked
+                ? "is-booked"
+                : courseStatus?.status === "completed" || courseStatus?.status === "delivered"
+                  ? "is-complete"
+                  : "is-sent";
+            const isEditing = editingOverviewLineId === lineId;
+            const product = pendingItem ? getProductById(state.products, pendingItem.productId) : undefined;
+            const supportsExtraIngredients = product?.supportsExtraIngredients === true;
+            const extraIngredientLabels = pendingItem
+              ? resolveExtraIngredientLabels(pendingItem, product, extraIngredientsCatalog)
+              : [];
 
             return (
               <article
-                key={`${line.productId}-${index}`}
-                className={"kiju-order-overview__item" + (line.pendingQuantity > 0 ? " is-pending" : "")}
+                key={lineId}
+                className={`kiju-order-overview__item ${statusTone}`}
               >
-                <div className="kiju-order-overview__item-main">
-                  <strong>{line.quantity}× {resolveProductName(state.products, line.productId)}</strong>
-                  {pendingStatusLabel ? (
-                    <span className="kiju-order-overview__item-status">{pendingStatusLabel}</span>
-                  ) : null}
-                  {lineDetails ? <small>{lineDetails}</small> : null}
+                <div className="kiju-order-overview__item-row">
+                  <div className="kiju-order-overview__item-main">
+                    <strong>{line.quantity}× {resolveProductName(state.products, line.productId)}</strong>
+                    <span className={`kiju-order-overview__item-status ${statusTone}`}>
+                      {statusLabel}
+                    </span>
+                    {lineDetails ? <small>{lineDetails}</small> : null}
+                  </div>
+                  <div className="kiju-order-overview__item-actions">
+                    <strong className="kiju-order-overview__item-price">{euro(line.totalCents)}</strong>
+                    {pendingItem ? (
+                      <button
+                        type="button"
+                        className="kiju-order-overview__item-edit"
+                        onClick={() => setEditingOverviewLineId(isEditing ? null : lineId)}
+                        aria-expanded={isEditing}
+                      >
+                        {isEditing ? "Fertig" : "Bearbeiten"}
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-                <strong className="kiju-order-overview__item-price">{euro(line.totalCents)}</strong>
+
+                {isEditing && pendingItem ? (
+                  <div className="kiju-order-overview__item-editor">
+                    <div className="kiju-order-overview__item-editor-actions">
+                      <span>Menge</span>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => handleOverviewPendingQuantityChange(pendingItem, -1)}
+                        disabled={pendingItem.quantity <= 1}
+                        aria-label="Menge verringern"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <strong>{pendingItem.quantity}</strong>
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--secondary"
+                        onClick={() => handleOverviewPendingQuantityChange(pendingItem, 1)}
+                        aria-label="Menge erhöhen"
+                      >
+                        <Plus size={14} />
+                      </button>
+                      {supportsExtraIngredients ? (
+                        <button
+                          type="button"
+                          className="kiju-button kiju-button--secondary"
+                          onClick={() => handleOpenExtraIngredientsDialog(pendingItem)}
+                        >
+                          <Plus size={14} />
+                          Extra
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="kiju-button kiju-button--danger"
+                        onClick={() => handleOverviewPendingRemoval(pendingItem)}
+                      >
+                        <Trash2 size={14} />
+                        Löschen
+                      </button>
+                    </div>
+                    <label className="kiju-order-overview__item-note">
+                      <span>Notiz</span>
+                      <input
+                        name={`overview-item-note-${pendingItem.id}`}
+                        value={pendingItem.note ?? ""}
+                        onChange={(event) => {
+                          if (!selectedTable) return;
+                          actions.updateItem(selectedTable.id, pendingItem.id, {
+                            note: event.target.value
+                          });
+                        }}
+                        placeholder="Zum Beispiel ohne Zwiebeln"
+                      />
+                    </label>
+                    {extraIngredientLabels.length > 0 ? (
+                      <small className="kiju-order-overview__item-extra">
+                        Extra: {extraIngredientLabels.join(", ")}
+                      </small>
+                    ) : null}
+                  </div>
+                ) : null}
               </article>
             );
-          });
-        })()}
+          })
+        )}
       </section>
 
       <section
@@ -2890,7 +3045,7 @@ export const WaiterWorkspace = () => {
           <button
             type="button"
             className="kiju-button kiju-button--primary"
-            onClick={openCategoryReview}
+            onClick={closeCategoryDialog}
           >
             Abschließen
           </button>

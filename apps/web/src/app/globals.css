@@ -1915,12 +1915,25 @@ button {
   border-bottom: 1px solid rgba(148, 163, 184, 0.35);
 }
 
-.kiju-order-overview__totals > span {
-  color: var(--muted);
-  font-size: 0.82rem;
+.kiju-order-overview__totals-counts {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
 }
 
-.kiju-order-overview__totals > strong {
+.kiju-order-overview__totals-counts strong {
+  color: var(--slate);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiju-order-overview__totals-counts > span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiju-order-overview__total-price {
   margin-left: auto;
   color: var(--slate);
   font-size: 1rem;
@@ -1938,9 +1951,7 @@ button {
 
 .kiju-order-overview__item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.6rem;
+  gap: 0.35rem;
   min-height: 2.25rem;
   padding: 0.32rem 0.65rem;
   background: var(--surface-strong);
@@ -1960,6 +1971,14 @@ button {
   display: flex;
   align-items: baseline;
   gap: 0.25rem;
+}
+
+.kiju-order-overview__item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
 .kiju-order-overview__item-main strong {
@@ -1984,6 +2003,112 @@ button {
   font-size: 0.7rem;
   font-weight: 900;
   white-space: nowrap;
+}
+
+.kiju-order-overview__item-status.is-sent {
+  color: #1d4ed8;
+}
+
+.kiju-order-overview__item-status.is-complete {
+  color: #15803d;
+}
+
+.kiju-order-overview__item-status.is-booked {
+  color: var(--muted);
+}
+
+.kiju-order-overview__item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.kiju-order-overview__item-edit {
+  min-height: 1.8rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid rgba(14, 116, 144, 0.42);
+  border-radius: 5px;
+  background: transparent;
+  color: #0e7490;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.kiju-order-overview__item-edit:hover,
+.kiju-order-overview__item-edit[aria-expanded="true"] {
+  background: rgba(14, 116, 144, 0.1);
+}
+
+.kiju-order-overview__item-editor {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 1fr);
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  padding: 0.45rem 0 0.08rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.45);
+}
+
+.kiju-order-overview__item-editor-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.kiju-order-overview__item-editor-actions > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.kiju-order-overview__item-editor-actions > strong {
+  min-width: 1.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiju-order-overview__item-editor-actions .kiju-button {
+  min-height: 1.85rem;
+  height: 1.85rem;
+  padding: 0 0.45rem;
+  font-size: 0.72rem;
+}
+
+.kiju-order-overview__item-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.kiju-order-overview__item-note span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.kiju-order-overview__item-note input {
+  width: 100%;
+  min-height: 1.85rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  border-radius: 5px;
+  background: var(--surface-strong);
+  color: var(--slate);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.kiju-order-overview__item-extra {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .kiju-order-overview__item-price {
@@ -6276,8 +6401,53 @@ button.kiju-admin-link-pill {
   }
 
   .kiju-order-overview__item {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+  }
+
+  .kiju-order-overview__totals {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .kiju-order-overview__totals-counts {
+    flex: 1 1 9rem;
+  }
+
+  .kiju-order-overview__total-price {
+    margin-left: 0;
+  }
+
+  .kiju-order-overview__item-row {
+    align-items: start;
+    gap: 0.4rem;
+  }
+
+  .kiju-order-overview__item-main {
+    flex-wrap: wrap;
+    row-gap: 0.1rem;
+  }
+
+  .kiju-order-overview__item-main strong {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .kiju-order-overview__item-status {
+    white-space: normal;
+  }
+
+  .kiju-order-overview__item-actions {
+    align-items: start;
+    flex-wrap: wrap;
+  }
+
+  .kiju-order-overview__item-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kiju-order-overview__item-note {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .kiju-order-wizard-modal .kiju-waiter-wizard-bar {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.07-beta
+- Datum: 2026-10-05
+- Uhrzeit: 16:28 +02:00
+- Typ: Verbesserung / Bestellübersicht
+- Zusammenfassung:
+  Die kompakte Bestellübersicht trennt gesendete und offene Positionen klar und erlaubt die Bearbeitung offener Artikel direkt in der Übersicht.
+- Änderungen:
+  Die Gesamtmenge wird jetzt zusätzlich als gesendet und offen ausgewiesen, damit zusammengefasste Artikel nicht mit fehlenden Positionen verwechselt werden.
+  Offene Positionen zeigen ihren Versand- beziehungsweise Bearbeitungsstatus und können direkt in Menge, Notiz und Extra-Zutaten geändert oder gelöscht werden.
+  Der Button „Abschließen“ nach der Artikelauswahl führt direkt zurück zur neuen Bestellübersicht statt in das alte Abschlussmenü.
+
 ## 0.14.06-beta
 - Datum: 2026-10-05
 - Uhrzeit: 16:04 +02:00
