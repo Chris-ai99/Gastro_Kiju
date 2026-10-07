@@ -2258,7 +2258,7 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   gap: 0.9rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .kiju-wizard-fusion-layout {
@@ -3012,8 +3012,35 @@ button {
 }
 
 .kiju-checkout-controls {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.8rem;
+  min-height: 0;
+}
+
+.kiju-wizard-checkout-side {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.kiju-wizard-checkout-side > .kiju-wizard-panel:first-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.kiju-wizard-checkout-side > .kiju-wizard-panel:first-child .kiju-checkout-controls {
+  flex: 1;
+}
+
+.kiju-checkout-controls__actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.12);
 }
 
 .kiju-checkout-context {
@@ -3126,6 +3153,20 @@ button {
 }
 
 @media (max-width: 720px) {
+  .kiju-admin-reset-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-admin-reset-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-admin-reset-dialog__actions .kiju-button {
+    width: 100%;
+    min-height: 48px;
+  }
+
   .kiju-checkout-primary-actions,
   .kiju-checkout-partial-actions {
     grid-template-columns: 1fr;
@@ -3151,15 +3192,12 @@ button {
   .kiju-checkout-primary-actions,
   .kiju-checkout-partial-actions,
   .kiju-checkout-close-actions {
-    position: sticky;
-    bottom: max(0.45rem, env(safe-area-inset-bottom));
-    z-index: 4;
-    margin-inline: -0.35rem;
-    padding: 0.55rem;
-    border: 1px solid rgba(17, 24, 39, 0.12);
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
-    box-shadow: 0 -0.35rem 1rem rgba(15, 23, 42, 0.1);
+    position: static;
+  }
+
+  .kiju-checkout-controls__actions {
+    margin-top: 0.25rem;
+    padding-top: 0.75rem;
   }
 }
 
@@ -3337,14 +3375,19 @@ button {
 }
 
 .kiju-review-actions {
-  position: sticky;
-  top: 5.5rem;
+  position: static;
 }
 
 .kiju-danger-zone,
 .kiju-danger-block,
 .kiju-danger-actions {
   display: grid;
+  gap: 1rem;
+}
+
+.kiju-admin-reset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: 1rem;
 }
 
@@ -3379,6 +3422,62 @@ button {
 
 .kiju-admin-feedback.is-success {
   border-color: rgba(22, 163, 74, 0.35);
+}
+
+.kiju-admin-reset-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.kiju-admin-reset-dialog {
+  width: min(640px, calc(100vw - 2rem));
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.6rem);
+  border: 1px solid rgba(220, 38, 38, 0.42);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.38);
+}
+
+.kiju-admin-reset-dialog__header,
+.kiju-admin-reset-dialog__scope {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.kiju-admin-reset-dialog__header h2,
+.kiju-admin-reset-dialog__header p {
+  margin: 0;
+}
+
+.kiju-admin-reset-dialog__header p,
+.kiju-admin-reset-dialog__scope span {
+  color: var(--muted);
+}
+
+.kiju-admin-reset-dialog__scope {
+  padding: 0.85rem;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 10px;
+  background: rgba(254, 242, 242, 0.78);
+}
+
+.kiju-admin-reset-dialog__warning {
+  color: var(--service-red);
+}
+
+.kiju-admin-reset-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .kiju-admin-feedback.is-alert {
@@ -8316,6 +8415,7 @@ html[data-theme="dark"] .kiju-checkout-cash-change {
   background: rgba(15, 23, 42, 0.82);
 }
 
+html[data-theme="dark"] .kiju-checkout-controls__actions,
 html[data-theme="dark"] .kiju-checkout-close-actions {
   border-color: rgba(71, 85, 105, 0.72);
 }
@@ -8376,6 +8476,7 @@ html[data-theme="dark"] .kiju-inline-panel--feedback {
 }
 
 html[data-theme="dark"] .kiju-table-action-dialog,
+html[data-theme="dark"] .kiju-admin-reset-dialog,
 html[data-theme="dark"] .kiju-order-wizard-modal,
 html[data-theme="dark"] .kiju-order-wizard-header,
 html[data-theme="dark"] .kiju-category-order-header,
@@ -8387,6 +8488,7 @@ html[data-theme="dark"] .kiju-wizard-footer {
 
 html[data-theme="dark"] .kiju-table-action-summary > div,
 html[data-theme="dark"] .kiju-table-action-choice,
+html[data-theme="dark"] .kiju-admin-reset-dialog__scope,
 html[data-theme="dark"] .kiju-close-order-confirm-dialog__linked,
 html[data-theme="dark"] .kiju-order-wizard-stat,
 html[data-theme="dark"] .kiju-wizard-panel,

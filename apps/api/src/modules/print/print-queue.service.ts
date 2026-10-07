@@ -40,6 +40,8 @@ const DEFAULT_PRINTER_CONFIG: NetworkPrinterConfig = {
 const ACTIVE_PRINT_JOB_STATUSES = ["pending", "processing", "failed"];
 const PRINT_OVERVIEW_RECENT_JOB_LIMIT = 80;
 const BRIDGE_JOB_LEASE_MS = 90_000;
+
+export type PrintQueueClearScope = "pending-failed" | "all";
 const BRIDGE_LEASE_ERROR =
   "Die Verbindung zur lokalen Druckbrücke wurde während des Drucks unterbrochen. Bitte zuerst prüfen, ob der Bon gedruckt wurde, bevor Sie ihn erneut senden.";
 const courseLabels: Record<Exclude<CourseKey, "drinks">, string> = {
@@ -199,6 +201,26 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
     return next;
   }
 
+  async resetPrinterConfig() {
+    await this.prisma.printerConfig.upsert({
+      where: { id: PRINTER_CONFIG_ID },
+      create: {
+        id: PRINTER_CONFIG_ID,
+        config: asJson(DEFAULT_PRINTER_CONFIG)
+      },
+      update: {
+        version: { increment: 1 },
+        config: asJson(DEFAULT_PRINTER_CONFIG),
+        bridgeLastSeenAt: null,
+        bridgePrinterReachable: null,
+        bridgePrinterCheckedAt: null,
+        bridgePrinterError: null
+      }
+    });
+    this.schedule();
+    return DEFAULT_PRINTER_CONFIG;
+  }
+
   async enqueue(request: PrintJobRequest) {
     const id = `print-job-${randomUUID()}`;
     const job = await this.prisma.printJob.create({
@@ -238,6 +260,22 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
     });
     this.schedule();
     return { ok: true as const, job: this.toPersistedJob(job) };
+  }
+
+  async clear(scope: PrintQueueClearScope) {
+    const result = await this.prisma.printJob.deleteMany({
+      where:
+        scope === "all"
+          ? undefined
+          : {
+              status: {
+                in: ["pending", "failed"]
+              }
+            }
+    });
+
+    this.schedule();
+    return { ok: true as const, deletedCount: result.count };
   }
 
   private async processNextJob() {

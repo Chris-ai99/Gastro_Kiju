@@ -71,7 +71,11 @@ const jobStatusLabels: Record<PersistedPrintJob["status"], string> = {
   failed: "Fehlgeschlagen"
 };
 
-export const PrinterAdminPanel = () => {
+type PrinterAdminPanelProps = {
+  refreshToken: number;
+};
+
+export const PrinterAdminPanel = ({ refreshToken }: PrinterAdminPanelProps) => {
   const [printer, setPrinter] = useState<NetworkPrinterConfig>(defaultPrinter);
   const [draft, setDraft] = useState({
     enabled: false,
@@ -123,7 +127,7 @@ export const PrinterAdminPanel = () => {
     }, 30000);
 
     return () => window.clearInterval(timer);
-  }, [isDraftDirty]);
+  }, [isDraftDirty, refreshToken]);
 
   const pendingCount = useMemo(
     () => jobs.filter((job) => job.status === "pending" || job.status === "processing").length,

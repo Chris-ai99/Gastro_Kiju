@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.14.14-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Admin und Datenverwaltung
+- Zusammenfassung:
+  Die Admin-Resets sind jetzt eindeutig getrennt und vor jeder destruktiven Aktion zweistufig abgesichert.
+- Änderungen:
+  Die Druckwarteschlange kann gezielt um wartende und fehlgeschlagene Druckjobs geleert werden; laufende und bereits gedruckte Jobs bleiben erhalten.
+  Der Tagesreset löscht Bestellungen, Zahlungen, Stornos, Bons und Hinweise, gibt die Tische frei und behält Stammdaten sowie Benutzer.
+  „Alles löschen“ entfernt Betriebs- und Stammdaten, leert die komplette Druckhistorie und behält ausschließlich einen aktiven Admin-Zugang.
+  Jede der drei Löschaktionen verlangt eine verständliche Bestätigung im ersten und zweiten Schritt.
+
+## 0.14.13-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Abrechnung
+- Zusammenfassung:
+  Die Zahlungsansicht ist übersichtlicher und hält die Zahlungsaktionen am unteren Ende des Abrechnungsbereichs.
+- Änderungen:
+  Die Auswahl mehrerer Zahlungsarten wurde entfernt; die Abrechnung verwendet weiterhin fest die Barzahlung und zeigt nur noch den Gegeben-Betrag sowie das Rückgeld.
+  „Zahlung erfassen“ und „Teilzahlung / Storno“ stehen in einem gemeinsamen unteren Aktionsbereich und schweben nicht mehr über dem Inhalt.
+
 ## 0.14.12-beta
 - Datum: 2026-10-07
 - Uhrzeit: laufend
