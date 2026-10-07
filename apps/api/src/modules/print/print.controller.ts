@@ -46,7 +46,10 @@ export class PrintController {
   @Put("config")
   async updateConfig(
     @Body()
-    input: Pick<NetworkPrinterConfig, "enabled" | "host" | "port"> & {
+    input: Pick<
+      NetworkPrinterConfig,
+      "enabled" | "host" | "port" | "windowsPrinterName"
+    > & {
       connectionMode?: NetworkPrinterConfig["connectionMode"];
     }
   ) {

@@ -25,6 +25,7 @@ const defaultPrinter: NetworkPrinterConfig = {
   host: "",
   port: 9100,
   model: "Epson TM-T70II",
+  windowsPrinterName: "",
   connectionMode: "server"
 };
 
@@ -77,6 +78,7 @@ export const PrinterAdminPanel = () => {
     enabled: false,
     host: "",
     port: "9100",
+    windowsPrinterName: "",
     connectionMode: "server" as "server" | "local-bridge"
   });
   const [jobs, setJobs] = useState<PersistedPrintJob[]>([]);
@@ -106,6 +108,7 @@ export const PrinterAdminPanel = () => {
         enabled: overview.printer.enabled,
         host: overview.printer.host,
         port: String(overview.printer.port),
+        windowsPrinterName: overview.printer.windowsPrinterName ?? "",
         connectionMode: overview.printer.connectionMode ?? "server"
       });
     }
@@ -140,6 +143,7 @@ export const PrinterAdminPanel = () => {
       enabled: draft.enabled,
       host: draft.host,
       port: Number(draft.port || "9100"),
+      windowsPrinterName: draft.windowsPrinterName,
       connectionMode: draft.connectionMode
     });
     setIsSaving(false);
@@ -157,6 +161,7 @@ export const PrinterAdminPanel = () => {
       enabled: result.printer.enabled,
       host: result.printer.host,
       port: String(result.printer.port),
+      windowsPrinterName: result.printer.windowsPrinterName ?? "",
       connectionMode: result.printer.connectionMode ?? "server"
     });
     setIsDraftDirty(false);
@@ -208,6 +213,7 @@ export const PrinterAdminPanel = () => {
     draft.enabled !== printer.enabled ||
     draft.host !== printer.host ||
     Number(draft.port || "9100") !== printer.port ||
+    draft.windowsPrinterName !== (printer.windowsPrinterName ?? "") ||
     draft.connectionMode !== (printer.connectionMode ?? "server");
   const bridgeLastSeen = printer.bridgeLastSeenAt
     ? new Date(printer.bridgeLastSeenAt).getTime()
@@ -227,7 +233,7 @@ export const PrinterAdminPanel = () => {
     <div id="drucker">
       <AccordionSection
         title="Drucker"
-        eyebrow="Epson TM-T70II im Netzwerk"
+        eyebrow="Bondrucker im Netzwerk oder über Windows"
         defaultOpen={false}
         className="kiju-admin-accordion"
         action={
@@ -261,8 +267,8 @@ export const PrinterAdminPanel = () => {
           <article className="kiju-admin-panel">
             <div className="kiju-admin-row kiju-admin-row--top">
               <div className="kiju-admin-heading-stack">
-                <strong>Netzwerkdrucker</strong>
-                <span>Küchenbons und Kassenbons laufen über denselben Epson.</span>
+                <strong>Bondrucker</strong>
+                <span>Küchenbons und Kassenbons laufen über dasselbe Druckziel.</span>
               </div>
               <StatusPill label={printer.model} tone="navy" />
             </div>
@@ -324,13 +330,17 @@ export const PrinterAdminPanel = () => {
                       ? "Der Druck-PC ist offline. Aufträge bleiben in der Warteschlange, bis er wieder verbunden ist."
                       : "Der Druck-PC ist noch nicht verbunden. Nach der PC-Einrichtung erscheint er hier automatisch."
                     : isPrinterReachable
-                      ? "Der Druck-PC ist online und die TCP-Verbindung zum Drucker ist erreichbar. Druckaufträge können abgeholt werden."
+                      ? draft.windowsPrinterName
+                        ? "Der Druck-PC ist online und der Windows-Druckerspooler hat das konfigurierte Druckziel gefunden. Druckaufträge können abgeholt werden."
+                        : "Der Druck-PC ist online und die TCP-Verbindung zum Drucker ist erreichbar. Druckaufträge können abgeholt werden."
                       : isPrinterUnreachable
-                        ? `Der Druck-PC ist online, erreicht den Drucker aber nicht. Aufträge bleiben in der Warteschlange. ${printer.bridgePrinterError ?? ""}`
-                        : "Der Druck-PC ist online. Die Erreichbarkeit des Druckers wird geprüft; Aufträge bleiben bis dahin in der Warteschlange."}
+                        ? `Der Druck-PC ist online, kann das Druckziel aber nicht verwenden. Aufträge bleiben in der Warteschlange. ${printer.bridgePrinterError ?? ""}`
+                        : "Der Druck-PC ist online. Das Druckziel wird geprüft; Aufträge bleiben bis dahin in der Warteschlange."}
                 </span>
                 <span>
-                  Die TCP-Prüfung bestätigt nur die Netzwerkverbindung. Papier- und Deckelstatus werden nicht ausgelesen. Letzter Druckercheck: {formatDateTime(printer.bridgePrinterCheckedAt)}
+                  {draft.windowsPrinterName
+                    ? "Die Prüfung bestätigt den Windows-Druckeranschluss, nicht Papier- oder Deckelstatus."
+                    : "Die TCP-Prüfung bestätigt nur die Netzwerkverbindung, nicht Papier- oder Deckelstatus."} Letzter Druckercheck: {formatDateTime(printer.bridgePrinterCheckedAt)}
                 </span>
               </div>
             ) : (
@@ -352,6 +362,23 @@ export const PrinterAdminPanel = () => {
                 }}
               />
             </label>
+
+            <label className="kiju-inline-field">
+              <span>Windows-Druckername oder Freigabepfad</span>
+              <input
+                placeholder="z. B. Bon-Drucker oder \\\\KASSE-PC\\Bon-Drucker"
+                value={draft.windowsPrinterName}
+                onChange={(event) => {
+                  setDraft((current) => ({ ...current, windowsPrinterName: event.target.value }));
+                  setIsDraftDirty(true);
+                }}
+              />
+            </label>
+            <div className="kiju-inline-panel">
+              <span>
+                Den Namen auf dem Druck-PC mit Get-Printer ermitteln. Ist dieses Feld leer, nutzt die lokale Druckbrücke den Netzwerkdruck über IP-Adresse und Port.
+              </span>
+            </div>
 
             <div className="kiju-admin-meta">
               <span>Letzter Test: {formatDateTime(printer.lastTestAt)}</span>

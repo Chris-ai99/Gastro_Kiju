@@ -7,9 +7,14 @@ import type {
   PersistedPrintJob
 } from "@kiju/domain";
 import {
+  buildEscPosDocumentBuffer,
   probeNetworkPrinter,
   sendEscPosDocumentToNetworkPrinter
 } from "@kiju/print-bridge/server";
+import {
+  probeWindowsPrinter,
+  sendRawEscPosToWindowsPrinter
+} from "./windows-spooler";
 
 type BridgeConfig = {
   serverUrl: string;
@@ -22,7 +27,10 @@ type ClaimResponse = {
   ok: true;
   job: null | {
     claimId: string;
-    printer: Pick<NetworkPrinterConfig, "enabled" | "host" | "port">;
+    printer: Pick<
+      NetworkPrinterConfig,
+      "enabled" | "host" | "port" | "windowsPrinterName"
+    >;
     job: PersistedPrintJob;
   };
 };
@@ -174,7 +182,10 @@ const run = async () => {
           }
 
           if (printer.connectionMode === "local-bridge" && printer.enabled) {
-            const probeTarget = `${printer.host.trim()}:${printer.port}`;
+            const windowsPrinterName = printer.windowsPrinterName?.trim() ?? "";
+            const probeTarget = windowsPrinterName
+              ? `windows:${windowsPrinterName}`
+              : `network:${printer.host.trim()}:${printer.port}`;
             if (probeTarget !== lastProbeTarget) {
               printerReachable = false;
               lastPrinterProbeAt = 0;
@@ -183,9 +194,17 @@ const run = async () => {
             if (Date.now() >= nextPrinterProbeAt) {
               let probeError: string | undefined;
               try {
-                await probeNetworkPrinter(printer);
+                if (windowsPrinterName) {
+                  await probeWindowsPrinter(windowsPrinterName);
+                } else {
+                  await probeNetworkPrinter(printer);
+                }
                 printerReachable = true;
-                await log("Druck-PC online; TCP-Verbindung zum Drucker erreichbar.");
+                await log(
+                  windowsPrinterName
+                    ? `Druck-PC online; Windows-Drucker „${windowsPrinterName}“ erreichbar.`
+                    : "Druck-PC online; TCP-Verbindung zum Drucker erreichbar."
+                );
               } catch (error) {
                 printerReachable = false;
                 probeError =
@@ -241,7 +260,15 @@ const run = async () => {
         let success = false;
         let error: string | undefined;
         try {
-          await sendEscPosDocumentToNetworkPrinter(claimedPrinter, job.document);
+          if (claimedPrinter.windowsPrinterName?.trim()) {
+            const rawDocument = buildEscPosDocumentBuffer(job.document);
+            await sendRawEscPosToWindowsPrinter(
+              claimedPrinter.windowsPrinterName,
+              rawDocument
+            );
+          } else {
+            await sendEscPosDocumentToNetworkPrinter(claimedPrinter, job.document);
+          }
           success = true;
         } catch (printError) {
           error =

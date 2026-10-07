@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.13-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Drucker
+- Zusammenfassung:
+  Die lokale Druckbrücke kann Bons über den Windows-Druckerspooler an einen installierten Drucker oder eine Druckerfreigabe senden.
+- Änderungen:
+  Der Windows-Druckername beziehungsweise Freigabepfad lässt sich im Admin-Bereich konfigurieren; die Druckbrücke prüft das Ziel mit dem Windows-Spooler.
+  ESC/POS-Daten werden unverändert als RAW-Auftrag an den Spooler übergeben. Der bestehende TCP-Netzwerkdruck bleibt als eigener Druckweg erhalten.
+  Unklare oder fehlgeschlagene Drucke bleiben zur Prüfung markiert und werden nicht automatisch erneut gesendet.
+  Die Anleitung beschreibt Get-Printer, Installation und Start der Druckbrücke auf dem Windows-PC.
+
 ## 0.14.12-beta
 - Datum: 2026-10-07
 - Uhrzeit: laufend

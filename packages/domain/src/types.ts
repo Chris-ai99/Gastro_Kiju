@@ -320,6 +320,7 @@ export interface NetworkPrinterConfig {
   host: string;
   port: number;
   model: string;
+  windowsPrinterName?: string;
   connectionMode?: "server" | "local-bridge";
   lastTestAt?: string;
   lastError?: string;

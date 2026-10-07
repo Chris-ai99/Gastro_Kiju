@@ -35,6 +35,7 @@ const DEFAULT_PRINTER_CONFIG: NetworkPrinterConfig = {
   host: "",
   port: 9100,
   model: "Epson TM-T70II",
+  windowsPrinterName: "",
   connectionMode: "server"
 };
 const ACTIVE_PRINT_JOB_STATUSES = ["pending", "processing", "failed"];
@@ -75,6 +76,7 @@ const normalizePrinterConfig = (
       ? Math.round(printer.port)
       : DEFAULT_PRINTER_CONFIG.port,
   model: printer?.model?.trim() || DEFAULT_PRINTER_CONFIG.model,
+  windowsPrinterName: printer?.windowsPrinterName?.trim() ?? "",
   connectionMode:
     printer?.connectionMode === "local-bridge" ? "local-bridge" : "server",
   lastTestAt: printer?.lastTestAt,
@@ -178,7 +180,10 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async updatePrinterConfig(
-    input: Pick<NetworkPrinterConfig, "enabled" | "host" | "port"> & {
+    input: Pick<
+      NetworkPrinterConfig,
+      "enabled" | "host" | "port" | "windowsPrinterName"
+    > & {
       connectionMode?: NetworkPrinterConfig["connectionMode"];
     }
   ) {
@@ -575,7 +580,7 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
       case "test-print":
         return buildPrinterTestDocument(
           printer.model,
-          printer.host,
+          printer.windowsPrinterName || printer.host,
           printer.port
         );
       case "legacy-document":

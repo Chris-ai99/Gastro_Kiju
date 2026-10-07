@@ -77,6 +77,21 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.13-beta",
+    date: "2026-10-07",
+    time: "laufend",
+    type: "Verbesserung / Drucker",
+    title: "Bons über den Windows-Druckerspooler ausgeben",
+    summary:
+      "Die lokale Druckbrücke kann Bons direkt über einen installierten Windows-Drucker oder dessen Freigabe ausgeben.",
+    categories: ["Drucker", "Windows", "Druckbrücke", "RAW"],
+    changes: [
+      "Windows-Druckernamen und Freigabepfade lassen sich im Admin-Bereich konfigurieren und der Spoolerstatus wird von der Druckbrücke geprüft.",
+      "ESC/POS-Druckdaten werden unverändert als RAW-Auftrag an den Windows-Spooler übergeben; der Netzwerkdruck per TCP bleibt verfügbar.",
+      "Druckaufträge mit unklarem Ergebnis werden nicht automatisch erneut gesendet und bleiben zur Prüfung als Fehler markiert."
+    ]
+  },
+  {
     version: "0.14.12-beta",
     date: "2026-10-07",
     time: "laufend",

@@ -57,7 +57,7 @@ export type CreatePrintJobRequest =
 
 export type UpdatePrinterConfigRequest = Pick<
   NetworkPrinterConfig,
-  "enabled" | "host" | "port"
+  "enabled" | "host" | "port" | "windowsPrinterName"
 > & { connectionMode: "server" | "local-bridge" };
 
 export type PrintOverviewResponse = {

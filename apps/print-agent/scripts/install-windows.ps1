@@ -1,5 +1,6 @@
 param(
-  [string]$ServerUrl
+  [string]$ServerUrl,
+  [Security.SecureString]$BridgeToken
 )
 
 $ErrorActionPreference = "Stop"
@@ -59,7 +60,10 @@ Copy-Item -LiteralPath $disableSource -Destination $disablePath -Force
 Copy-Item -LiteralPath $enableSource -Destination $enablePath -Force
 Remove-Item -LiteralPath $stopMarkerPath -Force -ErrorAction SilentlyContinue
 
-$secureToken = Read-Host "Druckbrückenschlüssel (64 zufällige Zeichen)" -AsSecureString
+$secureToken = $BridgeToken
+if (-not $secureToken) {
+  $secureToken = Read-Host "Druckbrückenschlüssel (64 zufällige Zeichen)" -AsSecureString
+}
 $tokenPointer = [IntPtr]::Zero
 try {
   $tokenPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
