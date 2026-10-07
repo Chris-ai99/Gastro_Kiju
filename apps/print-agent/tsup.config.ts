@@ -5,5 +5,5 @@ export default defineConfig({
   format: ["esm"],
   platform: "node",
   target: "node20",
-  noExternal: ["@kiju/print-bridge"]
+  noExternal: ["@kiju/domain", "@kiju/print-bridge"]
 });

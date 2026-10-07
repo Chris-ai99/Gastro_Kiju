@@ -90,6 +90,7 @@ const adminChangelogEntries: AdminChangelogEntry[] = [
       "ESC/POS-Druckdaten werden unverändert als RAW-Auftrag an den Windows-Spooler übergeben; der Netzwerkdruck per TCP bleibt verfügbar.",
       "Der erste Lebenszeichen-Heartbeat der Druckbrücke funktioniert auch ohne vorherige Druckerprüfung.",
       "Die Druckbrücke verarbeitet die vom Server tatsächlich gelieferte Reservierungsantwort und kann den Auftrag sicher bestätigen.",
+      "Das Windows-Paket enthält jetzt auch das KiJu-Domänenmodul und startet dadurch zuverlässig außerhalb des Projektordners.",
       "Der VPS-Deploy-Empfänger wird mit Unix-Zeilenenden installiert, damit weitere Deployments zuverlässig starten.",
       "Druckaufträge mit unklarem Ergebnis werden nicht automatisch erneut gesendet und bleiben zur Prüfung als Fehler markiert."
     ]

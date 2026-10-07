@@ -14,6 +14,7 @@
   Der VPS-Deploy-Empfänger wird mit Unix-Zeilenenden installiert, damit weitere Deployments zuverlässig starten.
   Unklare oder fehlgeschlagene Drucke bleiben zur Prüfung markiert und werden nicht automatisch erneut gesendet.
   Die Anleitung beschreibt Get-Printer, Installation und Start der Druckbrücke auf dem Windows-PC.
+  Das Windows-Paket enthält jetzt auch das KiJu-Domänenmodul, damit die geplante Aufgabe außerhalb des Projektordners starten kann.
 
 ## 0.14.12-beta
 - Datum: 2026-10-07
