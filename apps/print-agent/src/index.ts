@@ -25,14 +25,12 @@ type BridgeConfig = {
 
 type ClaimResponse = {
   ok: true;
-  job: null | {
-    claimId: string;
-    printer: Pick<
-      NetworkPrinterConfig,
-      "enabled" | "host" | "port" | "windowsPrinterName"
-    >;
-    job: PersistedPrintJob;
-  };
+  claimId?: string;
+  printer?: Pick<
+    NetworkPrinterConfig,
+    "enabled" | "host" | "port" | "windowsPrinterName"
+  >;
+  job: PersistedPrintJob | null;
 };
 
 type HeartbeatResponse = {
@@ -255,7 +253,12 @@ const run = async () => {
           continue;
         }
 
-        const { claimId, printer: claimedPrinter, job } = claimed.job;
+        if (!claimed.claimId || !claimed.printer) {
+          throw new Error("Der Server hat keinen vollständigen Druckauftrag reserviert.");
+        }
+        const claimId = claimed.claimId;
+        const claimedPrinter = claimed.printer;
+        const job = claimed.job;
         await log(`Druckauftrag ${job.id} wird verarbeitet.`);
         let success = false;
         let error: string | undefined;
