@@ -181,11 +181,10 @@ type DemoActions = {
   ) => Promise<CommitResult> | undefined;
   enqueuePrintJob: (request: CreatePrintJobRequest) => Promise<CommitResult>;
   closeOrder: (tableId: string, method: PaymentMethod) => void;
-  closePaidOrder: (tableId: string, remainingPaymentMethod?: PaymentMethod) => {
+  closePaidOrder: (tableId: string) => {
     ok: boolean;
     message?: string;
     archivedTableIds?: string[];
-    paidAmountCents?: number;
     confirmation?: Promise<CommitResult>;
   };
   recordPartialPayment: (
@@ -3165,7 +3164,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   );
 
   const closePaidOrder = useCallback(
-    (tableId: string, remainingPaymentMethod?: PaymentMethod) => {
+    (tableId: string) => {
       const next = structuredClone(state);
       const checkoutTableIds = getCheckoutTableIds(next, tableId);
       const sessions = checkoutTableIds
@@ -3180,33 +3179,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         (sum, session) => sum + calculateSessionOpenTotal(session, next.products),
         0
       );
-      if (openTotal > 0 && !remainingPaymentMethod) {
+      if (openTotal > 0) {
         return { ok: false, message: "Es sind noch Positionen offen." };
       }
 
       const closedAt = new Date().toISOString();
-      let paidAmountCents = 0;
       sessions.forEach((session) => {
         if (session.status === "closed") return;
-        if (remainingPaymentMethod) {
-          const openLineItems = getOpenLineItems(session).map(({ item, openQuantity }) => ({
-            itemId: item.id,
-            quantity: openQuantity
-          }));
-          const amountCents = calculateLineItemsTotal(session, next.products, openLineItems);
-
-          if (amountCents > 0) {
-            session.payments.push({
-              id: createClientId("payment"),
-              label: "Restzahlung",
-              amountCents,
-              method: remainingPaymentMethod,
-              lineItems: openLineItems,
-              tableIds: checkoutTableIds
-            });
-            paidAmountCents += amountCents;
-          }
-        }
         session.status = "closed";
         session.receipt.printedAt ??= closedAt;
         session.receipt.closedAt = closedAt;
@@ -3240,8 +3219,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         body:
           archivedTableIds.length > 0
             ? `${tableName} wurde abgeschlossen und archiviert.`
-            : paidAmountCents > 0
-            ? `${tableName} wurde mit Restzahlung abgeschlossen.`
             : checkoutTableIds.length > 1
             ? "Gekoppelte Tische wurden abgeschlossen."
             : `${tableName} wurde abgeschlossen.`,
@@ -3250,7 +3227,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }, currentUserId);
       emitOperatorFeedback();
       const confirmation = commit(next, undefined, "order.close");
-      return { ok: true, archivedTableIds, paidAmountCents, confirmation };
+      return { ok: true, archivedTableIds, confirmation };
     },
     [commit, currentUserId, state]
   );

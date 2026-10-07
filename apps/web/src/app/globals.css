@@ -3011,6 +3011,158 @@ button {
   flex: 0 0 auto;
 }
 
+.kiju-checkout-controls {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.kiju-checkout-context {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.kiju-checkout-context small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.kiju-checkout-status {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(8, 145, 178, 0.24);
+  border-radius: 10px;
+  background: rgba(8, 145, 178, 0.07);
+}
+
+.kiju-checkout-status small,
+.kiju-checkout-cash-change span,
+.kiju-checkout-compact-line small {
+  color: var(--muted);
+}
+
+.kiju-checkout-cash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.kiju-checkout-cash-change {
+  min-height: 44px;
+  display: grid;
+  gap: 0.1rem;
+  align-content: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.kiju-checkout-cash-change strong {
+  font-size: 1.1rem;
+}
+
+.kiju-form-error {
+  margin: 0;
+  color: var(--service-red);
+  font-weight: 700;
+}
+
+.kiju-checkout-primary-actions,
+.kiju-checkout-partial-actions,
+.kiju-checkout-close-actions {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.kiju-checkout-primary-actions {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.kiju-checkout-partial-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1.1fr);
+}
+
+.kiju-checkout-close-actions {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.12);
+}
+
+.kiju-checkout-close-actions p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.kiju-checkout-compact-list,
+.kiju-checkout-compact-lines {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.kiju-checkout-compact-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px dotted rgba(17, 24, 39, 0.2);
+}
+
+.kiju-checkout-compact-line > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.kiju-checkout-compact-line strong {
+  overflow-wrap: anywhere;
+}
+
+.kiju-checkout-compact-line > strong {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .kiju-checkout-primary-actions,
+  .kiju-checkout-partial-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-checkout-cash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-checkout-compact-line {
+    align-items: flex-start;
+    padding-inline: 0.25rem;
+  }
+
+  .kiju-checkout-compact-line > strong {
+    font-size: 0.92rem;
+  }
+
+  .kiju-checkout-controls .kiju-button {
+    min-height: 46px;
+  }
+
+  .kiju-checkout-primary-actions,
+  .kiju-checkout-partial-actions,
+  .kiju-checkout-close-actions {
+    position: sticky;
+    bottom: max(0.45rem, env(safe-area-inset-bottom));
+    z-index: 4;
+    margin-inline: -0.35rem;
+    padding: 0.55rem;
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
+    box-shadow: 0 -0.35rem 1rem rgba(15, 23, 42, 0.1);
+  }
+}
+
 .kiju-checkout-table-group {
   display: grid;
   gap: 0.75rem;
@@ -8133,6 +8285,24 @@ html[data-theme="dark"] .kiju-checkout-selection-toolbar span {
 
 html[data-theme="dark"] .kiju-checkout-selection-toolbar small {
   color: #cbd5e1;
+}
+
+html[data-theme="dark"] .kiju-checkout-status {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: rgba(8, 47, 73, 0.42);
+}
+
+html[data-theme="dark"] .kiju-checkout-cash-change {
+  border-color: rgba(71, 85, 105, 0.86);
+  background: rgba(15, 23, 42, 0.82);
+}
+
+html[data-theme="dark"] .kiju-checkout-close-actions {
+  border-color: rgba(71, 85, 105, 0.72);
+}
+
+html[data-theme="dark"] .kiju-checkout-compact-line {
+  border-color: rgba(148, 163, 184, 0.35);
 }
 
 html[data-theme="dark"] .kiju-close-order-confirm-dialog__linked {

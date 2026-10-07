@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.10-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Abrechnung
+- Zusammenfassung:
+  Die Abrechnung ist jetzt eine klare Kassenseite mit Zahlung zuerst und einem getrennten, bestätigten Tischabschluss.
+- Änderungen:
+  Die Standardansicht erfasst den vollständigen offenen Tischbetrag ohne Auswahlfelder; Teilzahlung und Storno liegen in einem eigenen Zusatzbereich.
+  Barzahlungen zeigen Gegeben-Betrag und Rückgeld, wobei der Zahlungsbetrag erst nach Serverbestätigung als erfolgreich gilt.
+  Nach der Zahlung bleibt der Tisch mit „Zahlung bestätigt – Tisch noch nicht geschlossen“ geöffnet; das Schließen ist erst bei 0,00 € und nach einer eigenen Bestätigung möglich.
+  Doppelte Zahlungs- und Abschlussklicks werden während der Servertransaktion blockiert, und Stornos benötigen eine eigene Bestätigung.
+
 ## 0.14.09-beta
 - Datum: 2026-10-06
 - Uhrzeit: 21:20 +02:00

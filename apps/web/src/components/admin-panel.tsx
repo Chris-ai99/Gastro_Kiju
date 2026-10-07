@@ -77,6 +77,22 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.10-beta",
+    date: "2026-10-07",
+    time: "laufend",
+    type: "Verbesserung / Abrechnung",
+    title: "Abrechnung als klare Kassenseite",
+    summary:
+      "Die Abrechnung erfasst zuerst die Zahlung und trennt den anschließenden Tischabschluss eindeutig.",
+    categories: ["Abrechnung", "Zahlung", "Mobil", "Sicherheit"],
+    changes: [
+      "Die Standardansicht zeigt alle offenen Positionen kompakt und erfasst den vollständigen offenen Betrag ohne Auswahlfelder.",
+      "Teilzahlung und Storno liegen in einem eigenen Bereich; ein Storno muss vor der Servertransaktion ausdrücklich bestätigt werden.",
+      "Bei Barzahlung werden Gegeben-Betrag und Rückgeld lokal berechnet; Erfolg und Zahlungsstatus erscheinen erst nach Serverbestätigung.",
+      "Der Tisch bleibt nach der Zahlung mit Zahlung bestätigt – Tisch noch nicht geschlossen geöffnet und kann erst bei 0,00 € separat geschlossen werden."
+    ]
+  },
+  {
     version: "0.14.09-beta",
     date: "2026-10-06",
     time: "21:20 +02:00",
