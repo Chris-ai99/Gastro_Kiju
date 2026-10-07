@@ -32,7 +32,7 @@ export type KitchenStatus =
   | "countdown"
   | "ready"
   | "completed";
-export type KitchenUnitStatus = "pending" | "in-progress" | "completed";
+export type KitchenUnitStatus = "pending" | "in-progress" | "oven" | "completed";
 export const EXTRA_INGREDIENTS_MODIFIER_GROUP_ID = "extra-ingredients";
 export type NotificationTone = "info" | "success" | "alert";
 export type NotificationKind =

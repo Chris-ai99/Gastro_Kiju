@@ -187,6 +187,14 @@ const syncTicketFromBatch = (
   };
 };
 
+const findMergeableKitchenBatch = (session: OrderSession, course: CourseKey) =>
+  [...session.kitchenTicketBatches]
+    .filter(
+      (batch) =>
+        batch.course === course && batch.status !== "completed" && batch.status !== "skipped"
+    )
+    .sort((left, right) => left.sequence - right.sequence)[0];
+
 export const appendValidatedSelfOrderLines = ({
   session,
   lines,
@@ -247,7 +255,8 @@ export const appendValidatedSelfOrderLines = ({
     });
     if (items.length === 0) return;
 
-    const batch = createBatch({
+    const existingBatch = findMergeableKitchenBatch(session, course);
+    const batch = existingBatch ?? createBatch({
       id: createId(`kitchen-ticket-${session.tableId}-${course}`),
       course,
       itemIds: items.map((item) => item.id),
@@ -257,7 +266,11 @@ export const appendValidatedSelfOrderLines = ({
       bedienung,
       isBar: false
     });
-    session.kitchenTicketBatches.push(batch);
+    if (existingBatch) {
+      batch.itemIds.push(...items.map((item) => item.id));
+    } else {
+      session.kitchenTicketBatches.push(batch);
+    }
     syncTicketFromBatch(session, batch);
   });
 

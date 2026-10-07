@@ -33,7 +33,10 @@ export const getProductById = (products: Product[], id: string) =>
   products.find((product) => product.id === id);
 
 export const getSessionForTable = (sessions: OrderSession[], tableId: string) =>
-  sessions.find((session) => session.tableId === tableId && session.status !== "closed");
+  sessions.find(
+    (session) =>
+      session.tableId === tableId && session.status !== "closed" && session.items.length > 0
+  );
 
 export const isOrderItemCanceled = (item: Pick<OrderItem, "canceledAt">) =>
   Boolean(item.canceledAt);

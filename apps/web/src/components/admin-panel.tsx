@@ -77,6 +77,35 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.12-beta",
+    date: "2026-10-07",
+    time: "laufend",
+    type: "Verbesserung / Nachbestellungen und Küche",
+    title: "Nachbestellungen und Küchenstatus zusammenführen",
+    summary:
+      "Offene Nachbestellungen bleiben beim laufenden Küchenbon, während Pizza und Pasta ihren passenden Zubereitungsstatus zeigen.",
+    categories: ["Bestellung", "Nachbestellung", "Küche", "Pizza", "Pasta"],
+    changes: [
+      "Eine Nachbestellung wird dem noch offenen oder bereits bearbeiteten Küchenbon desselben Gangs hinzugefügt; nach Abschluss entsteht wieder ein eigener Nachbestellungsbon.",
+      "Pizza zeigt ausstehend schwarz, in Zubereitung grün, im Ofen rot und fertig durchgestrichen.",
+      "Pasta zeigt ausstehend schwarz, in Bearbeitung orange und fertig durchgestrichen."
+    ]
+  },
+  {
+    version: "0.14.11-beta",
+    date: "2026-10-07",
+    time: "laufend",
+    type: "Fehlerbehebung / Bestellübersicht",
+    title: "Artikel sicher aus der Hauptansicht löschen",
+    summary:
+      "Das Löschen des letzten ungesendeten Artikels verträgt sich jetzt mit parallel aktualisierten Bestelldaten auf anderen Geräten.",
+    categories: ["Bestellung", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Beim Entfernen eines Artikels bleibt der Bestelldatensatz bestehen, damit parallele Küchen-, Bar- und Statusänderungen erhalten bleiben.",
+      "Eine leere Bestellung zeigt den Tisch weiterhin als frei und wird bei einer neuen Bestellung wiederverwendet."
+    ]
+  },
+  {
     version: "0.14.10-beta",
     date: "2026-10-07",
     time: "laufend",

@@ -551,6 +551,14 @@ const sortKitchenBatchesByNewest = (batches: KitchenTicketBatch[]) =>
     return new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime();
   });
 
+const findMergeableKitchenBatch = (session: OrderSession, course: CourseKey) =>
+  [...getKitchenBatchesForCourse(session, course)]
+    .filter((batch) => batch.status !== "completed" && batch.status !== "skipped")
+    .sort((left, right) => {
+      if (left.sequence !== right.sequence) return left.sequence - right.sequence;
+      return new Date(left.sentAt).getTime() - new Date(right.sentAt).getTime();
+    })[0];
+
 const getKitchenUnitCount = (item: Pick<OrderItem, "quantity">) => Math.max(1, Math.floor(item.quantity));
 
 const tracksKitchenUnitProgress = (item: Pick<OrderItem, "category" | "sentAt">) =>
@@ -569,6 +577,13 @@ const normalizeKitchenUnitState = (unitState: KitchenUnitState | undefined): Kit
       status: "completed",
       startedAt: unitState.startedAt,
       completedAt: unitState.completedAt
+    };
+  }
+
+  if (unitState?.status === "oven") {
+    return {
+      status: "oven",
+      startedAt: unitState.startedAt
     };
   }
 
@@ -676,7 +691,12 @@ const setKitchenItemCompleted = (item: OrderItem, completedAt: string) => {
   item.preparedAt = resolveLatestKitchenCompletionAt(item.kitchenUnitStates, completedAt) ?? completedAt;
 };
 
-const cycleKitchenUnitState = (item: OrderItem, unitIndex: number, changedAt: string) => {
+const cycleKitchenUnitState = (
+  item: OrderItem,
+  unitIndex: number,
+  changedAt: string,
+  isPizza: boolean
+) => {
   if (isOrderItemCanceled(item)) {
     return null;
   }
@@ -698,6 +718,17 @@ const cycleKitchenUnitState = (item: OrderItem, unitIndex: number, changedAt: st
       startedAt: changedAt
     };
   } else if (currentState.status === "in-progress") {
+    nextStates[unitIndex] = isPizza
+      ? {
+          status: "oven",
+          startedAt: currentState.startedAt ?? changedAt
+        }
+      : {
+          status: "completed",
+          startedAt: currentState.startedAt ?? changedAt,
+          completedAt: changedAt
+        };
+  } else if (currentState.status === "oven") {
     nextStates[unitIndex] = {
       status: "completed",
       startedAt: currentState.startedAt ?? changedAt,
@@ -2265,9 +2296,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       const table = next.tables.find((entry) => entry.id === tableId);
       if (!table) return;
 
-      let session = next.sessions.find(
-        (entry) => entry.tableId === tableId && entry.status !== "closed"
-      );
+      let session =
+        getSessionForTable(next.sessions, tableId) ??
+        next.sessions.find(
+          (entry) =>
+            entry.tableId === tableId && entry.status !== "closed" && entry.items.length === 0
+        );
 
       if (!session) {
         session = createSession(tableId, waiterId);
@@ -2435,10 +2469,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       } else {
         session.items = session.items.filter((entry) => entry.id !== itemId);
         normalizeSessionAfterItemRemoval(session);
-      }
-
-      if (!item.sentAt && session.items.length === 0) {
-        next.sessions = next.sessions.filter((entry) => entry.id !== session.id);
+        if (session.items.length === 0) {
+          session.status = "idle";
+        }
       }
 
       void commit(next, undefined, "order.item.remove");
@@ -2636,7 +2669,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         const kitchenTicket = session.courseTickets[kitchenCourse];
         const shouldWait = kitchenTicket.status === "countdown";
         const batchStatus: KitchenStatus = shouldWait ? "countdown" : "ready";
-        const batch = createKitchenTicketBatch(
+        const existingBatch = findMergeableKitchenBatch(session, kitchenCourse);
+        const batch = existingBatch ?? createKitchenTicketBatch(
           session,
           tableId,
           kitchenCourse,
@@ -2645,7 +2679,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
           batchStatus,
           bedienung
         );
-        session.kitchenTicketBatches.push(batch);
+        if (existingBatch) {
+          batch.itemIds.push(...items.map((item) => item.id));
+        } else {
+          session.kitchenTicketBatches.push(batch);
+        }
 
         items.forEach((item) => {
           item.sentAt = sentAt;
@@ -2657,8 +2695,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         affectedCourses.push(kitchenCourse);
         sentItemCount += items.reduce((sum, item) => sum + item.quantity, 0);
 
-        const batchLabel =
-          batch.sequence > 1
+        const batchLabel = existingBatch
+          ? `${courseLabels[kitchenCourse]} ergänzt`
+          : batch.sequence > 1
             ? `${courseLabels[kitchenCourse]} · Nachbestellung ${batch.sequence}`
             : courseLabels[kitchenCourse];
         sentKitchenCourseLabels.push(batchLabel);
@@ -2668,7 +2707,9 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         withNotification(next, {
           title: shouldWait
             ? `${batchLabel} wartet`
-            : `${batchLabel} gesendet`,
+            : existingBatch
+              ? batchLabel
+              : `${batchLabel} gesendet`,
           body: shouldWait
             ? `${tableName}: ${batchLabel} wartet ${batch.countdownMinutes} Minuten, bevor die Küche startet.`
             : `${tableName} wartet auf ${batchLabel.toLowerCase()}.`,
@@ -2736,7 +2777,13 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       }
 
       const changedAt = new Date().toISOString();
-      const nextStatus = cycleKitchenUnitState(item, unitIndex, changedAt);
+      const productName = getProductById(next.products, item.productId)?.name ?? "";
+      const nextStatus = cycleKitchenUnitState(
+        item,
+        unitIndex,
+        changedAt,
+        productName.toLocaleLowerCase("de-DE").includes("pizza")
+      );
       if (!nextStatus) return { ok: false, message: "Portion konnte nicht aktualisiert werden." };
 
       if (isKitchenBatchCompletedByUnits(session, batch)) {

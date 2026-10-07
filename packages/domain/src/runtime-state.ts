@@ -528,7 +528,9 @@ const normalizeKitchenUnitState = (
   fallbackStatus: KitchenUnitStatus = "pending"
 ): KitchenUnitState => {
   const status =
-    unitState?.status === "in-progress" || unitState?.status === "completed"
+    unitState?.status === "in-progress" ||
+    unitState?.status === "oven" ||
+    unitState?.status === "completed"
       ? unitState.status
       : fallbackStatus;
 
@@ -537,6 +539,13 @@ const normalizeKitchenUnitState = (
   }
 
   if (status === "in-progress") {
+    return {
+      status,
+      startedAt: unitState?.startedAt
+    };
+  }
+
+  if (status === "oven") {
     return {
       status,
       startedAt: unitState?.startedAt

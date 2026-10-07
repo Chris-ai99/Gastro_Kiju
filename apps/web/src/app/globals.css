@@ -7654,9 +7654,28 @@ button.kiju-admin-link-pill {
   color: #c2410c;
 }
 
+.kiju-pass-ticket__line.is-pizza.is-in-progress .kiju-pass-ticket__line-button,
+.kiju-pass-ticket__line.is-pizza.is-in-progress .kiju-pass-ticket__line-copy strong,
+.kiju-pass-ticket__unit.is-pizza.is-in-progress {
+  color: #15803d;
+}
+
 .kiju-pass-ticket__line.is-in-progress .kiju-pass-ticket__line-button,
 .kiju-pass-ticket__unit.is-in-progress {
   background: #fff7ed;
+}
+
+.kiju-pass-ticket__line.is-pizza.is-in-progress .kiju-pass-ticket__line-button,
+.kiju-pass-ticket__unit.is-pizza.is-in-progress {
+  background: #f0fdf4;
+}
+
+.kiju-pass-ticket__line.is-oven .kiju-pass-ticket__line-button,
+.kiju-pass-ticket__line.is-oven .kiju-pass-ticket__line-copy strong,
+.kiju-pass-ticket__unit.is-oven {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .kiju-pass-ticket__line.is-completed .kiju-pass-ticket__line-button,
@@ -8749,6 +8768,21 @@ html[data-theme="dark"] .kiju-pass-ticket__unit:focus-visible {
 html[data-theme="dark"] .kiju-pass-ticket__line.is-in-progress .kiju-pass-ticket__line-button,
 html[data-theme="dark"] .kiju-pass-ticket__unit.is-in-progress {
   background: rgba(154, 52, 18, 0.34);
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__line.is-pizza.is-in-progress .kiju-pass-ticket__line-button,
+html[data-theme="dark"] .kiju-pass-ticket__line.is-pizza.is-in-progress .kiju-pass-ticket__line-copy strong,
+html[data-theme="dark"] .kiju-pass-ticket__unit.is-pizza.is-in-progress {
+  color: #86efac;
+  background: rgba(20, 83, 45, 0.52);
+}
+
+html[data-theme="dark"] .kiju-pass-ticket__line.is-oven .kiju-pass-ticket__line-button,
+html[data-theme="dark"] .kiju-pass-ticket__line.is-oven .kiju-pass-ticket__line-copy strong,
+html[data-theme="dark"] .kiju-pass-ticket__unit.is-oven {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(127, 29, 29, 0.55);
+  color: #fca5a5;
 }
 
 html[data-theme="dark"] .kiju-pass-ticket__line.is-canceled,

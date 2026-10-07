@@ -133,9 +133,23 @@ describe("QR-Selbstbestellung", () => {
       bedienung: "Selbstbestellung",
       createId
     });
+    appendValidatedSelfOrderLines({
+      session,
+      lines: validateSelfOrderLines(products, [
+        {
+          productId: "pizza",
+          quantity: 1,
+          modifiers: [{ groupId: "size", optionIds: ["small"] }]
+        }
+      ]),
+      createdAt: "2026-06-13T20:06:00.000Z",
+      bedienung: "Selbstbestellung",
+      createId
+    });
 
     expect(session.kitchenTicketBatches).toHaveLength(1);
     expect(session.kitchenTicketBatches[0]?.sequence).toBe(1);
+    expect(session.kitchenTicketBatches[0]?.itemIds).toHaveLength(2);
     expect(session.barTicketBatches.map((batch) => batch.sequence)).toEqual([1, 2]);
     expect(session.items.find((item) => item.productId === "service")?.sentAt).toBeUndefined();
     expect(session.items.find((item) => item.productId === "pizza")?.kitchenUnitStates).toHaveLength(2);

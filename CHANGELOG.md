@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.14.12-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Nachbestellungen und Küche
+- Zusammenfassung:
+  Offene Nachbestellungen werden dem laufenden Küchenbon hinzugefügt, und Pizza sowie Pasta zeigen ihren unterschiedlichen Zubereitungsstatus klar an.
+- Änderungen:
+  Nachbestellungen landen bei einem noch offenen oder bereits in Bearbeitung befindlichen Küchenbon desselben Gangs; erst nach einem abgeschlossenen Bon wird ein neuer Nachbestellungsbon angelegt.
+  Pizza durchläuft beim Anklicken die Zustände ausstehend, in Zubereitung, im Ofen und fertig; fertige Portionen werden durchgestrichen angezeigt.
+  Pasta bleibt beim kürzeren Ablauf ausstehend, in Bearbeitung und fertig und verwendet dabei die orange Hervorhebung für die laufende Zubereitung.
+
+## 0.14.11-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Bestellübersicht
+- Zusammenfassung:
+  Das Löschen des letzten ungesendeten Artikels löst keinen Konflikt mehr mit parallel aktualisierten Bestelldaten aus.
+- Änderungen:
+  Beim Entfernen eines Artikels bleibt der Bestelldatensatz erhalten; dadurch kann der Server die Änderung gezielt mit parallelen Küchen-, Bar- oder Statusänderungen zusammenführen.
+  Leere Bestellungen gelten weiterhin als freie Tische und werden bei einer späteren neuen Bestellung wiederverwendet.
+
 ## 0.14.10-beta
 - Datum: 2026-10-07
 - Uhrzeit: laufend

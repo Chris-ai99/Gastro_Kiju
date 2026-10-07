@@ -50,13 +50,8 @@ const ticketStatusRank: Record<keyof typeof ticketStatusLabels, number> = {
 const kitchenUnitStatusLabels: Record<KitchenUnitStatus, string> = {
   pending: "Offen",
   "in-progress": "In Bearbeitung",
+  oven: "Im Ofen",
   completed: "Fertig"
-};
-
-const nextKitchenUnitStatusLabels: Record<KitchenUnitStatus, string> = {
-  pending: "In Bearbeitung",
-  "in-progress": "Fertig",
-  completed: "Offen"
 };
 
 type TicketStatus = keyof typeof ticketStatusLabels;
@@ -69,6 +64,7 @@ type PassTicketUnit = {
   unitIndex: number;
   status: KitchenUnitStatus;
   label: string;
+  isPizza: boolean;
 };
 
 type PassTicketLine = {
@@ -81,6 +77,7 @@ type PassTicketLine = {
   note?: string;
   canceledAt?: string;
   units?: PassTicketUnit[];
+  isPizza: boolean;
 };
 
 type PassTicket = {
@@ -256,6 +253,7 @@ const normalizeKitchenUnits = (item: OrderItem, productName: string): PassTicket
   }
 
   const existingStates = Array.isArray(item.kitchenUnitStates) ? item.kitchenUnitStates : [];
+  const isPizza = productName.toLocaleLowerCase("de-DE").includes("pizza");
 
   return Array.from({ length: item.quantity }, (_, index) => {
     const unitState = existingStates[index];
@@ -264,12 +262,15 @@ const normalizeKitchenUnits = (item: OrderItem, productName: string): PassTicket
         ? "completed"
         : unitState?.status === "in-progress"
           ? "in-progress"
+          : unitState?.status === "oven"
+            ? "oven"
           : "pending";
 
     return {
       id: `${item.id}-unit-${index}`,
       unitIndex: index,
       status,
+      isPizza,
       label:
         item.quantity === 1 ? productName : `Portion ${index + 1} · ${productName}`
     };
@@ -281,8 +282,18 @@ const formatKitchenCount = (count: number) =>
 
 const ticketHasInProgressUnit = (ticket: PassTicket) =>
   ticket.lines.some((line) =>
-    line.units?.some((unit) => unit.status === "in-progress")
+    line.units?.some((unit) => unit.status === "in-progress" || unit.status === "oven")
   );
+
+const getNextKitchenUnitStatus = (
+  status: KitchenUnitStatus,
+  isPizza: boolean
+): KitchenUnitStatus => {
+  if (status === "pending") return "in-progress";
+  if (status === "in-progress") return isPizza ? "oven" : "completed";
+  if (status === "oven") return "completed";
+  return "pending";
+};
 
 export const PassBoard = ({ station }: { station: PassStation }) => {
   const config = passStationConfig[station];
@@ -360,7 +371,8 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
             modifiers: buildModifierLabels(item, product),
             note: item.note,
             canceledAt,
-            units
+            units,
+            isPizza: productName.toLocaleLowerCase("de-DE").includes("pizza")
           };
         });
 
@@ -627,8 +639,8 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                 <li
                   key={line.id}
                   className={`kiju-pass-ticket__line is-clickable is-${unit.status}${
-                    line.canceledAt ? " is-canceled" : ""
-                  }`}
+                    line.isPizza ? " is-pizza" : ""
+                  }${line.canceledAt ? " is-canceled" : ""}`}
                 >
                   <button
                     type="button"
@@ -637,7 +649,9 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                     disabled={!canToggleKitchenUnits || Boolean(line.canceledAt)}
                     aria-label={`${ticket.tableName}, ${ticket.courseLabel}, ${line.productName}: aktuell ${
                       kitchenUnitStatusLabels[unit.status]
-                    }, weiter zu ${nextKitchenUnitStatusLabels[unit.status]}`}
+                    }, weiter zu ${
+                      kitchenUnitStatusLabels[getNextKitchenUnitStatus(unit.status, line.isPizza)]
+                    }`}
                   >
                     <span className="kiju-pass-ticket__quantity">{line.quantity}</span>
                     {renderLineCopy(line)}
@@ -661,13 +675,15 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
                       <button
                         key={unit.id}
                         type="button"
-                        className={`kiju-pass-ticket__unit is-${unit.status}`}
+                        className={`kiju-pass-ticket__unit is-${unit.status}${
+                          line.isPizza ? " is-pizza" : ""
+                        }`}
                         onClick={() => void handleKitchenUnitStatusChange(ticket, line, unit)}
                         disabled={!canToggleKitchenUnits || Boolean(line.canceledAt)}
                         aria-label={`${ticket.tableName}, ${ticket.courseLabel}, ${line.productName}, Portion ${
                           unit.unitIndex + 1
                         }: aktuell ${kitchenUnitStatusLabels[unit.status]}, weiter zu ${
-                          nextKitchenUnitStatusLabels[unit.status]
+                          kitchenUnitStatusLabels[getNextKitchenUnitStatus(unit.status, line.isPizza)]
                         }`}
                       >
                         <span>{unit.label}</span>
