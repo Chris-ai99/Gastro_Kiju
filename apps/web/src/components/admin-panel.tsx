@@ -77,6 +77,38 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.09-beta",
+    date: "2026-10-06",
+    time: "21:20 +02:00",
+    type: "Verbesserung / Bedienung und Betrieb",
+    title: "Kompakte Kassenansicht",
+    summary:
+      "Tischwahl, Bestellübersicht, Küchen-/Barbons und Druckstatus führen schneller zum richtigen nächsten Schritt.",
+    categories: ["Service", "Küche", "Bar", "Mobil", "Druck"],
+    changes: [
+      "Ein Tischklick öffnet direkt die Bestellübersicht; doppelte Raum- und Tischauswahlen wurden entfernt.",
+      "Tischkacheln zeigen Frei/Belegt, Status, Artikelanzahl und Betrag; geplante Tische bleiben eindeutig markiert.",
+      "Küche und Bar filtern offene, laufende, fertige und alle Bons, ohne aktive Bons still auszublenden.",
+      "Druckmeldungen unterscheiden zwischen gespeichertem Druckauftrag und bestätigtem Druck."
+    ]
+  },
+  {
+    version: "0.14.08-beta",
+    date: "2026-10-06",
+    time: "20:53 +02:00",
+    type: "Verbesserung / Abrechnung",
+    title: "Abschluss gegen Fehlklick schützen",
+    summary:
+      "Die Abrechnung trennt Auswahl, Zahlung und Tischabschluss klarer und fragt vor einer Restzahlung mit Schließung noch einmal ausdrücklich nach.",
+    categories: ["Abrechnung", "Zahlung", "Sicherheit"],
+    changes: [
+      "Die Abrechnung erklärt direkt an der Auswahl, dass nur markierte Positionen mit Auswahl bezahlen verbucht werden.",
+      "Bei einer Teil-Auswahl bleibt Restzahlung & Tisch schließen gesperrt, bis die Auswahl bezahlt oder aufgehoben wurde.",
+      "Vor dem Gesamtabschluss werden Tisch, offener Betrag, Zahlart und gekoppelte Tische in einer Sicherheitsabfrage angezeigt.",
+      "Die Buttons für Zahlung und Storno nennen den ausgewählten Betrag."
+    ]
+  },
+  {
     version: "0.14.07-beta",
     date: "2026-10-05",
     time: "16:28 +02:00",

@@ -11,6 +11,8 @@ Das Deployment lässt sich von jedem Rechner aus der GitHub-Oberfläche starten.
 
 Der Workflow überträgt den ausgewählten Commit als Quellarchiv per SSH. Der VPS baut daraus eine neue Release unter **/opt/kiju-gastro/releases**, kopiert die Next.js-Assets in den eigenständigen Webserver und schaltet die API- und Web-Verknüpfung erst nach erfolgreichem Build um. Anschließend startet er **gastroapi** und **kiju-gastro** neu und prüft die direkte API-Gesundheit unter **/api/health**, den öffentlichen Proxy unter **/gastro/api/health** sowie **/gastro/** lokal auf dem Server. Der Proxy-Check stellt sicher, dass Base-Path, Webdienst, API und PostgreSQL gemeinsam erreichbar sind. Bei einem Fehler stellt er die vorherigen Verknüpfungen wieder her. Frühere Releases und die bestehenden PostgreSQL-Daten bleiben erhalten.
 
+Nach jedem produktiven Deployment wird zusätzlich geprüft, dass der öffentliche Health-Proxy HTTP 200 liefert, die PostgreSQL-Verbindung verfügbar ist, die interne Oberfläche den letzten bestätigten Serverstand lädt und ein Testvorgang von zwei getrennten Browsergeräten per SSE beziehungsweise Fallback-Abruf sichtbar wird. Änderungen an der Druckstrecke gelten erst dann als betriebsbereit, wenn ein Druckauftrag in der serverseitigen Warteschlange erscheint; die tatsächliche Druckbestätigung bleibt davon getrennt.
+
 ## Zugriff
 
 Das Repository verwendet das Actions-Secret **KIJU_DEPLOY_SSH_KEY**. Der passende öffentliche Schlüssel auf dem VPS ist auf **/usr/local/sbin/kiju-gastroweb-deploy** beschränkt. Er kann keine Shell öffnen und keine SSH-Portweiterleitungen verwenden.

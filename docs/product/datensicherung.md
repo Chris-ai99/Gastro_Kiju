@@ -20,6 +20,12 @@ oder neu importiert.
 - Wiederherstellung regelmäßig mit einer separaten Testdatenbank prüfen
 - vor größeren Updates zusätzlich einen Snapshot des IONOS-VPS erstellen
 
+Für den laufenden Betrieb sollte die Admin-Abnahme außerdem täglich den Zeitpunkt
+des letzten erfolgreichen Dumps und die Anzahl fehlgeschlagener Druckaufträge
+prüfen. Ein fehlender oder veralteter Dump ist ein Betriebsfehler und darf nicht
+als erfolgreiche Sicherung angezeigt werden. Vor einem größeren Release werden
+Health-Proxy, Datenbank, Live-Verbindung und eine Testbestellung gemeinsam geprüft.
+
 Beispiel für einen manuellen Dump:
 
 ```bash

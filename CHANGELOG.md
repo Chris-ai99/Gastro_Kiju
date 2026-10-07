@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.14.09-beta
+- Datum: 2026-10-06
+- Uhrzeit: 21:20 +02:00
+- Typ: Verbesserung / Bedienung und Betrieb
+- Zusammenfassung:
+  Die Service-, Küchen- und Baransichten führen schneller zum richtigen Vorgang und zeigen Server- sowie Druckzustände eindeutiger.
+- Änderungen:
+  Ein Tischklick öffnet im Service direkt die Bestellübersicht; doppelte Raum- und Tischauswahlen wurden entfernt.
+  Tischkacheln zeigen Belegung, Bestellstatus, Artikelanzahl und Betrag; geplante Tische werden separat markiert.
+  Küche und Bar bieten Filter für offene, laufende, fertige und alle Bons und zeigen auch bei vielen Bons keinen aktiven Auftrag mehr unbemerkt nur außerhalb der Ansicht.
+  Druckmeldungen unterscheiden jetzt zwischen gespeichertem Druckauftrag und bestätigtem Druck.
+  Abrechnungssteuerungen werden in den Servicevarianten gemeinsam gerendert, damit Sicherheitsregeln und Beschriftungen nicht auseinanderlaufen.
+
+## 0.14.08-beta
+- Datum: 2026-10-06
+- Uhrzeit: 20:53 +02:00
+- Typ: Verbesserung / Abrechnung
+- Zusammenfassung:
+  Die Abrechnung schützt vor versehentlichem Bezahlen und Schließen des Tisches und trennt Auswahl, Zahlung und Abschluss deutlicher.
+- Änderungen:
+  Die Auswahlleiste erklärt jetzt ausdrücklich, dass nur markierte Positionen mit „Auswahl bezahlen“ verbucht werden; die Auswahl kann auch wieder aufgehoben werden.
+  Ein teilweise markierter Bestand blockiert den Gesamtabschluss, bis die Auswahl bezahlt oder aufgehoben wurde.
+  „Restzahlung & Tisch schließen“ öffnet vor der endgültigen Servertransaktion eine Sicherheitsabfrage mit Tisch, Betrag, Zahlart und Hinweis auf gekoppelte Tische.
+  Die Zahlungs- und Stornoaktionen zeigen den jeweils ausgewählten Betrag direkt am Button.
+
 ## 0.14.07-beta
 - Datum: 2026-10-05
 - Uhrzeit: 16:28 +02:00

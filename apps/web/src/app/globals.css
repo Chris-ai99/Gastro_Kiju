@@ -497,6 +497,20 @@ button {
   gap: 0.75rem;
 }
 
+.kiju-operational-status {
+  min-width: 0;
+  display: grid;
+  justify-items: end;
+  gap: 0.12rem;
+}
+
+.kiju-operational-status small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .kiju-step-actions {
   width: min(100%, 980px);
   display: grid;
@@ -1345,6 +1359,11 @@ button {
   border-style: dashed;
 }
 
+.kiju-waiter-table-card--planned {
+  border-left-color: #94a3b8;
+  opacity: 0.82;
+}
+
 .kiju-waiter-table-card.is-selected {
   border-color: rgba(202, 138, 4, 0.9);
   border-left-color: rgba(202, 138, 4, 0.95);
@@ -1880,6 +1899,38 @@ button {
   opacity: 0.48;
 }
 
+.kiju-close-order-confirm-overlay {
+  z-index: 160;
+}
+
+.kiju-close-order-confirm-dialog {
+  max-width: min(600px, calc(100vw - 2rem));
+  border-color: rgba(220, 38, 38, 0.42);
+}
+
+.kiju-close-order-confirm-dialog__linked {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(217, 119, 6, 0.42);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.9);
+  color: #92400e;
+  font-weight: 800;
+}
+
+.kiju-close-order-confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.kiju-checkout-selection-toolbar small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
 .kiju-order-wizard-modal > .kiju-steps {
   grid-row: 3;
   grid-template-columns: repeat(var(--kiju-step-count, 7), minmax(7.5rem, 1fr));
@@ -1962,6 +2013,11 @@ button {
   box-shadow: inset 3px 0 0 rgba(217, 119, 6, 0.88);
 }
 
+.kiju-order-overview__item.is-canceled {
+  background: rgba(254, 242, 242, 0.88);
+  box-shadow: inset 3px 0 0 rgba(185, 28, 28, 0.72);
+}
+
 .kiju-order-overview__item + .kiju-order-overview__item {
   border-top: 1px solid rgba(148, 163, 184, 0.24);
 }
@@ -2015,6 +2071,10 @@ button {
 
 .kiju-order-overview__item-status.is-booked {
   color: var(--muted);
+}
+
+.kiju-order-overview__item-status.is-canceled {
+  color: #b91c1c;
 }
 
 .kiju-order-overview__item-actions {
@@ -6015,6 +6075,14 @@ button.kiju-admin-link-pill {
     align-items: center;
   }
 
+  .kiju-operational-status {
+    justify-items: start;
+  }
+
+  .kiju-operational-status small {
+    font-size: 0.62rem;
+  }
+
   .kiju-topbar-actions .kiju-button,
   .kiju-notification-popover__trigger,
   .kiju-service-menu-popover__trigger,
@@ -6138,6 +6206,14 @@ button.kiju-admin-link-pill {
 
   .kiju-waiter-table-card__pickup-actions .kiju-button {
     width: 100%;
+  }
+
+  .kiju-pass-filter {
+    width: 100%;
+  }
+
+  .kiju-pass-filter__button {
+    flex: 1 1 calc(50% - 0.25rem);
   }
 
   .kiju-service-drink-popup-stack {
@@ -6332,6 +6408,16 @@ button.kiju-admin-link-pill {
   }
 
   .kiju-table-action-dialog > .kiju-button {
+    min-height: 48px;
+  }
+
+  .kiju-close-order-confirm-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .kiju-close-order-confirm-dialog__actions .kiju-button {
+    width: 100%;
     min-height: 48px;
   }
 
@@ -7587,7 +7673,7 @@ button.kiju-admin-link-pill {
 .kiju-pass-ticket__action,
 .kiju-kitchen-wallboard__footer-button,
 .kiju-kitchen-wallboard__service-link {
-  min-height: 32px;
+  min-height: 44px;
   padding: 0.45rem 0.7rem;
   border-radius: 0;
   border: 1px solid #325d23;
@@ -7771,6 +7857,28 @@ button.kiju-admin-link-pill {
   background: transparent;
 }
 
+.kiju-pass-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.kiju-pass-filter__button {
+  border-color: #9ca8b7;
+  background: #fff;
+  color: #334155;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.kiju-pass-filter__button.is-active,
+.kiju-pass-filter__button:hover,
+.kiju-pass-filter__button:focus-visible {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
+}
+
 .kiju-kitchen-wallboard__footer-center {
   flex: 1;
   justify-content: center;
@@ -7789,6 +7897,23 @@ button.kiju-admin-link-pill {
   gap: 0.25rem;
   font-size: 0.76rem;
   color: #0f172a;
+}
+
+.kiju-kitchen-wallboard__refresh small {
+  color: inherit;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiju-kitchen-wallboard__refresh.is-saving,
+.kiju-kitchen-wallboard__refresh.is-connecting,
+.kiju-kitchen-wallboard__refresh.is-reconnecting {
+  color: #a16207;
+}
+
+.kiju-kitchen-wallboard__refresh.is-offline,
+.kiju-kitchen-wallboard__refresh.is-error {
+  color: #b91c1c;
 }
 
 .kiju-kitchen-wallboard .kiju-role-switch-popover__trigger {
@@ -8006,6 +8131,16 @@ html[data-theme="dark"] .kiju-checkout-selection-toolbar span {
   color: #cbd5e1;
 }
 
+html[data-theme="dark"] .kiju-checkout-selection-toolbar small {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .kiju-close-order-confirm-dialog__linked {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(120, 53, 15, 0.32);
+  color: #fde68a;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kiju-product-card.is-added,
   .kiju-pass-ticket.wait-urgent {
@@ -8063,6 +8198,7 @@ html[data-theme="dark"] .kiju-wizard-footer {
 
 html[data-theme="dark"] .kiju-table-action-summary > div,
 html[data-theme="dark"] .kiju-table-action-choice,
+html[data-theme="dark"] .kiju-close-order-confirm-dialog__linked,
 html[data-theme="dark"] .kiju-order-wizard-stat,
 html[data-theme="dark"] .kiju-wizard-panel,
 html[data-theme="dark"] .kiju-party-group-card,
@@ -8088,8 +8224,17 @@ html[data-theme="dark"] .kiju-order-overview__item.is-pending {
   box-shadow: inset 3px 0 0 rgba(251, 191, 36, 0.88);
 }
 
+html[data-theme="dark"] .kiju-order-overview__item.is-canceled {
+  background: rgba(127, 29, 29, 0.28);
+  box-shadow: inset 3px 0 0 rgba(248, 113, 113, 0.82);
+}
+
 html[data-theme="dark"] .kiju-order-overview__item-status {
   color: #fbbf24;
+}
+
+html[data-theme="dark"] .kiju-order-overview__item-status.is-canceled {
+  color: #fca5a5;
 }
 
 html[data-theme="dark"] .kiju-order-overview-group__header,

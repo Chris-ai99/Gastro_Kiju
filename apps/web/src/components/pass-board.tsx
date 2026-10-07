@@ -33,8 +33,6 @@ import { isServiceBookedItem } from "../lib/order-overview";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
 
-const MAX_VISIBLE_TICKETS = 7;
-
 const ticketStatusLabels = {
   blocked: "Gesperrt",
   countdown: "Wartezeit läuft",
@@ -63,6 +61,7 @@ const nextKitchenUnitStatusLabels: Record<KitchenUnitStatus, string> = {
 
 type TicketStatus = keyof typeof ticketStatusLabels;
 type PassStation = "kitchen" | "bar";
+type PassBoardFilter = "open" | "in-progress" | "completed" | "all";
 type WaitAttention = "normal" | "warning" | "critical" | "urgent";
 
 type PassTicketUnit = {
@@ -138,6 +137,19 @@ const formatClock = (value: number | string | undefined) => {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+};
+
+const formatLastSync = (value?: string) => {
+  if (!value) return "kein Serverstand";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Serverstand unbekannt";
+
+  return new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(date);
 };
 
 const formatWaitDuration = (secondsLeft: number) => {
@@ -267,11 +279,17 @@ const normalizeKitchenUnits = (item: OrderItem, productName: string): PassTicket
 const formatKitchenCount = (count: number) =>
   `${count} ${count === 1 ? "offene Portion" : "offene Portionen"}`;
 
+const ticketHasInProgressUnit = (ticket: PassTicket) =>
+  ticket.lines.some((line) =>
+    line.units?.some((unit) => unit.status === "in-progress")
+  );
+
 export const PassBoard = ({ station }: { station: PassStation }) => {
   const config = passStationConfig[station];
-  const { state, unreadNotifications, actions, currentUser } = useDemoApp();
+  const { state, unreadNotifications, actions, currentUser, serverConnection } = useDemoApp();
   const [showArchived, setShowArchived] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [boardFilter, setBoardFilter] = useState<PassBoardFilter>("open");
   const [stationClock, setStationClock] = useState(() => Date.now());
   const hasActiveKitchenTickets =
     config.showWaitControls &&
@@ -429,9 +447,13 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
     })
     .slice(0, 8);
 
-  const visibleTickets = activeTickets.slice(0, MAX_VISIBLE_TICKETS);
-  const hiddenTicketCount = Math.max(0, activeTickets.length - MAX_VISIBLE_TICKETS);
-  const emptySlotCount = Math.max(0, MAX_VISIBLE_TICKETS - visibleTickets.length);
+  const inProgressTickets = activeTickets.filter(ticketHasInProgressUnit);
+  const visibleTickets = sortedTickets.filter((ticket) => {
+    if (boardFilter === "all") return true;
+    if (boardFilter === "completed") return ticket.status === "completed";
+    if (boardFilter === "in-progress") return ticketHasInProgressUnit(ticket);
+    return ticket.status !== "completed";
+  });
   const readyCount = activeTickets.filter((ticket) => ticket.status === "ready").length;
   const waitingCount = activeTickets.filter((ticket) => ticket.status === "countdown").length;
 
@@ -718,14 +740,20 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
       <main className="kiju-page kiju-kitchen-wallboard">
         <section className="kiju-kitchen-wallboard__grid">
           {visibleTickets.map((ticket) => renderTicketCard(ticket))}
-          {Array.from({ length: emptySlotCount }, (_, index) => (
-            <article key={`empty-${index}`} className="kiju-pass-ticket kiju-pass-ticket--empty">
+          {visibleTickets.length === 0 ? (
+            <article className="kiju-pass-ticket kiju-pass-ticket--empty">
               <div>
                 <ChefHat size={22} />
-                <span>Freier Platz</span>
+                <span>
+                  {boardFilter === "in-progress"
+                    ? "Keine Bons in Bearbeitung"
+                    : boardFilter === "completed"
+                      ? "Keine fertigen Bons in dieser Ansicht"
+                      : "Keine offenen Bons"}
+                </span>
               </div>
             </article>
-          ))}
+          ) : null}
 
           <aside className="kiju-kitchen-summary-card">
             <header className="kiju-kitchen-summary-card__header">
@@ -802,6 +830,28 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
 
         <footer className="kiju-kitchen-wallboard__footer">
           <div className="kiju-kitchen-wallboard__footer-left">
+            <div className="kiju-pass-filter" role="group" aria-label="Bonfilter">
+              {(
+                [
+                  ["open", `Offen ${activeTickets.length}`],
+                  ["in-progress", `In Arbeit ${inProgressTickets.length}`],
+                  ["completed", `Fertig ${archivedTickets.length}`],
+                  ["all", `Alle ${sortedTickets.length}`]
+                ] as const
+              ).map(([filter, label]) => (
+                <button
+                  key={filter}
+                  type="button"
+                  className={`kiju-kitchen-wallboard__footer-button kiju-pass-filter__button${
+                    boardFilter === filter ? " is-active" : ""
+                  }`}
+                  onClick={() => setBoardFilter(filter)}
+                  aria-pressed={boardFilter === filter}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               className="kiju-kitchen-wallboard__footer-button is-icon"
@@ -820,15 +870,21 @@ export const PassBoard = ({ station }: { station: PassStation }) => {
           </div>
 
           <div className="kiju-kitchen-wallboard__footer-center">
-            {hiddenTicketCount > 0 ? <span>+{hiddenTicketCount} weitere Bons</span> : null}
             <span>{readyCount} frei</span>
             <span>{waitingCount} wartet</span>
           </div>
 
           <div className="kiju-kitchen-wallboard__footer-right">
-            <span className="kiju-kitchen-wallboard__refresh">
+            <span className={`kiju-kitchen-wallboard__refresh is-${serverConnection.status}`}>
               <RefreshCw size={16} />
-              Live
+              {serverConnection.status === "online"
+                ? "Live"
+                : serverConnection.status === "saving"
+                  ? "Speichert"
+                  : serverConnection.status === "connecting" || serverConnection.status === "reconnecting"
+                    ? "Verbindet"
+                    : "Offline"}
+              <small>{formatLastSync(serverConnection.lastSyncedAt)}</small>
             </span>
             {currentUser?.role === "admin" ? (
               <>
