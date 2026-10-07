@@ -75,8 +75,9 @@ export class PrintController {
       throw new BadRequestException("Der Druckerstatus ist ungültig.");
     }
     const status = body as Record<string, unknown> | undefined;
+    const hasStatusFields = status && Object.keys(status).length > 0;
     if (
-      status &&
+      hasStatusFields &&
       (typeof status["printerReachable"] !== "boolean" ||
         (status["printerError"] !== undefined &&
           typeof status["printerError"] !== "string"))
@@ -84,7 +85,7 @@ export class PrintController {
       throw new BadRequestException("Der Druckerstatus ist ungültig.");
     }
     return this.printQueue.recordBridgeHeartbeat(
-      status
+      hasStatusFields && status
         ? {
             reachable: status["printerReachable"] as boolean,
             error:
