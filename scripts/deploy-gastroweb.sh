@@ -223,7 +223,8 @@ wait_for_health() {
 wait_for_health "${API_HEALTH_URL}"
 wait_for_health "${WEB_API_HEALTH_URL}"
 wait_for_health "${WEB_HEALTH_URL}"
-install -o root -g root -m 0755 "${release_dir}/scripts/deploy-gastroweb.sh" "${DEPLOY_RECEIVER}"
+tr -d '\r' < "${release_dir}/scripts/deploy-gastroweb.sh" > "${temporary_dir}/deploy-receiver"
+install -o root -g root -m 0755 "${temporary_dir}/deploy-receiver" "${DEPLOY_RECEIVER}"
 switch_started="0"
 trap - ERR
 echo "DEPLOY_COMPLETED ${revision} ${release_dir}"
