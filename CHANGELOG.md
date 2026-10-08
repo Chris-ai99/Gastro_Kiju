@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.15-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Abrechnung
+- Zusammenfassung:
+  Zahlungsfeld, Buchungsaktionen und Bonübersicht bleiben auch bei langen Bestellungen getrennt und erreichbar.
+- Änderungen:
+  Die Zahlungs- und Bonbereiche behalten ihre natürliche Höhe und überdecken sich auf Handy und Desktop nicht mehr.
+  Der automatisch vorgeschlagene Gegeben-Betrag nutzt das deutsche Kommaformat.
+
 ## 0.14.14-beta
 - Datum: 2026-10-07
 - Uhrzeit: laufend

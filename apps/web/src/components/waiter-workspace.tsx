@@ -1106,7 +1106,7 @@ export const WaiterWorkspace = () => {
     }
 
     if (cashReceivedInput === "" && activePaymentTotal > 0) {
-      setCashReceivedInput((activePaymentTotal / 100).toFixed(2));
+      setCashReceivedInput((activePaymentTotal / 100).toFixed(2).replace(".", ","));
     }
   }, [activePaymentTotal, cashReceivedInput, paymentMethod]);
   const sessionItemCount =

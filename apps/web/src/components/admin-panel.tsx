@@ -78,6 +78,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.15-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Abrechnung",
+    title: "Zahlung und Bonübersicht wieder vollständig bedienen",
+    summary:
+      "Zahlungsfeld, Buchungsaktionen und Bonübersicht bleiben auch bei langen Bestellungen getrennt und erreichbar.",
+    categories: ["Abrechnung", "Zahlung", "Mobil", "Fehlerbehebung"],
+    changes: [
+      "Die Zahlungs- und Bonbereiche behalten ihre natürliche Höhe und überdecken sich auf Handy und Desktop nicht mehr.",
+      "Der automatisch vorgeschlagene Gegeben-Betrag nutzt das deutsche Kommaformat."
+    ]
+  },
+  {
     version: "0.14.14-beta",
     date: "2026-10-07",
     time: "laufend",

@@ -2258,7 +2258,7 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   gap: 0.9rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .kiju-wizard-fusion-layout {
@@ -3019,20 +3019,9 @@ button {
 }
 
 .kiju-wizard-checkout-side {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.kiju-wizard-checkout-side > .kiju-wizard-panel:first-child {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.kiju-wizard-checkout-side > .kiju-wizard-panel:first-child .kiju-checkout-controls {
-  flex: 1;
+  display: grid;
+  align-content: start;
+  min-width: 0;
 }
 
 .kiju-checkout-controls__actions {
