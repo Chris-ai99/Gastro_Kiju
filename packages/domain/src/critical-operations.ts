@@ -456,6 +456,39 @@ export const applyCriticalOperation = (
       const index = target.findIndex(
         (entry) => isRecord(entry) && entry["id"] === patch.id
       );
+
+      const sessionPathSegment = patch.path[1];
+      const removesOrderItem =
+        operation.kind === "order.item.remove" &&
+        patch.path.length === 3 &&
+        patch.path[0] === "sessions" &&
+        typeof sessionPathSegment === "object" &&
+        sessionPathSegment !== null &&
+        patch.path[2] === "items";
+
+      if (removesOrderItem) {
+        const session = resolvePath(rootHolder.value, patch.path.slice(0, 2));
+        const currentItem = index >= 0 ? target[index] : undefined;
+        if (
+          !session.exists ||
+          !isRecord(session.value) ||
+          session.value["status"] === "closed" ||
+          !isRecord(currentItem) ||
+          currentItem["sentAt"]
+        ) {
+          throw new CriticalOperationConflictError(
+            `Datensatz ${patch.id} wurde zwischenzeitlich geändert.`,
+            [...patch.path, { id: patch.id }]
+          );
+        }
+
+        target.splice(index, 1);
+        if (target.length === 0 && session.value["status"] !== "closed") {
+          session.value["status"] = "idle";
+        }
+        return;
+      }
+
       if (index < 0 || !valuesEqual(target[index], patch.before)) {
         throw new CriticalOperationConflictError(
           `Datensatz ${patch.id} wurde zwischenzeitlich geändert.`,
@@ -489,6 +522,19 @@ export const applyCriticalOperation = (
         if (leftOrder === undefined || rightOrder === undefined) return 0;
         return leftOrder - rightOrder;
       });
+      return;
+    }
+
+    if (
+      operation.kind === "order.item.remove" &&
+      patch.op === "set" &&
+      patch.path.length === 3 &&
+      patch.path[0] === "sessions" &&
+      typeof patch.path[1] === "object" &&
+      patch.path[1] !== null &&
+      patch.path[2] === "status" &&
+      patch.value === "idle"
+    ) {
       return;
     }
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.20-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Bestellungen
+- Zusammenfassung:
+  Das Entfernen eines ungesendeten Gerichts hängt nicht mehr davon ab, ob sein Detailstand auf einem anderen Gerät geändert wurde.
+- Änderungen:
+  Der Löschvorgang verwendet die Artikel-ID und erhält andere Positionen derselben Bestellung; bereits gesendete Gerichte bleiben geschützt.
+
 ## 0.14.19-beta
 - Datum: 2026-10-08
 - Uhrzeit: laufend

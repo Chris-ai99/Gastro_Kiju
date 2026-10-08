@@ -78,6 +78,19 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.20-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Bestellungen",
+    title: "Offene Gerichte auch nach parallelen Änderungen löschen",
+    summary:
+      "Das Entfernen eines ungesendeten Gerichts hängt nicht mehr davon ab, ob sein Detailstand auf einem anderen Gerät geändert wurde.",
+    categories: ["Bestellungen", "Service", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Der Löschvorgang verwendet die Artikel-ID und erhält andere Positionen derselben Bestellung; bereits gesendete Gerichte bleiben geschützt."
+    ]
+  },
+  {
     version: "0.14.19-beta",
     date: "2026-10-08",
     time: "laufend",
