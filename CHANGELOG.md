@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.14.19-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Admin
+- Zusammenfassung:
+  Der bestätigte Tagesreset leert die aktuellen Bestellungen und Tagesdaten auch dann, wenn ein anderes Gerät sie kurz zuvor geändert hat.
+- Änderungen:
+  Der Reset wendet seinen bestätigten Umfang auf den aktuellen Serverstand an; Produkte, Tische, Benutzer und Einstellungen bleiben erhalten.
+  Die Erfolgsbestätigung nennt keine möglicherweise veraltete lokale Bestellanzahl.
+
+## 0.14.18-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Bestellungen
+- Zusammenfassung:
+  Einzelne Löschungen ändern gezielt den betroffenen Artikel, auch wenn er der letzte in der Bestellung ist.
+- Änderungen:
+  Artikeländerungen werden auch bei einer leeren Artikelliste über Artikel-IDs abgeglichen; unabhängige parallele Änderungen führen dadurch nicht mehr zum Abbruch der Löschung.
+
+## 0.14.17-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Mobilansicht
+- Zusammenfassung:
+  Die Artikelliste im Kellner-Wizard wächst wieder mit allen Bestellpositionen und lässt sich vollständig durchscrollen.
+- Änderungen:
+  Die mobile Bestellübersicht richtet ihre Artikelliste am Inhalt aus, damit Einträge nicht mehr am unteren Rand abgeschnitten werden.
+
+## 0.14.16-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Service
+- Zusammenfassung:
+  Fertige Speisen und weitere offene Serviceaufträge erscheinen in der Serviceübersicht nur noch einmal.
+- Änderungen:
+  Die schwebende Wiederholung entfällt; offene Aufträge bleiben in der Auslieferungsliste mit ihrer Annehmen- oder Erledigt-Aktion verfügbar.
+
 ## 0.14.15-beta
 - Datum: 2026-10-08
 - Uhrzeit: laufend

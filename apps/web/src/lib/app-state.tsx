@@ -286,7 +286,6 @@ type DemoActions = {
   toggleTableActive: (tableId: string) => void;
   resetDailyState: () => {
     ok: boolean;
-    clearedSessions: number;
     message?: string;
     confirmation?: Promise<CommitResult>;
   };
@@ -4177,7 +4176,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const resetDailyState = useCallback(() => {
     const next = structuredClone(state);
     const resetAt = new Date().toISOString();
-    const clearedSessions = next.sessions.length;
 
     dailyResetUndoRef.current = structuredClone(state);
 
@@ -4198,7 +4196,6 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
 
     return {
       ok: true,
-      clearedSessions,
       confirmation
     };
   }, [clearServiceHandoverUndo, commit, currentUserId, state]);

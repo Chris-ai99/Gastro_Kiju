@@ -3612,63 +3612,6 @@ export const WaiterWorkspace = () => {
           </div>
         ) : null}
 
-        {isWaiterView && primaryServiceDeliveryNotification && !isOrderWizardOpen ? (
-          <aside className="kiju-service-drink-popup-stack" role="alert" aria-live="polite">
-            <article key={primaryServiceDeliveryNotification.id} className="kiju-service-drink-popup">
-              <button
-                type="button"
-                className="kiju-service-drink-popup__dismiss"
-                aria-label="Quick-Benachrichtigung schließen"
-                onClick={() => handleNotificationDismiss(primaryServiceDeliveryNotification.id)}
-              >
-                <X size={16} />
-              </button>
-              <div className="kiju-service-drink-popup__content">
-                <span className="kiju-service-drink-popup__eyebrow">
-                  {primaryServiceDeliveryNotification.kind === "service-drinks"
-                    ? "Getränke-Service"
-                    : primaryServiceDeliveryNotification.kind === "service-course-ready"
-                      ? "Küchenpass"
-                    : primaryServiceDeliveryNotification.kind === "service-drinks-accepted" ||
-                        primaryServiceDeliveryNotification.kind === "service-course-ready-accepted"
-                      ? "Übernommen"
-                      : "Serviceauftrag"}
-                </span>
-                <strong>{primaryServiceDeliveryNotification.title}</strong>
-                <span>{primaryServiceDeliveryNotification.body}</span>
-              </div>
-              <button
-                type="button"
-                className="kiju-button kiju-button--primary"
-                onClick={() => handleNotificationAction(primaryServiceDeliveryNotification)}
-              >
-                <CheckCircle2 size={18} />
-                {primaryServiceDeliveryNotification.kind === "service-drinks" ||
-                primaryServiceDeliveryNotification.kind === "service-course-ready"
-                  ? "Annehmen"
-                  : "Erledigt"}
-              </button>
-            </article>
-            {additionalServiceDeliveryCount > 0 ? (
-              <details className="kiju-service-drink-popup-more">
-                <summary>+{additionalServiceDeliveryCount} weitere</summary>
-                <div>
-                  {serviceDeliveryNotifications.slice(1).map((notification) => (
-                    <button
-                      key={notification.id}
-                      type="button"
-                      onClick={() => handleNotificationAction(notification)}
-                    >
-                      <strong>{notification.title}</strong>
-                      <span>{notification.body}</span>
-                    </button>
-                  ))}
-                </div>
-              </details>
-            ) : null}
-          </aside>
-        ) : null}
-
         {isWaiterView && currentStep === "table" ? (
           <section className="kiju-service-drink-delivery">
             <div className="kiju-service-drink-delivery__header">

@@ -150,7 +150,14 @@ const createPatches = (
   if (valuesEqual(before, after)) return;
 
   if (Array.isArray(before) && Array.isArray(after)) {
-    if (isIdentifiedRecordArray(before) && isIdentifiedRecordArray(after)) {
+    const beforeHasRecordIds = isIdentifiedRecordArray(before);
+    const afterHasRecordIds = isIdentifiedRecordArray(after);
+    const canPatchRecordsById =
+      (beforeHasRecordIds || before.length === 0) &&
+      (afterHasRecordIds || after.length === 0) &&
+      (beforeHasRecordIds || afterHasRecordIds);
+
+    if (canPatchRecordsById) {
       const beforeById = new Map(before.map((entry) => [entry["id"], entry]));
       const afterById = new Map(after.map((entry) => [entry["id"], entry]));
 
@@ -387,7 +394,44 @@ export const applyCriticalOperation = (
     value: cloneValue(state)
   };
 
+  if (operation.kind === "daily.reset") {
+    const resetState = rootHolder.value as AppState;
+    const resetDatePatch = operation.patches.find(
+      (patch) =>
+        patch.op === "set" &&
+        patch.path.length === 2 &&
+        patch.path[0] === "dailyStats" &&
+        patch.path[1] === "date"
+    );
+    resetState.sessions = [];
+    resetState.linkedTableGroups = [];
+    resetState.notifications = [];
+    resetState.dailyStats = {
+      ...resetState.dailyStats,
+      date:
+        resetDatePatch?.op === "set"
+          ? String(resetDatePatch.value)
+          : resetState.dailyStats.date,
+      revenueCents: 0,
+      servedTables: 0,
+      servedGuests: 0,
+      closedOrderIds: []
+    };
+  }
+
   operation.patches.forEach((patch) => {
+    const rootPath = patch.path[0];
+    const rootField = typeof rootPath === "string" ? rootPath : undefined;
+    if (
+      operation.kind === "daily.reset" &&
+      (rootField === "sessions" ||
+        rootField === "linkedTableGroups" ||
+        rootField === "notifications" ||
+        rootField === "dailyStats")
+    ) {
+      return;
+    }
+
     if (patch.op === "array-insert") {
       const target = requireArrayAtPath(rootHolder.value, patch.path);
       const existing = target.find(

@@ -6731,6 +6731,14 @@ button.kiju-admin-link-pill {
     padding-left: 0.5rem;
   }
 
+  .kiju-order-overview {
+    align-content: start;
+  }
+
+  .kiju-order-overview__items {
+    min-height: max-content;
+  }
+
   .kiju-order-overview__totals {
     align-items: flex-start;
     flex-wrap: wrap;

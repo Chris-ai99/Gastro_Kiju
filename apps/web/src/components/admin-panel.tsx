@@ -78,6 +78,59 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.19-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Admin",
+    title: "Tagesreset trotz paralleler Bestelländerungen ausführen",
+    summary:
+      "Der bestätigte Tagesreset leert die aktuellen Bestellungen und Tagesdaten auch dann, wenn ein anderes Gerät sie kurz zuvor geändert hat.",
+    categories: ["Admin", "Tagesreset", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Der Reset wendet seinen bestätigten Umfang auf den aktuellen Serverstand an; Produkte, Tische, Benutzer und Einstellungen bleiben erhalten.",
+      "Die Erfolgsbestätigung nennt keine möglicherweise veraltete lokale Bestellanzahl."
+    ]
+  },
+  {
+    version: "0.14.18-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Bestellungen",
+    title: "Gerichte aus offenen Bestellungen zuverlässig entfernen",
+    summary:
+      "Einzelne Löschungen ändern gezielt den betroffenen Artikel, auch wenn er der letzte in der Bestellung ist.",
+    categories: ["Bestellungen", "Service", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Artikeländerungen werden auch bei einer leeren Artikelliste über Artikel-IDs abgeglichen; unabhängige parallele Änderungen führen dadurch nicht mehr zum Abbruch der Löschung."
+    ]
+  },
+  {
+    version: "0.14.17-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Mobilansicht",
+    title: "Alle Bestellartikel auf dem Handy erreichbar machen",
+    summary:
+      "Die Artikelliste im Kellner-Wizard wächst wieder mit allen Bestellpositionen und lässt sich vollständig durchscrollen.",
+    categories: ["Service", "Mobil", "Bestellübersicht", "Fehlerbehebung"],
+    changes: [
+      "Die mobile Bestellübersicht richtet ihre Artikelliste am Inhalt aus, damit Einträge nicht mehr am unteren Rand abgeschnitten werden."
+    ]
+  },
+  {
+    version: "0.14.16-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Service",
+    title: "Doppelte Küchenpass-Meldung im Service entfernen",
+    summary:
+      "Fertige Speisen und weitere offene Serviceaufträge erscheinen in der Serviceübersicht nur noch einmal.",
+    categories: ["Service", "Küchenpass", "Fehlerbehebung"],
+    changes: [
+      "Die schwebende Wiederholung entfällt; offene Aufträge bleiben in der Auslieferungsliste mit ihrer Annehmen- oder Erledigt-Aktion verfügbar."
+    ]
+  },
+  {
     version: "0.14.15-beta",
     date: "2026-10-08",
     time: "laufend",
@@ -2782,7 +2835,7 @@ export const AdminPanel = ({
         setFeedback({
           tone: confirmed ? "success" : "alert",
           message: confirmed
-            ? `${result.clearedSessions} Bestellungen und die Tagesdaten wurden gelöscht.`
+            ? "Bestellungen und Tagesdaten wurden gelöscht."
             : confirmationMessage ?? result.message ?? "Tagesdaten konnten nicht gelöscht werden."
         });
       } else {
