@@ -236,10 +236,22 @@ const normalizeProduct = (
   const normalizedBaseProduct =
     product.category !== "drinks"
       ? (() => {
-          const { drinkSubcategory: _drinkSubcategory, ...rest } = product;
-          return rest;
+          const {
+            drinkSubcategory: _drinkSubcategory,
+            courseSubcategory: _rawCourseSubcategory,
+            ...rest
+          } = product;
+          const courseSubcategory = product.courseSubcategory?.trim();
+          return {
+            ...rest,
+            ...(courseSubcategory ? { courseSubcategory } : {})
+          };
         })()
       : (() => {
+          const {
+            courseSubcategory: _courseSubcategory,
+            ...productWithoutCourseSubcategory
+          } = product;
           const hasDrinkSubcategory = Object.prototype.hasOwnProperty.call(
             product,
             "drinkSubcategory"
@@ -248,7 +260,7 @@ const normalizeProduct = (
             typeof product.drinkSubcategory === "string" ? product.drinkSubcategory.trim() : "";
 
           return {
-            ...product,
+            ...productWithoutCourseSubcategory,
             drinkSubcategory: hasDrinkSubcategory
               ? drinkSubcategory
               : inferDrinkSubcategory(product.name)

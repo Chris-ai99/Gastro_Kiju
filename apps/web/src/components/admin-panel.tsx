@@ -78,6 +78,19 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.24-beta",
+    date: "2026-10-09",
+    time: "16:46",
+    type: "Fehlerbehebung / Speisekarte",
+    title: "Speisen-Untergruppe im Admin wählbar",
+    summary:
+      "Speisen lassen sich unabhängig vom Produktnamen gezielt der passenden Service-Untergruppe zuordnen.",
+    categories: ["Admin", "Speisekarte", "Service", "Fehlerbehebung"],
+    changes: [
+      "Für Vorspeisen, Hauptspeisen und Desserts kann die Service-Untergruppe direkt am Produkt geändert werden; Nudeln lassen sich der Gruppe Pasta zuordnen."
+    ]
+  },
+  {
     version: "0.14.23-beta",
     date: "2026-10-09",
     time: "16:35",
@@ -1919,6 +1932,43 @@ const resolveNotificationActor = (state: AppState, notification: AppNotification
 };
 
 const productCategoryOrder: ProductCategory[] = ["starter", "main", "drinks", "dessert"];
+const foodSubcategoryOptions: Partial<
+  Record<ProductCategory, Array<{ value: string; label: string }>>
+> = {
+  starter: [
+    { value: "Pizzabrot", label: "Pizzabrot" },
+    { value: "Sonstiges", label: "Sonstiges" }
+  ],
+  main: [
+    { value: "Pizza", label: "Pizza" },
+    { value: "Pasta", label: "Pasta (Nudeln)" },
+    { value: "Sonstiges", label: "Sonstiges" }
+  ],
+  dessert: [
+    { value: "Dessert", label: "Dessert" },
+    { value: "Süßes", label: "Süßes" },
+    { value: "Sonstiges", label: "Sonstiges" }
+  ]
+};
+const inferFoodSubcategory = (category: ProductCategory, productName: string) => {
+  const normalizedName = productName.toLocaleLowerCase("de-DE");
+  if (category === "starter" && normalizedName.includes("pizzabrot")) return "Pizzabrot";
+  if (category === "main") {
+    if (normalizedName.includes("pizza")) return "Pizza";
+    if (normalizedName.includes("nudel") || normalizedName.includes("pasta")) return "Pasta";
+  }
+  if (category === "dessert") {
+    if (normalizedName.includes("dessert")) return "Dessert";
+    if (
+      normalizedName.includes("nutella") ||
+      normalizedName.includes("süß") ||
+      normalizedName.includes("suess")
+    ) {
+      return "Süßes";
+    }
+  }
+  return "Sonstiges";
+};
 const tableOrderTarget: OrderTarget = { type: "table" };
 const designModeOptions: { mode: DesignMode; label: string }[] = [
   { mode: "modern", label: "Neu" },
@@ -4637,6 +4687,18 @@ export const AdminPanel = ({
                       ) : (
                         products.map((product) => {
                           const usage = productUsage.get(product.id) ?? { open: 0, closed: 0 };
+                          const foodSubcategories = foodSubcategoryOptions[product.category] ?? [];
+                          const selectedFoodSubcategory =
+                            product.courseSubcategory ||
+                            inferFoodSubcategory(product.category, product.name);
+                          const visibleFoodSubcategories = foodSubcategories.some(
+                            (option) => option.value === selectedFoodSubcategory
+                          )
+                            ? foodSubcategories
+                            : [
+                                ...foodSubcategories,
+                                { value: selectedFoodSubcategory, label: selectedFoodSubcategory }
+                              ];
 
                           return (
                             <AccordionSection
@@ -4686,7 +4748,8 @@ export const AdminPanel = ({
                                     value={product.category}
                                     onChange={(event) =>
                                       actions.updateProduct(product.id, {
-                                        category: event.target.value as ProductCategory
+                                        category: event.target.value as ProductCategory,
+                                        courseSubcategory: undefined
                                       })
                                     }
                                   >
@@ -4712,7 +4775,25 @@ export const AdminPanel = ({
                                     }
                                   />
                                 </label>
-                              ) : null}
+                              ) : (
+                                <label className="kiju-inline-field">
+                                  <span>Service-Untergruppe</span>
+                                  <select
+                                    value={selectedFoodSubcategory}
+                                    onChange={(event) =>
+                                      actions.updateProduct(product.id, {
+                                        courseSubcategory: event.target.value
+                                      })
+                                    }
+                                  >
+                                    {visibleFoodSubcategories.map((subcategory) => (
+                                      <option key={subcategory.value} value={subcategory.value}>
+                                        {subcategory.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              )}
 
                               <label className="kiju-inline-field">
                                 <span>Beschreibung</span>

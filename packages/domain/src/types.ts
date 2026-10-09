@@ -88,6 +88,7 @@ export interface Product {
   id: string;
   name: string;
   category: ProductCategory;
+  courseSubcategory?: string;
   drinkSubcategory?: string;
   description: string;
   priceCents: number;

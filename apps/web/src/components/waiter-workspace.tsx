@@ -358,8 +358,11 @@ const inferDrinkSubcategory = (productName: string) => {
 const getDrinkSubcategory = (product: Product) =>
   product.drinkSubcategory?.trim() || inferDrinkSubcategory(product.name);
 
-const getFoodCourseGroup = (course: CourseKey, productName: string) => {
-  const normalizedName = productName.toLocaleLowerCase("de-DE");
+const getFoodCourseGroup = (course: CourseKey, product: Product) => {
+  const explicitSubcategory = product.courseSubcategory?.trim();
+  if (explicitSubcategory) return explicitSubcategory;
+
+  const normalizedName = product.name.toLocaleLowerCase("de-DE");
 
   if (course === "starter") {
     if (normalizedName.includes("pizza brot") || normalizedName.includes("pizzabrot")) {
@@ -390,7 +393,7 @@ const getFoodCourseGroup = (course: CourseKey, productName: string) => {
 };
 
 const getProductCourseGroup = (course: CourseKey, product: Product) =>
-  course === "drinks" ? getDrinkSubcategory(product) : getFoodCourseGroup(course, product.name);
+  course === "drinks" ? getDrinkSubcategory(product) : getFoodCourseGroup(course, product);
 
 const sortCourseGroups = (course: CourseKey, groups: string[]) => {
   const preferredOrder = preferredCourseGroupOrder[course] ?? [fallbackCourseGroup];

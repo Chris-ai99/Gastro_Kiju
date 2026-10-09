@@ -3507,6 +3507,8 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       Object.assign(product, normalizedPatch);
       if (product.category !== "drinks") {
         delete product.drinkSubcategory;
+      } else {
+        delete product.courseSubcategory;
       }
       if (isAlwaysServiceBookedProduct(product)) {
         product.productionTarget = "service";
