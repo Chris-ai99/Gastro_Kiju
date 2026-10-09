@@ -5,6 +5,7 @@ import type {
   OrderSession,
   PersistedPrintJob,
   Product,
+  ThermalPrintDocument,
   TableLayout
 } from "@kiju/domain";
 
@@ -24,6 +25,14 @@ export type PrintJobRequest =
       batch: KitchenTicketBatch;
     }
   | {
+      type: "daily-close";
+      document: ThermalPrintDocument;
+      bookingCount: number;
+      closedCount: number;
+      printedAt?: string;
+    }
+  | {
+      /** Backward compatibility for print jobs queued before the compact format. */
       type: "daily-close";
       sessions: OrderSession[];
       tables: TableLayout[];

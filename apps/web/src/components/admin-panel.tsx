@@ -46,7 +46,10 @@ import {
   type Role,
   type ServiceOrderMode
 } from "@kiju/domain";
-import { buildReceiptDocumentFromSessions } from "@kiju/print-bridge";
+import {
+  buildBookingStatisticsPrintDocument,
+  buildReceiptDocumentFromSessions
+} from "@kiju/print-bridge";
 import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
 import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
@@ -77,6 +80,20 @@ type AdminChangelogEntry = {
 };
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
+  {
+    version: "0.14.25-beta",
+    date: "2026-10-09",
+    time: "laufend",
+    type: "Fehlerbehebung / Statistikdruck",
+    title: "Statistikdruck bei großen Bestellungen repariert",
+    summary:
+      "Der Statistikdruck überträgt nur noch das fertige Druckdokument; die API nimmt größere, begrenzte JSON-Anfragen an.",
+    categories: ["Admin", "Druck", "Statistik", "Fehlerbehebung"],
+    changes: [
+      "Der Statistikbericht wird vor dem Speichern des Druckauftrags erstellt; umfangreiche Küchen-, Service- und Verlaufsdaten werden nicht mehr erneut übertragen.",
+      "Die API verarbeitet JSON-Anfragen bis 10 MB, damit umfangreiche betriebliche Änderungen nicht an der bisherigen Standardgrenze scheitern."
+    ]
+  },
   {
     version: "0.14.24-beta",
     date: "2026-10-09",
@@ -2848,9 +2865,13 @@ export const AdminPanel = ({
 
     const result = await actions.enqueuePrintJob({
       type: "daily-close",
-      sessions,
-      tables: state.tables,
-      products: state.products,
+      document: buildBookingStatisticsPrintDocument({
+        sessions,
+        tables: state.tables,
+        products: state.products
+      }),
+      bookingCount: sessions.length,
+      closedCount: sessions.filter((session) => session.status === "closed").length,
       printedAt: new Date().toISOString()
     });
 

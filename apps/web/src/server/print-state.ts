@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 
 import {
-  buildBookingStatisticsPrintDocument,
   buildKitchenPlateLabelPrintDocument,
   buildKitchenTicketPrintDocument,
   buildPickupTicketPrintDocument,
@@ -318,31 +317,16 @@ const createPickupTicketJob = (request: Extract<CreatePrintJobRequest, { type: "
 };
 
 const createDailyCloseJob = (request: Extract<CreatePrintJobRequest, { type: "daily-close" }>) => {
-  const printableSessions = request.sessions.filter(
-    (session) =>
-      session.items.length > 0 ||
-      session.payments.length > 0 ||
-      session.cancellations.length > 0
-  );
-  const document = buildBookingStatisticsPrintDocument({
-    sessions: printableSessions,
-    tables: request.tables,
-    products: request.products,
-    printedAt: request.printedAt
-  });
-
   return {
     id: createClientId("print-job"),
     type: "daily-close" as const,
     status: "pending" as const,
     title: "Statistik drucken",
-    subtitle: `${printableSessions.length} Buchungen · ${
-      printableSessions.filter((session) => session.status === "closed").length
-    } Abschlüsse`,
+    subtitle: `${request.bookingCount} Buchungen · ${request.closedCount} Abschlüsse`,
     createdAt: nowIso(),
     updatedAt: nowIso(),
     attemptCount: 0,
-    document
+    document: request.document
   };
 };
 

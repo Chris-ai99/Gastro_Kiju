@@ -6,6 +6,7 @@ import type {
   OrderSession,
   PersistedPrintJob,
   Product,
+  ThermalPrintDocument,
   TableLayout
 } from "@kiju/domain";
 
@@ -28,9 +29,9 @@ export type CreatePrintJobRequest =
     }
   | {
       type: "daily-close";
-      sessions: OrderSession[];
-      tables: TableLayout[];
-      products: Product[];
+      document: ThermalPrintDocument;
+      bookingCount: number;
+      closedCount: number;
       printedAt?: string;
     }
   | {

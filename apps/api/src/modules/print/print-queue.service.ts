@@ -614,7 +614,9 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
       case "pickup-ticket":
         return buildPickupTicketPrintDocument(request);
       case "daily-close":
-        return buildBookingStatisticsPrintDocument(request);
+        return "document" in request
+          ? request.document
+          : buildBookingStatisticsPrintDocument(request);
       case "test-print":
         return buildPrinterTestDocument(
           printer.model,
@@ -730,7 +732,10 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
       return {
         type: request.type,
         title: "Statistik drucken",
-        subtitle: `${request.sessions.length} Buchungen`
+        subtitle:
+          "bookingCount" in request
+            ? `${request.bookingCount} Buchungen · ${request.closedCount} Abschlüsse`
+            : `${request.sessions.length} Buchungen`
       };
     }
     if (request.type === "legacy-document") {
