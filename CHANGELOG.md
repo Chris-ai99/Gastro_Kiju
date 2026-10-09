@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.21-beta
+- Datum: 2026-10-09
+- Uhrzeit: 15:42 Europe/Berlin
+- Typ: Fehlerbehebung / Admin
+- Zusammenfassung:
+  Der Tagesreset funktioniert auch bei großen Bestellungen, ohne wegen einer zu großen Anfrage verworfen zu werden.
+- Änderungen:
+  Der Reset überträgt keine gelöschten Bestellsnapshots mehr; der Server setzt Bestellungen und Tagesdaten über den kompakten Reset-Vorgang zurück.
+
 ## 0.14.20-beta
 - Datum: 2026-10-08
 - Uhrzeit: laufend

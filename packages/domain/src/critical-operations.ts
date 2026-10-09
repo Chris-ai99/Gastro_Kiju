@@ -259,6 +259,24 @@ export const createCriticalOperation = (
   after: AppState,
   kind: CriticalOperationKind = "state.update"
 ): CriticalOperation => {
+  if (kind === "daily.reset") {
+    return {
+      type: "state.patch",
+      kind,
+      // The server applies the reset semantically; sending removed order snapshots
+      // here can exceed the transaction request-size limit.
+      patches: [
+        {
+          op: "set",
+          path: ["dailyStats", "date"],
+          hadValue: true,
+          before: cloneValue(before.dailyStats.date),
+          value: cloneValue(after.dailyStats.date)
+        }
+      ]
+    };
+  }
+
   const patches: StatePatch[] = [];
   createPatches(
     before,

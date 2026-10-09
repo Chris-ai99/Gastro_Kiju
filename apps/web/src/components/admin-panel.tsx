@@ -78,6 +78,19 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.21-beta",
+    date: "2026-10-09",
+    time: "15:42",
+    type: "Fehlerbehebung / Admin",
+    title: "Tagesreset auch bei großen Bestellungen ausführen",
+    summary:
+      "Der Tagesreset wird nicht mehr wegen einer zu großen Anfrage abgebrochen.",
+    categories: ["Admin", "Tagesreset", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Der Reset überträgt keine gelöschten Bestellsnapshots mehr; der Server setzt Bestellungen und Tagesdaten über den kompakten Reset-Vorgang zurück."
+    ]
+  },
+  {
     version: "0.14.20-beta",
     date: "2026-10-08",
     time: "laufend",
