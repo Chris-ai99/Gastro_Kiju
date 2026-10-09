@@ -78,6 +78,19 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.23-beta",
+    date: "2026-10-09",
+    time: "16:35",
+    type: "Fehlerbehebung / Synchronisierung",
+    title: "Falsche Konflikte bei geänderten Datensätzen behoben",
+    summary:
+      "Gleiche Datensätze werden auch dann als unverändert erkannt, wenn ihre Felder in anderer Reihenfolge übertragen wurden.",
+    categories: ["Synchronisierung", "Admin", "Fehlerbehebung"],
+    changes: [
+      "Der Vergleich von Datenbank-Datensätzen ignoriert die Reihenfolge von Objektfeldern und verhindert dadurch falsche Konfliktmeldungen beim Speichern oder Löschen."
+    ]
+  },
+  {
     version: "0.14.22-beta",
     date: "2026-10-09",
     time: "15:57",

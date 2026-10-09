@@ -117,6 +117,20 @@ export class CriticalOperationConflictError extends Error {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
+const canonicalize = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(canonicalize);
+  }
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, canonicalize(entry)])
+    );
+  }
+  return value;
+};
+
 const isIdentifiedRecordArray = (
   value: unknown[]
 ): value is Array<Record<string, unknown> & { id: string }> => {
@@ -138,7 +152,7 @@ const isIdentifiedRecordArray = (
 };
 
 const valuesEqual = (left: unknown, right: unknown) =>
-  JSON.stringify(left) === JSON.stringify(right);
+  JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
 
 const cloneValue = <T>(value: T): T => structuredClone(value);
 
