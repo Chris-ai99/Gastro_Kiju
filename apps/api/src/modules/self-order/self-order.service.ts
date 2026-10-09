@@ -202,6 +202,7 @@ export class SelfOrderService {
         const table: TableLayout = {
           id: tableId,
           name: tableName,
+          pickupName: input.customerName,
           seatCount: 1,
           active: true,
           plannedOnly: false,

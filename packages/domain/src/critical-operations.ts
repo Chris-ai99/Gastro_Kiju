@@ -1,5 +1,6 @@
 import type { AppState } from "./types";
 import { normalizeOperationalState } from "./runtime-state";
+import { isPickupTable } from "./self-order";
 
 export type CriticalOperationKind =
   | "order.item.add"
@@ -422,6 +423,7 @@ export const applyCriticalOperation = (
         patch.path[1] === "date"
     );
     resetState.sessions = [];
+    resetState.tables = resetState.tables.filter((table) => !isPickupTable(table));
     resetState.linkedTableGroups = [];
     resetState.notifications = [];
     resetState.dailyStats = {

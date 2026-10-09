@@ -321,6 +321,11 @@ export const resolveNextTableNumber = (tables: TableLayout[]) =>
     return match ? Math.max(highest, Number(match[1])) : highest;
   }, 0) + 1;
 
+export const isPickupTable = (table: Pick<TableLayout, "name" | "note" | "pickupName">) =>
+  Boolean(table.pickupName?.trim()) ||
+  /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
+  /^(Abholung|Selbstbestellung|Zum Abholen)\s*·/i.test(table.note?.trim() ?? "");
+
 export const resolveNextPickupNumber = (tables: TableLayout[]) =>
   tables.reduce((highest, table) => {
     const match = table.name.trim().match(/^Zum Abholen\s+(\d+)$/i);

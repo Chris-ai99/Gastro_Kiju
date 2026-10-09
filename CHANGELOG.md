@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.22-beta
+- Datum: 2026-10-09
+- Uhrzeit: 15:57 Europe/Berlin
+- Typ: Fehlerbehebung / Abholung und Tagesreset
+- Zusammenfassung:
+  Der Tagesreset entfernt auch offene Abholtische, und der Name der abholenden Person wird in der Serviceübersicht angezeigt.
+- Änderungen:
+  Manuelle und digitale Abholbons speichern den Kundennamen am Tisch; ältere Bons lesen ihn aus ihren Bestelldaten.
+  Der Tagesreset löscht automatisch angelegte Abholtische samt Tagesbestellungen, lässt reguläre Tische aber bestehen.
+
 ## 0.14.21-beta
 - Datum: 2026-10-09
 - Uhrzeit: 15:42 Europe/Berlin

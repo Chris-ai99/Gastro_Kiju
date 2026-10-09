@@ -19,6 +19,7 @@ import {
   getProductById,
   getSessionForTable,
   isOrderItemCanceled,
+  isPickupTable,
   normalizeOperationalState,
   type AppNotification,
   type AppState,
@@ -505,9 +506,6 @@ const getNextPickupNumber = (tables: TableLayout[]) =>
     const pickupNumber = Number(pickupMatch?.[1] ?? 0);
     return Math.max(maxNumber, Number.isFinite(pickupNumber) ? pickupNumber : 0);
   }, 0) + 1;
-const isPickupTable = (table: TableLayout) =>
-  /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
-  table.note?.trim().toLowerCase().startsWith("zum abholen") === true;
 const resolveTablePlacement = (index: number) => {
   const preset = tablePlacements[index];
   if (preset) {
@@ -3906,6 +3904,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     next.tables.push({
       id: tableId,
       name: tableName,
+      pickupName: customerName,
       seatCount,
       active: true,
       plannedOnly: false,
@@ -4180,6 +4179,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     dailyResetUndoRef.current = structuredClone(state);
 
     next.sessions = [];
+    next.tables = next.tables.filter((table) => !isPickupTable(table));
     next.linkedTableGroups = [];
     next.notifications = [];
 

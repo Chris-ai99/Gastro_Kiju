@@ -223,10 +223,25 @@ const availabilityTone: Record<"free" | "occupied", "green" | "amber"> = {
   occupied: "amber"
 };
 
-const isPickupTableEntry = (table: Pick<TableLayout, "name" | "note">) =>
+const isPickupTableEntry = (table: Pick<TableLayout, "name" | "note" | "pickupName">) =>
+  Boolean(table.pickupName?.trim()) ||
   /^Zum Abholen\s+\d+$/i.test(table.name.trim()) ||
   table.note?.trim().toLowerCase().startsWith("abholung") === true ||
   table.note?.trim().toLowerCase().startsWith("zum abholen") === true;
+
+const getPickupCustomerName = (
+  table: Pick<TableLayout, "pickupName" | "note">,
+  customerName?: string
+) => {
+  const storedName = table.pickupName?.trim() || customerName?.trim();
+  if (storedName) return storedName;
+
+  if (table.note?.trim().startsWith("Abholung ·")) {
+    return table.note.split(" · ")[1]?.trim() ?? "";
+  }
+
+  return "";
+};
 
 const getTableNumberLabel = (table: Pick<TableLayout, "id" | "name">) => {
   const pickupNumber = table.name.trim().match(/^Zum Abholen\s+(\d+)$/i)?.[1];
@@ -3738,6 +3753,9 @@ export const WaiterWorkspace = () => {
                 const isPickup = isPickupTableEntry(entry.table);
                 const isOccupied = entry.availability === "occupied";
                 const entrySession = getSessionForTable(state.sessions, entry.table.id);
+                const pickupCustomerName = isPickup
+                  ? getPickupCustomerName(entry.table, entrySession?.selfOrder?.customerName)
+                  : "";
                 const entryItemCount =
                   entrySession?.items
                     .filter((item) => !isOrderItemCanceled(item))
@@ -3774,6 +3792,7 @@ export const WaiterWorkspace = () => {
                       </span>
                       <span className="kiju-waiter-table-card__copy">
                         <strong>{entry.table.name}</strong>
+                        {pickupCustomerName ? <small>Für {pickupCustomerName}</small> : null}
                         <small>
                           {statusText} · {entryItemCount} Artikel · {euro(entry.total)}
                         </small>

@@ -78,6 +78,20 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.22-beta",
+    date: "2026-10-09",
+    time: "15:57",
+    type: "Fehlerbehebung / Abholung und Tagesreset",
+    title: "Abholtische zurücksetzen und Kundennamen anzeigen",
+    summary:
+      "Der Tagesreset entfernt automatisch angelegte Abholtische; in der Serviceübersicht steht der Name der abholenden Person.",
+    categories: ["Admin", "Tagesreset", "Abholung", "Fehlerbehebung"],
+    changes: [
+      "Manuelle und digitale Abholbons speichern den Kundennamen direkt am Tisch; bereits angelegte Bons zeigen den Namen aus ihren Bestelldaten.",
+      "Der Reset entfernt Abholtische und Tagesbestellungen, reguläre Tische bleiben erhalten."
+    ]
+  },
+  {
     version: "0.14.21-beta",
     date: "2026-10-09",
     time: "15:42",
