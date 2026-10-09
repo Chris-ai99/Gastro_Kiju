@@ -150,7 +150,14 @@ const createPatches = (
   if (valuesEqual(before, after)) return;
 
   if (Array.isArray(before) && Array.isArray(after)) {
-    if (isIdentifiedRecordArray(before) && isIdentifiedRecordArray(after)) {
+    const beforeHasRecordIds = isIdentifiedRecordArray(before);
+    const afterHasRecordIds = isIdentifiedRecordArray(after);
+    const canPatchRecordsById =
+      (beforeHasRecordIds || before.length === 0) &&
+      (afterHasRecordIds || after.length === 0) &&
+      (beforeHasRecordIds || afterHasRecordIds);
+
+    if (canPatchRecordsById) {
       const beforeById = new Map(before.map((entry) => [entry["id"], entry]));
       const afterById = new Map(after.map((entry) => [entry["id"], entry]));
 
@@ -387,7 +394,44 @@ export const applyCriticalOperation = (
     value: cloneValue(state)
   };
 
+  if (operation.kind === "daily.reset") {
+    const resetState = rootHolder.value as AppState;
+    const resetDatePatch = operation.patches.find(
+      (patch) =>
+        patch.op === "set" &&
+        patch.path.length === 2 &&
+        patch.path[0] === "dailyStats" &&
+        patch.path[1] === "date"
+    );
+    resetState.sessions = [];
+    resetState.linkedTableGroups = [];
+    resetState.notifications = [];
+    resetState.dailyStats = {
+      ...resetState.dailyStats,
+      date:
+        resetDatePatch?.op === "set"
+          ? String(resetDatePatch.value)
+          : resetState.dailyStats.date,
+      revenueCents: 0,
+      servedTables: 0,
+      servedGuests: 0,
+      closedOrderIds: []
+    };
+  }
+
   operation.patches.forEach((patch) => {
+    const rootPath = patch.path[0];
+    const rootField = typeof rootPath === "string" ? rootPath : undefined;
+    if (
+      operation.kind === "daily.reset" &&
+      (rootField === "sessions" ||
+        rootField === "linkedTableGroups" ||
+        rootField === "notifications" ||
+        rootField === "dailyStats")
+    ) {
+      return;
+    }
+
     if (patch.op === "array-insert") {
       const target = requireArrayAtPath(rootHolder.value, patch.path);
       const existing = target.find(
@@ -412,6 +456,39 @@ export const applyCriticalOperation = (
       const index = target.findIndex(
         (entry) => isRecord(entry) && entry["id"] === patch.id
       );
+
+      const sessionPathSegment = patch.path[1];
+      const removesOrderItem =
+        operation.kind === "order.item.remove" &&
+        patch.path.length === 3 &&
+        patch.path[0] === "sessions" &&
+        typeof sessionPathSegment === "object" &&
+        sessionPathSegment !== null &&
+        patch.path[2] === "items";
+
+      if (removesOrderItem) {
+        const session = resolvePath(rootHolder.value, patch.path.slice(0, 2));
+        const currentItem = index >= 0 ? target[index] : undefined;
+        if (
+          !session.exists ||
+          !isRecord(session.value) ||
+          session.value["status"] === "closed" ||
+          !isRecord(currentItem) ||
+          currentItem["sentAt"]
+        ) {
+          throw new CriticalOperationConflictError(
+            `Datensatz ${patch.id} wurde zwischenzeitlich geändert.`,
+            [...patch.path, { id: patch.id }]
+          );
+        }
+
+        target.splice(index, 1);
+        if (target.length === 0 && session.value["status"] !== "closed") {
+          session.value["status"] = "idle";
+        }
+        return;
+      }
+
       if (index < 0 || !valuesEqual(target[index], patch.before)) {
         throw new CriticalOperationConflictError(
           `Datensatz ${patch.id} wurde zwischenzeitlich geändert.`,
@@ -445,6 +522,19 @@ export const applyCriticalOperation = (
         if (leftOrder === undefined || rightOrder === undefined) return 0;
         return leftOrder - rightOrder;
       });
+      return;
+    }
+
+    if (
+      operation.kind === "order.item.remove" &&
+      patch.op === "set" &&
+      patch.path.length === 3 &&
+      patch.path[0] === "sessions" &&
+      typeof patch.path[1] === "object" &&
+      patch.path[1] !== null &&
+      patch.path[2] === "status" &&
+      patch.value === "idle"
+    ) {
       return;
     }
 

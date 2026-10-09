@@ -51,6 +51,7 @@ import { AccordionSection, SectionCard, StatusPill } from "@kiju/ui";
 
 import { courseLabels, getSessionForTable, resolveProductName, useDemoApp } from "../lib/app-state";
 import { isAlwaysServiceBookedProduct } from "../lib/order-overview";
+import { clearPrintJobs } from "../lib/print-client";
 import { PrinterAdminPanel } from "./printer-admin-panel";
 import { RoleSwitchPopover } from "./role-switch-popover";
 import { RouteGuard } from "./route-guard";
@@ -76,6 +77,116 @@ type AdminChangelogEntry = {
 };
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
+  {
+    version: "0.14.20-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Bestellungen",
+    title: "Offene Gerichte auch nach parallelen Änderungen löschen",
+    summary:
+      "Das Entfernen eines ungesendeten Gerichts hängt nicht mehr davon ab, ob sein Detailstand auf einem anderen Gerät geändert wurde.",
+    categories: ["Bestellungen", "Service", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Der Löschvorgang verwendet die Artikel-ID und erhält andere Positionen derselben Bestellung; bereits gesendete Gerichte bleiben geschützt."
+    ]
+  },
+  {
+    version: "0.14.19-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Admin",
+    title: "Tagesreset trotz paralleler Bestelländerungen ausführen",
+    summary:
+      "Der bestätigte Tagesreset leert die aktuellen Bestellungen und Tagesdaten auch dann, wenn ein anderes Gerät sie kurz zuvor geändert hat.",
+    categories: ["Admin", "Tagesreset", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Der Reset wendet seinen bestätigten Umfang auf den aktuellen Serverstand an; Produkte, Tische, Benutzer und Einstellungen bleiben erhalten.",
+      "Die Erfolgsbestätigung nennt keine möglicherweise veraltete lokale Bestellanzahl."
+    ]
+  },
+  {
+    version: "0.14.18-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Bestellungen",
+    title: "Gerichte aus offenen Bestellungen zuverlässig entfernen",
+    summary:
+      "Einzelne Löschungen ändern gezielt den betroffenen Artikel, auch wenn er der letzte in der Bestellung ist.",
+    categories: ["Bestellungen", "Service", "Synchronisierung", "Fehlerbehebung"],
+    changes: [
+      "Artikeländerungen werden auch bei einer leeren Artikelliste über Artikel-IDs abgeglichen; unabhängige parallele Änderungen führen dadurch nicht mehr zum Abbruch der Löschung."
+    ]
+  },
+  {
+    version: "0.14.17-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Mobilansicht",
+    title: "Alle Bestellartikel auf dem Handy erreichbar machen",
+    summary:
+      "Die Artikelliste im Kellner-Wizard wächst wieder mit allen Bestellpositionen und lässt sich vollständig durchscrollen.",
+    categories: ["Service", "Mobil", "Bestellübersicht", "Fehlerbehebung"],
+    changes: [
+      "Die mobile Bestellübersicht richtet ihre Artikelliste am Inhalt aus, damit Einträge nicht mehr am unteren Rand abgeschnitten werden."
+    ]
+  },
+  {
+    version: "0.14.16-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Service",
+    title: "Doppelte Küchenpass-Meldung im Service entfernen",
+    summary:
+      "Fertige Speisen und weitere offene Serviceaufträge erscheinen in der Serviceübersicht nur noch einmal.",
+    categories: ["Service", "Küchenpass", "Fehlerbehebung"],
+    changes: [
+      "Die schwebende Wiederholung entfällt; offene Aufträge bleiben in der Auslieferungsliste mit ihrer Annehmen- oder Erledigt-Aktion verfügbar."
+    ]
+  },
+  {
+    version: "0.14.15-beta",
+    date: "2026-10-08",
+    time: "laufend",
+    type: "Fehlerbehebung / Abrechnung",
+    title: "Zahlung und Bonübersicht wieder vollständig bedienen",
+    summary:
+      "Zahlungsfeld, Buchungsaktionen und Bonübersicht bleiben auch bei langen Bestellungen getrennt und erreichbar.",
+    categories: ["Abrechnung", "Zahlung", "Mobil", "Fehlerbehebung"],
+    changes: [
+      "Die Zahlungs- und Bonbereiche behalten ihre natürliche Höhe und überdecken sich auf Handy und Desktop nicht mehr.",
+      "Der automatisch vorgeschlagene Gegeben-Betrag nutzt das deutsche Kommaformat."
+    ]
+  },
+  {
+    version: "0.14.14-beta",
+    date: "2026-10-07",
+    time: "laufend",
+    type: "Verbesserung / Admin und Datenverwaltung",
+    title: "Admin-Resets eindeutig und zweistufig absichern",
+    summary:
+      "Druckwarteschlange, Tagesdaten und Komplettreset sind jetzt getrennte, klar erklärte Admin-Aktionen.",
+    categories: ["Admin", "Datenverwaltung", "Druck", "Sicherheit"],
+    changes: [
+      "Die Druckwarteschlange löscht gezielt wartende und fehlgeschlagene Jobs; laufende und gedruckte Jobs bleiben erhalten.",
+      "Der Tagesreset leert Bestellungen, Zahlungen, Stornos, Bons und Hinweise, ohne Produkte, Tische oder Benutzer zu entfernen.",
+      "Der Komplettreset löscht Betriebs- und Stammdaten, setzt die Druckerkonfiguration zurück und behält einen aktiven Admin-Zugang.",
+      "Alle drei Aktionen benötigen eine zweistufige Bestätigung mit konkreter Beschreibung des Löschumfangs."
+    ]
+  },
+  {
+    version: "0.14.13-beta",
+    date: "2026-10-07",
+    time: "laufend",
+    type: "Verbesserung / Abrechnung",
+    title: "Zahlungsaktionen übersichtlicher anordnen",
+    summary:
+      "Die Zahlungsansicht bündelt die Aktionen unten und entfernt die nicht benötigte Auswahl mehrerer Zahlungsarten.",
+    categories: ["Abrechnung", "Zahlung", "Bedienung"],
+    changes: [
+      "Die Abrechnung verwendet fest die Barzahlung; das Auswahlfeld für Bar, Karte und Gutschein entfällt.",
+      "Zahlung erfassen sowie Teilzahlung / Storno stehen gemeinsam am unteren Ende des Zahlungsbereichs und überdecken beim Scrollen nicht mehr den Inhalt."
+    ]
+  },
   {
     version: "0.14.13-beta",
     date: "2026-10-07",
@@ -1795,6 +1906,12 @@ type FeedbackState =
     }
   | undefined;
 
+type AdminResetAction = "print-queue" | "daily" | "all";
+type AdminResetDialogState = {
+  action: AdminResetAction;
+  step: 1 | 2;
+};
+
 const formatAdminDateTime = (value: string) =>
   new Date(value).toLocaleString("de-DE", {
     dateStyle: "short",
@@ -2030,6 +2147,9 @@ export const AdminPanel = ({
   const closedSessions = useMemo(() => buildClosedSessions(state), [state]);
   const [feedback, setFeedback] = useState<FeedbackState>();
   const [canUndoDailyReset, setCanUndoDailyReset] = useState(false);
+  const [resetDialog, setResetDialog] = useState<AdminResetDialogState | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [printerRefreshToken, setPrinterRefreshToken] = useState(0);
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
@@ -2713,22 +2833,61 @@ export const AdminPanel = ({
     });
   };
 
-  const handleDailyReset = () => {
-    const confirmed = window.confirm(
-      "Tagesstand wirklich zurücksetzen? Umsatz heute wird auf 0 gesetzt und offene Bestellungen werden geschlossen."
-    );
-    if (!confirmed) return;
+  const openResetDialog = (action: AdminResetAction) => {
+    setResetDialog({ action, step: 1 });
+  };
 
-    const result = actions.resetDailyState();
-    setCanUndoDailyReset(result.ok);
-    setUserDrafts({});
-    setFeedback({
-      tone: "success",
-      message:
-        result.closedSessions > 0
-          ? `Tagesstand zurückgesetzt. ${result.closedSessions} offene Bestellungen wurden geschlossen.`
-          : "Tagesstand zurückgesetzt. Es waren keine offenen Bestellungen vorhanden."
-    });
+  const handleResetConfirmation = async () => {
+    if (!resetDialog || resetDialog.step !== 2 || isResetting) return;
+
+    setIsResetting(true);
+    const action = resetDialog.action;
+
+    try {
+      if (action === "print-queue") {
+        const result = await clearPrintJobs("pending-failed");
+        setFeedback({
+          tone: result.ok ? "success" : "alert",
+          message: result.ok
+            ? `${result.deletedCount ?? 0} wartende oder fehlgeschlagene Druckjobs wurden gelöscht.`
+            : result.message ?? "Druckwarteschlange konnte nicht geleert werden."
+        });
+        if (result.ok) {
+          setPrinterRefreshToken((current) => current + 1);
+        }
+      } else if (action === "daily") {
+        const result = actions.resetDailyState();
+        const confirmation = result.confirmation ? await result.confirmation : undefined;
+        const confirmed = confirmation?.ok ?? result.ok;
+        const confirmationMessage =
+          confirmation && !confirmation.ok ? confirmation.message : undefined;
+
+        setCanUndoDailyReset(confirmed);
+        setUserDrafts({});
+        setFeedback({
+          tone: confirmed ? "success" : "alert",
+          message: confirmed
+            ? "Bestellungen und Tagesdaten wurden gelöscht."
+            : confirmationMessage ?? result.message ?? "Tagesdaten konnten nicht gelöscht werden."
+        });
+      } else {
+        const result = await actions.resetAllState();
+        setFeedback({
+          tone: result.ok ? "success" : "alert",
+          message: result.ok
+            ? `Alle Betriebsdaten wurden gelöscht. ${result.clearedPrintJobs ?? 0} Druckjobs wurden ebenfalls entfernt.`
+            : result.message ?? "Alle Betriebsdaten konnten nicht vollständig gelöscht werden."
+        });
+        if (result.ok) {
+          setCanUndoDailyReset(false);
+          setUserDrafts({});
+          setPrinterRefreshToken((current) => current + 1);
+        }
+      }
+    } finally {
+      setResetDialog(null);
+      setIsResetting(false);
+    }
   };
 
   const handleUndoDailyReset = () => {
@@ -3083,6 +3242,32 @@ export const AdminPanel = ({
     year: "numeric"
   });
 
+  const resetDialogDetails = resetDialog
+    ? {
+        "print-queue": {
+          title: "Druckwarteschlange leeren",
+          summary: "Wartende und fehlgeschlagene Druckjobs werden gelöscht.",
+          scope:
+            "Bereits gedruckte Jobs und Druckjobs, die gerade verarbeitet werden, bleiben erhalten.",
+          finalLabel: "Druckwarteschlange endgültig leeren"
+        },
+        daily: {
+          title: "Tagesdaten löschen",
+          summary: `${state.sessions.length} Bestellungen, Zahlungen, Stornos und zugehörige Bons werden entfernt.`,
+          scope:
+            "Tische werden freigegeben; Produkte, Tischaufbau, Benutzer und Einstellungen bleiben erhalten. Ein Rückgängig-Snapshot wird gespeichert.",
+          finalLabel: "Tagesdaten endgültig löschen"
+        },
+        all: {
+          title: "Alles löschen",
+          summary: `${state.sessions.length} Bestellungen, ${state.tables.length} Tische und ${state.products.length} Produkte werden entfernt.`,
+          scope:
+            "Auch Mitarbeiter, Hinweise, Selbstbestell-Orte, Druckjobs und die Druckerkonfiguration werden gelöscht. Ein aktiver Admin-Zugang bleibt erhalten.",
+          finalLabel: "Alles endgültig löschen"
+        }
+      }[resetDialog.action]
+    : null;
+
   return (
     <RouteGuard allowedRoles={["admin"]}>
       <main className="kiju-page kiju-admin-shell">
@@ -3197,8 +3382,8 @@ export const AdminPanel = ({
             <a className="kiju-admin-link-pill" href="#bestellungen">
               Bestellungen
             </a>
-            <a className="kiju-admin-link-pill" href="#tagesreset">
-              Tagesreset
+            <a className="kiju-admin-link-pill" href="#datenverwaltung">
+              Daten & Reset
             </a>
           </div>
           <div className="kiju-admin-status-pills">
@@ -3985,7 +4170,7 @@ export const AdminPanel = ({
             </AccordionSection>
           </div>
 
-          <PrinterAdminPanel />
+          <PrinterAdminPanel refreshToken={printerRefreshToken} />
 
           <div id="changelog">
             <AccordionSection
@@ -5111,41 +5296,65 @@ export const AdminPanel = ({
             </AccordionSection>
           </div>
 
-          <div id="tagesreset">
+          <div id="datenverwaltung">
             <AccordionSection
-              title="Tagesreset"
-              eyebrow="Neuer Tag ohne Altlasten"
+              title="Datenverwaltung und Zurücksetzen"
+              eyebrow="Destruktive Aktionen"
               defaultOpen={false}
               className="kiju-admin-accordion"
               action={
                 <StatusPill
-                  label={canUndoDailyReset ? "Rückgängig möglich" : `${openSessions.length} offen`}
-                  tone={canUndoDailyReset ? "amber" : openSessions.length > 0 ? "red" : "green"}
+                  label={`${state.sessions.length} Bestellungen`}
+                  tone={state.sessions.length > 0 ? "red" : "green"}
                 />
               }
             >
-              <div className="kiju-danger-zone">
+              <div className="kiju-admin-reset-grid">
                 <article className="kiju-danger-block">
                   <div className="kiju-danger-copy">
-                    <strong>Tagesstand zurücksetzen</strong>
+                    <strong>Druckwarteschlange leeren</strong>
                     <p>
-                      Setzt Umsatz heute, Tagesgäste und Tagesabschlüsse auf 0. Offene
-                      Bestellungen werden geschlossen, damit ein neuer Tag ohne Altlasten starten
-                      kann. Tische, Leistungen, Benutzer und Hinweise bleiben erhalten.
+                      Löscht wartende und fehlgeschlagene Druckjobs. Bereits gedruckte Jobs und
+                      Druckjobs, die gerade verarbeitet werden, bleiben erhalten.
                     </p>
                     <small>
-                      Vor dem Tagesreset wird ein Rückgängig-Snapshot für diese Admin-Sitzung
-                      gespeichert.
+                      Die Aktion verändert keine Bestellungen, Produkte, Tische oder
+                      Druckereinstellungen.
                     </small>
                   </div>
                   <div className="kiju-danger-actions">
                     <button
                       type="button"
                       className="kiju-button kiju-button--danger"
-                      onClick={handleDailyReset}
+                      onClick={() => openResetDialog("print-queue")}
+                    >
+                      <Trash2 size={18} />
+                      Druckwarteschlange leeren
+                    </button>
+                  </div>
+                </article>
+
+                <article className="kiju-danger-block">
+                  <div className="kiju-danger-copy">
+                    <strong>Tagesdaten löschen</strong>
+                    <p>
+                      Löscht alle Bestellungen, Zahlungen, Stornos und zugehörigen Küchen- sowie
+                      Barbons. Die Tische werden freigegeben; Produkte, Tischaufbau, Benutzer und
+                      Einstellungen bleiben erhalten.
+                    </p>
+                    <small>
+                      Die Aktion wird zweimal bestätigt und kann danach in dieser Admin-Sitzung
+                      rückgängig gemacht werden.
+                    </small>
+                  </div>
+                  <div className="kiju-danger-actions">
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--danger"
+                      onClick={() => openResetDialog("daily")}
                     >
                       <AlertTriangle size={18} />
-                      Tagesstand zurücksetzen
+                      Tagesdaten löschen
                     </button>
                     <button
                       type="button"
@@ -5154,7 +5363,32 @@ export const AdminPanel = ({
                       disabled={!canUndoDailyReset}
                     >
                       <RotateCcw size={18} />
-                      Tagesreset rückgängig
+                      Tagesdaten rückgängig
+                    </button>
+                  </div>
+                </article>
+
+                <article className="kiju-danger-block">
+                  <div className="kiju-danger-copy">
+                    <strong>Alles löschen</strong>
+                    <p>
+                      Entfernt Bestellungen, Zahlungen, Hinweise, Tische, Produkte, Mitarbeiter,
+                      Selbstbestell-Orte und Einstellungen. Die Druckwarteschlange und ihre
+                      Historie werden ebenfalls geleert.
+                    </p>
+                    <small>
+                      Ein aktiver Admin-Zugang bleibt erhalten. Demo-Tische und Demo-Produkte
+                      werden nicht automatisch neu angelegt.
+                    </small>
+                  </div>
+                  <div className="kiju-danger-actions">
+                    <button
+                      type="button"
+                      className="kiju-button kiju-button--danger"
+                      onClick={() => openResetDialog("all")}
+                    >
+                      <Trash2 size={18} />
+                      Alles löschen
                     </button>
                   </div>
                 </article>
@@ -5162,6 +5396,64 @@ export const AdminPanel = ({
             </AccordionSection>
           </div>
         </div>
+        {resetDialog && resetDialogDetails ? (
+          <div className="kiju-admin-reset-overlay">
+            <section
+              className="kiju-admin-reset-dialog"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="kiju-admin-reset-title"
+              aria-describedby="kiju-admin-reset-summary"
+            >
+              <div className="kiju-admin-reset-dialog__header">
+                <span className="kiju-eyebrow">
+                  Sicherheitsprüfung · Schritt {resetDialog.step} von 2
+                </span>
+                <h2 id="kiju-admin-reset-title">{resetDialogDetails.title}</h2>
+                <p id="kiju-admin-reset-summary">{resetDialogDetails.summary}</p>
+              </div>
+              <div className="kiju-admin-reset-dialog__scope">
+                <strong>
+                  {resetDialog.step === 1 ? "Was wird verändert?" : "Letzte Prüfung"}
+                </strong>
+                <span>{resetDialogDetails.scope}</span>
+                {resetDialog.step === 2 ? (
+                  <strong className="kiju-admin-reset-dialog__warning">
+                    Diese Aktion kann nicht automatisch zurückgenommen werden.
+                  </strong>
+                ) : null}
+              </div>
+              <div className="kiju-admin-reset-dialog__actions">
+                <button
+                  type="button"
+                  className="kiju-button kiju-button--secondary"
+                  onClick={() => setResetDialog(null)}
+                  disabled={isResetting}
+                >
+                  Abbrechen
+                </button>
+                {resetDialog.step === 1 ? (
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--primary"
+                    onClick={() => setResetDialog({ ...resetDialog, step: 2 })}
+                  >
+                    Weiter zur zweiten Prüfung
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="kiju-button kiju-button--danger"
+                    onClick={() => void handleResetConfirmation()}
+                    disabled={isResetting}
+                  >
+                    {isResetting ? "Wird gelöscht …" : resetDialogDetails.finalLabel}
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
         {adminPrintMode === "staff-logins" ? (
         <div className="kiju-print-root kiju-print-root--staff-logins" aria-hidden="true">
           <section className="kiju-staff-login-sheet">

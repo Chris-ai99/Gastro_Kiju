@@ -674,7 +674,7 @@ export const WaiterWorkspace = () => {
   const [activeCourseGroup, setActiveCourseGroup] = useState(fallbackCourseGroup);
   const [categoryDialogInitialItemIds, setCategoryDialogInitialItemIds] = useState<string[]>([]);
   const [activeDrinkSubcategory, setActiveDrinkSubcategory] = useState(fallbackDrinkSubcategory);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "voucher">("cash");
+  const paymentMethod = "cash" as const;
   const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>("full");
   const [checkoutMutation, setCheckoutMutation] = useState<CheckoutMutation>("idle");
   const [cashReceivedInput, setCashReceivedInput] = useState("");
@@ -1106,7 +1106,7 @@ export const WaiterWorkspace = () => {
     }
 
     if (cashReceivedInput === "" && activePaymentTotal > 0) {
-      setCashReceivedInput((activePaymentTotal / 100).toFixed(2));
+      setCashReceivedInput((activePaymentTotal / 100).toFixed(2).replace(".", ","));
     }
   }, [activePaymentTotal, cashReceivedInput, paymentMethod]);
   const sessionItemCount =
@@ -2748,24 +2748,6 @@ export const WaiterWorkspace = () => {
           </small>
         </div>
 
-        <div className="kiju-inline-field">
-          <span>Zahlart</span>
-          <select
-            name="payment-method"
-            aria-label="Zahlart"
-            value={paymentMethod}
-            disabled={isMutationPending || checkoutOpenTotal === 0}
-            onChange={(event) => {
-              setPaymentMethod(event.target.value as "cash" | "card" | "voucher");
-              setCashReceivedInput("");
-            }}
-          >
-            <option value="cash">Bar</option>
-            <option value="card">Karte</option>
-            <option value="voucher">Gutschein</option>
-          </select>
-        </div>
-
         {paymentMethod === "cash" && checkoutOpenTotal > 0 ? (
           <div className="kiju-checkout-cash-grid">
             <label className="kiju-inline-field">
@@ -2816,80 +2798,82 @@ export const WaiterWorkspace = () => {
           </div>
         </div>
 
-        {checkoutMode === "full" ? (
-          <div className="kiju-checkout-primary-actions">
-            <button
-              type="button"
-              className="kiju-button kiju-button--primary"
-              onClick={handleRecordFullPayment}
-              disabled={
-                checkoutOpenTotal === 0 ||
-                fullPaymentLineItems.length === 0 ||
-                isMutationPending ||
-                !cashPaymentValid
-              }
-            >
-              Zahlung erfassen ({euro(checkoutOpenTotal)})
-            </button>
-            <button
-              type="button"
-              className="kiju-button kiju-button--secondary"
-              onClick={() => {
-                setCheckoutMode("partial");
-                setCashReceivedInput("");
-              }}
-              disabled={isMutationPending || checkoutOpenTotal === 0}
-            >
-              Teilzahlung / Storno
-            </button>
-          </div>
-        ) : (
-          <div className="kiju-checkout-partial-actions">
-            <button
-              type="button"
-              className="kiju-button kiju-button--secondary"
-              onClick={() => {
-                setCheckoutMode("full");
-                setCashReceivedInput("");
-              }}
-              disabled={isMutationPending}
-            >
-              Gesamtzahlung anzeigen
-            </button>
-            <button
-              type="button"
-              className="kiju-button kiju-button--primary"
-              onClick={handleRecordPartialPayment}
-              disabled={
-                selectedPaymentLineItems.length === 0 || isMutationPending || !cashPaymentValid
-              }
-            >
-              Auswahl bezahlen ({euro(selectedPaymentTotal)})
-            </button>
-            <button
-              type="button"
-              className="kiju-button kiju-button--danger"
-              onClick={handleRecordInvoiceCancellation}
-              disabled={selectedPaymentLineItems.length === 0 || isMutationPending}
-            >
-              Auswahl stornieren ({euro(selectedPaymentTotal)})
-            </button>
-          </div>
-        )}
+        <div className="kiju-checkout-controls__actions">
+          {checkoutMode === "full" ? (
+            <div className="kiju-checkout-primary-actions">
+              <button
+                type="button"
+                className="kiju-button kiju-button--primary"
+                onClick={handleRecordFullPayment}
+                disabled={
+                  checkoutOpenTotal === 0 ||
+                  fullPaymentLineItems.length === 0 ||
+                  isMutationPending ||
+                  !cashPaymentValid
+                }
+              >
+                Zahlung erfassen ({euro(checkoutOpenTotal)})
+              </button>
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={() => {
+                  setCheckoutMode("partial");
+                  setCashReceivedInput("");
+                }}
+                disabled={isMutationPending || checkoutOpenTotal === 0}
+              >
+                Teilzahlung / Storno
+              </button>
+            </div>
+          ) : (
+            <div className="kiju-checkout-partial-actions">
+              <button
+                type="button"
+                className="kiju-button kiju-button--secondary"
+                onClick={() => {
+                  setCheckoutMode("full");
+                  setCashReceivedInput("");
+                }}
+                disabled={isMutationPending}
+              >
+                Gesamtzahlung anzeigen
+              </button>
+              <button
+                type="button"
+                className="kiju-button kiju-button--primary"
+                onClick={handleRecordPartialPayment}
+                disabled={
+                  selectedPaymentLineItems.length === 0 || isMutationPending || !cashPaymentValid
+                }
+              >
+                Auswahl bezahlen ({euro(selectedPaymentTotal)})
+              </button>
+              <button
+                type="button"
+                className="kiju-button kiju-button--danger"
+                onClick={handleRecordInvoiceCancellation}
+                disabled={selectedPaymentLineItems.length === 0 || isMutationPending}
+              >
+                Auswahl stornieren ({euro(selectedPaymentTotal)})
+              </button>
+            </div>
+          )}
 
-        {checkoutOpenTotal === 0 ? (
-          <div className="kiju-checkout-close-actions">
-            <p>Bezahlt oder storniert. Der Tisch ist noch nicht geschlossen.</p>
-            <button
-              type="button"
-              className="kiju-button kiju-button--danger"
-              onClick={requestClosePaidOrder}
-              disabled={isMutationPending}
-            >
-              Tisch schließen
-            </button>
-          </div>
-        ) : null}
+          {checkoutOpenTotal === 0 ? (
+            <div className="kiju-checkout-close-actions">
+              <p>Bezahlt oder storniert. Der Tisch ist noch nicht geschlossen.</p>
+              <button
+                type="button"
+                className="kiju-button kiju-button--danger"
+                onClick={requestClosePaidOrder}
+                disabled={isMutationPending}
+              >
+                Tisch schließen
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   };
@@ -3628,63 +3612,6 @@ export const WaiterWorkspace = () => {
           </div>
         ) : null}
 
-        {isWaiterView && primaryServiceDeliveryNotification && !isOrderWizardOpen ? (
-          <aside className="kiju-service-drink-popup-stack" role="alert" aria-live="polite">
-            <article key={primaryServiceDeliveryNotification.id} className="kiju-service-drink-popup">
-              <button
-                type="button"
-                className="kiju-service-drink-popup__dismiss"
-                aria-label="Quick-Benachrichtigung schließen"
-                onClick={() => handleNotificationDismiss(primaryServiceDeliveryNotification.id)}
-              >
-                <X size={16} />
-              </button>
-              <div className="kiju-service-drink-popup__content">
-                <span className="kiju-service-drink-popup__eyebrow">
-                  {primaryServiceDeliveryNotification.kind === "service-drinks"
-                    ? "Getränke-Service"
-                    : primaryServiceDeliveryNotification.kind === "service-course-ready"
-                      ? "Küchenpass"
-                    : primaryServiceDeliveryNotification.kind === "service-drinks-accepted" ||
-                        primaryServiceDeliveryNotification.kind === "service-course-ready-accepted"
-                      ? "Übernommen"
-                      : "Serviceauftrag"}
-                </span>
-                <strong>{primaryServiceDeliveryNotification.title}</strong>
-                <span>{primaryServiceDeliveryNotification.body}</span>
-              </div>
-              <button
-                type="button"
-                className="kiju-button kiju-button--primary"
-                onClick={() => handleNotificationAction(primaryServiceDeliveryNotification)}
-              >
-                <CheckCircle2 size={18} />
-                {primaryServiceDeliveryNotification.kind === "service-drinks" ||
-                primaryServiceDeliveryNotification.kind === "service-course-ready"
-                  ? "Annehmen"
-                  : "Erledigt"}
-              </button>
-            </article>
-            {additionalServiceDeliveryCount > 0 ? (
-              <details className="kiju-service-drink-popup-more">
-                <summary>+{additionalServiceDeliveryCount} weitere</summary>
-                <div>
-                  {serviceDeliveryNotifications.slice(1).map((notification) => (
-                    <button
-                      key={notification.id}
-                      type="button"
-                      onClick={() => handleNotificationAction(notification)}
-                    >
-                      <strong>{notification.title}</strong>
-                      <span>{notification.body}</span>
-                    </button>
-                  ))}
-                </div>
-              </details>
-            ) : null}
-          </aside>
-        ) : null}
-
         {isWaiterView && currentStep === "table" ? (
           <section className="kiju-service-drink-delivery">
             <div className="kiju-service-drink-delivery__header">
@@ -4079,7 +4006,7 @@ export const WaiterWorkspace = () => {
                             <span className="kiju-eyebrow">Verbuchen</span>
                             <strong>Zahlung und Storno</strong>
                           </div>
-                          <StatusPill label={paymentMethodLabels[paymentMethod]} tone="navy" />
+                          <StatusPill label="Barzahlung" tone="navy" />
                         </div>
                         {renderCheckoutPaymentControls()}
                       </section>

@@ -38,6 +38,24 @@ export class PrintController {
     return this.printQueue.retry(jobId);
   }
 
+  @Post("jobs/clear")
+  async clearJobs(@Body() body: unknown) {
+    const scope =
+      body && typeof body === "object" && (body as { scope?: unknown }).scope === "all"
+        ? "all"
+        : body &&
+            typeof body === "object" &&
+            (body as { scope?: unknown }).scope === "pending-failed"
+          ? "pending-failed"
+          : null;
+
+    if (!scope) {
+      throw new BadRequestException("Ungültiger Bereich für die Druckwarteschlange.");
+    }
+
+    return this.printQueue.clear(scope);
+  }
+
   @Get("config")
   async config() {
     return { ok: true, printer: await this.printQueue.getPrinterConfig() };
@@ -56,6 +74,14 @@ export class PrintController {
     return {
       ok: true,
       printer: await this.printQueue.updatePrinterConfig(input)
+    };
+  }
+
+  @Post("config/reset")
+  async resetConfig() {
+    return {
+      ok: true,
+      printer: await this.printQueue.resetPrinterConfig()
     };
   }
 

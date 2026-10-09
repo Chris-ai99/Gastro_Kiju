@@ -1,5 +1,82 @@
 # Changelog
 
+## 0.14.20-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Bestellungen
+- Zusammenfassung:
+  Das Entfernen eines ungesendeten Gerichts hängt nicht mehr davon ab, ob sein Detailstand auf einem anderen Gerät geändert wurde.
+- Änderungen:
+  Der Löschvorgang verwendet die Artikel-ID und erhält andere Positionen derselben Bestellung; bereits gesendete Gerichte bleiben geschützt.
+
+## 0.14.19-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Admin
+- Zusammenfassung:
+  Der bestätigte Tagesreset leert die aktuellen Bestellungen und Tagesdaten auch dann, wenn ein anderes Gerät sie kurz zuvor geändert hat.
+- Änderungen:
+  Der Reset wendet seinen bestätigten Umfang auf den aktuellen Serverstand an; Produkte, Tische, Benutzer und Einstellungen bleiben erhalten.
+  Die Erfolgsbestätigung nennt keine möglicherweise veraltete lokale Bestellanzahl.
+
+## 0.14.18-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Bestellungen
+- Zusammenfassung:
+  Einzelne Löschungen ändern gezielt den betroffenen Artikel, auch wenn er der letzte in der Bestellung ist.
+- Änderungen:
+  Artikeländerungen werden auch bei einer leeren Artikelliste über Artikel-IDs abgeglichen; unabhängige parallele Änderungen führen dadurch nicht mehr zum Abbruch der Löschung.
+
+## 0.14.17-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Mobilansicht
+- Zusammenfassung:
+  Die Artikelliste im Kellner-Wizard wächst wieder mit allen Bestellpositionen und lässt sich vollständig durchscrollen.
+- Änderungen:
+  Die mobile Bestellübersicht richtet ihre Artikelliste am Inhalt aus, damit Einträge nicht mehr am unteren Rand abgeschnitten werden.
+
+## 0.14.16-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Service
+- Zusammenfassung:
+  Fertige Speisen und weitere offene Serviceaufträge erscheinen in der Serviceübersicht nur noch einmal.
+- Änderungen:
+  Die schwebende Wiederholung entfällt; offene Aufträge bleiben in der Auslieferungsliste mit ihrer Annehmen- oder Erledigt-Aktion verfügbar.
+
+## 0.14.15-beta
+- Datum: 2026-10-08
+- Uhrzeit: laufend
+- Typ: Fehlerbehebung / Abrechnung
+- Zusammenfassung:
+  Zahlungsfeld, Buchungsaktionen und Bonübersicht bleiben auch bei langen Bestellungen getrennt und erreichbar.
+- Änderungen:
+  Die Zahlungs- und Bonbereiche behalten ihre natürliche Höhe und überdecken sich auf Handy und Desktop nicht mehr.
+  Der automatisch vorgeschlagene Gegeben-Betrag nutzt das deutsche Kommaformat.
+
+## 0.14.14-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Admin und Datenverwaltung
+- Zusammenfassung:
+  Die Admin-Resets sind jetzt eindeutig getrennt und vor jeder destruktiven Aktion zweistufig abgesichert.
+- Änderungen:
+  Die Druckwarteschlange kann gezielt um wartende und fehlgeschlagene Druckjobs geleert werden; laufende und bereits gedruckte Jobs bleiben erhalten.
+  Der Tagesreset löscht Bestellungen, Zahlungen, Stornos, Bons und Hinweise, gibt die Tische frei und behält Stammdaten sowie Benutzer.
+  „Alles löschen“ entfernt Betriebs- und Stammdaten, leert die komplette Druckhistorie und behält ausschließlich einen aktiven Admin-Zugang.
+  Jede der drei Löschaktionen verlangt eine verständliche Bestätigung im ersten und zweiten Schritt.
+
+## 0.14.13-beta
+- Datum: 2026-10-07
+- Uhrzeit: laufend
+- Typ: Verbesserung / Abrechnung
+- Zusammenfassung:
+  Die Zahlungsansicht ist übersichtlicher und hält die Zahlungsaktionen am unteren Ende des Abrechnungsbereichs.
+- Änderungen:
+  Die Auswahl mehrerer Zahlungsarten wurde entfernt; die Abrechnung verwendet weiterhin fest die Barzahlung und zeigt nur noch den Gegeben-Betrag sowie das Rückgeld.
+
 ## 0.14.13-beta
 - Datum: 2026-10-07
 - Uhrzeit: laufend

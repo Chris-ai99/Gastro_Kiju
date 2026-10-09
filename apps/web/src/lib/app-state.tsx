@@ -68,6 +68,7 @@ import {
   resetKitchenItemsForReopen,
   type OrderSendTarget
 } from "./order-overview";
+import { clearPrintJobs, resetPrinterConfig } from "./print-client";
 import {
   clearPendingTransactions,
   createPendingTransaction,
@@ -283,13 +284,21 @@ type DemoActions = {
   setDesignMode: (mode: DesignMode) => void;
   setSeatVisible: (tableId: string, seatId: string, visible: boolean) => void;
   toggleTableActive: (tableId: string) => void;
-  resetDailyState: () => { ok: boolean; closedSessions: number; message?: string };
+  resetDailyState: () => {
+    ok: boolean;
+    message?: string;
+    confirmation?: Promise<CommitResult>;
+  };
   undoDailyStateReset: () => { ok: boolean; message?: string };
   addServiceUserToTable: (tableId: string, userId: string) => { ok: boolean; message?: string };
   handoverServiceTasks: (targetUserId: string) => { ok: boolean; message?: string };
   releaseServiceTasks: () => { ok: boolean; message?: string };
   undoLastServiceHandover: () => { ok: boolean; message?: string };
-  resetDemoState: () => void;
+  resetAllState: () => Promise<{
+    ok: boolean;
+    message?: string;
+    clearedPrintJobs?: number;
+  }>;
   removeTableAndServices: (tableId: string) => { ok: boolean; message?: string };
   markNotificationRead: (
     notificationId: string,
@@ -930,9 +939,6 @@ const setSessionServiceUserIds = (session: OrderSession, userIds: string[]) => {
   const nextUserIds = [...new Set(userIds.filter(Boolean))];
   session.serviceUserIds = nextUserIds;
 };
-
-const employeeRoles: Role[] = ["waiter", "kitchen", "bar"];
-const isEmployeeAccount = (user: UserAccount) => employeeRoles.includes(user.role);
 
 const serviceNotificationKinds: AppNotification["kind"][] = [
   "service-drinks",
@@ -4170,79 +4176,12 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
   const resetDailyState = useCallback(() => {
     const next = structuredClone(state);
     const resetAt = new Date().toISOString();
-    const sessionsToClose = next.sessions.filter((session) => session.status !== "closed");
 
     dailyResetUndoRef.current = structuredClone(state);
 
-    sessionsToClose.forEach((session) => {
-      session.status = "closed";
-      session.receipt.closedAt = resetAt;
-      session.courseTickets = Object.fromEntries(
-        Object.entries(session.courseTickets).map(([course, ticket]) => [
-          course,
-          {
-            ...ticket,
-            status:
-              ticket.status === "not-recorded" || ticket.status === "skipped"
-                ? ticket.status
-                : "completed",
-            completedAt:
-              ticket.status === "not-recorded" || ticket.status === "skipped"
-                ? ticket.completedAt
-                : ticket.completedAt ?? resetAt
-          }
-        ])
-      ) as OrderSession["courseTickets"];
-      session.kitchenTicketBatches.forEach((batch) => {
-        if (batch.status !== "completed") {
-          batch.status = "completed";
-          batch.completedAt = batch.completedAt ?? resetAt;
-        }
-      });
-      session.barTicketBatches.forEach((batch) => {
-        if (batch.status !== "completed") {
-          batch.status = "completed";
-          batch.completedAt = batch.completedAt ?? resetAt;
-        }
-      });
-    });
-
-    const removedEmployeeIds = new Set(next.users.filter(isEmployeeAccount).map((user) => user.id));
-    next.users = next.users.filter((user) => !removedEmployeeIds.has(user.id));
-    next.deletedUserIds = [
-      ...new Set([...(next.deletedUserIds ?? []), ...removedEmployeeIds])
-    ];
-
-    next.sessions.forEach((session) => {
-      const remainingServiceUserIds = getSessionServiceUserIds(session).filter(
-        (userId) => !removedEmployeeIds.has(userId)
-      );
-      setSessionServiceUserIds(session, remainingServiceUserIds);
-    });
-
-    next.notifications.forEach((notification) => {
-      if (!isServiceNotification(notification)) return;
-
-      if (notification.acceptedByUserId && removedEmployeeIds.has(notification.acceptedByUserId)) {
-        if (notification.kind === "service-drinks-accepted") {
-          notification.kind = "service-drinks";
-        }
-        if (notification.kind === "service-course-ready-accepted") {
-          notification.kind = "service-course-ready";
-        }
-        notification.acceptedByUserId = undefined;
-        notification.acceptedByName = undefined;
-        notification.sourceNotificationId = undefined;
-      }
-
-      if (notification.targetUserIds?.length) {
-        const remainingTargetUserIds = notification.targetUserIds.filter(
-          (userId) => !removedEmployeeIds.has(userId)
-        );
-        notification.targetUserIds =
-          remainingTargetUserIds.length > 0 ? remainingTargetUserIds : undefined;
-      }
-    });
+    next.sessions = [];
+    next.linkedTableGroups = [];
+    next.notifications = [];
 
     next.dailyStats = {
       date: resetAt.slice(0, 10),
@@ -4253,14 +4192,11 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     };
 
     clearServiceHandoverUndo();
-    const nextUserId = next.users.some((user) => user.id === currentUserId)
-      ? currentUserId
-      : next.users.find((user) => user.role === "admin" && user.active)?.id ?? null;
-    void commit(next, nextUserId, "daily.reset");
+    const confirmation = commit(next, currentUserId, "daily.reset");
 
     return {
       ok: true,
-      closedSessions: sessionsToClose.length
+      confirmation
     };
   }, [clearServiceHandoverUndo, commit, currentUserId, state]);
 
@@ -4472,12 +4408,99 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
     return { ok: true, message: "Die letzte Schichtübergabe wurde rückgängig gemacht." };
   }, [commit]);
 
-  const resetDemoState = useCallback(() => {
-    const next = createDefaultOperationalState();
-    const nextUserId = next.users.some((user) => user.id === currentUserId) ? currentUserId : null;
+  const resetAllState = useCallback(async () => {
+    const seedState = createDefaultOperationalState();
+    const preservedAdmin =
+      state.users.find(
+        (user) => user.id === currentUserId && user.role === "admin" && user.active
+      ) ??
+      state.users.find((user) => user.role === "admin" && user.active) ??
+      seedState.users.find((user) => user.role === "admin" && user.active);
+
+    if (!preservedAdmin) {
+      return {
+        ok: false,
+        message: "Es konnte kein aktiver Admin-Zugang für den Reset erhalten werden."
+      };
+    }
+
+    const deletedTableIds = [
+      ...new Set([
+        ...(state.deletedTableIds ?? []),
+        ...state.tables.map((table) => table.id),
+        ...seedState.tables.map((table) => table.id)
+      ])
+    ];
+    const deletedProductIds = [
+      ...new Set([
+        ...(state.deletedProductIds ?? []),
+        ...state.products.map((product) => product.id),
+        ...seedState.products.map((product) => product.id)
+      ])
+    ];
+    const deletedUserIds = [
+      ...new Set([
+        ...(state.deletedUserIds ?? []),
+        ...state.users.map((user) => user.id),
+        ...seedState.users.map((user) => user.id)
+      ])
+    ].filter((userId) => userId !== preservedAdmin.id);
+    const next: AppState = {
+      ...structuredClone(state),
+      serviceOrderMode: "table",
+      designMode: "modern",
+      selfOrderLocations: [],
+      linkedTableGroups: [],
+      deletedTableIds,
+      deletedUserIds,
+      deletedProductIds,
+      extraIngredients: [],
+      users: [structuredClone(preservedAdmin)],
+      tables: [],
+      products: [],
+      sessions: [],
+      notifications: [],
+      dailyStats: {
+        date: new Date().toISOString().slice(0, 10),
+        revenueCents: 0,
+        servedTables: 0,
+        servedGuests: 0,
+        closedOrderIds: []
+      }
+    };
+
     clearServiceHandoverUndo();
-    void commit(next, nextUserId, "state.reset");
-  }, [clearServiceHandoverUndo, commit, currentUserId]);
+    const stateResult = await commit(next, preservedAdmin.id, "state.reset");
+    if (!stateResult.ok) {
+      return {
+        ok: false,
+        message: stateResult.message
+      };
+    }
+
+    const [printResult, printerResult] = await Promise.all([
+      clearPrintJobs("all"),
+      resetPrinterConfig()
+    ]);
+    if (!printResult.ok || !printerResult.ok) {
+      return {
+        ok: false,
+        message:
+          `Betriebsdaten wurden gelöscht, aber ${
+            !printResult.ok && !printerResult.ok
+              ? "Druckwarteschlange und Druckerkonfiguration"
+              : !printResult.ok
+                ? "die Druckwarteschlange"
+                : "die Druckerkonfiguration"
+          } konnten nicht vollständig zurückgesetzt werden.`
+      };
+    }
+
+    return {
+      ok: true,
+      clearedPrintJobs: printResult.deletedCount ?? 0
+    };
+  }, [clearServiceHandoverUndo, commit, currentUserId, state]);
 
   const removeTableAndServices = useCallback(
     (tableId: string) => {
@@ -4738,7 +4761,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
         handoverServiceTasks,
         releaseServiceTasks,
         undoLastServiceHandover,
-        resetDemoState,
+        resetAllState,
         removeTableAndServices,
         markNotificationRead,
         markNotificationsRead,
@@ -4788,7 +4811,7 @@ export const DemoAppProvider = ({ children }: PropsWithChildren) => {
       releaseServiceTasks,
       reconnectServer,
       rotateSelfOrderLocationKey,
-      resetDemoState,
+      resetAllState,
       removeTableAndServices,
       sendCourseToKitchen,
       sendAllPendingItems,

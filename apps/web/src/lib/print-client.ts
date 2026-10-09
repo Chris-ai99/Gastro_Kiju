@@ -147,6 +147,37 @@ export const requestPrinterTestPrint = async (): Promise<PrintJobResponse> =>
     }
   })();
 
+export const resetPrinterConfig = async (): Promise<{
+  ok: boolean;
+  printer?: NetworkPrinterConfig;
+  message?: string;
+}> => {
+  try {
+    const response = await fetch(resolvePrintApiPath("/config/reset"), {
+      method: "POST"
+    });
+    const payload = await parseJson<{
+      ok: boolean;
+      printer?: NetworkPrinterConfig;
+      message?: string;
+    }>(response);
+
+    if (!response.ok || !payload) {
+      return {
+        ok: false,
+        message: payload?.message ?? "Druckerkonfiguration konnte nicht zurückgesetzt werden."
+      };
+    }
+
+    return payload;
+  } catch {
+    return {
+      ok: false,
+      message: "Druckerkonfiguration konnte nicht zurückgesetzt werden."
+    };
+  }
+};
+
 export const retryPrintJob = async (
   jobId: string
 ): Promise<{ ok: boolean; job?: PersistedPrintJob; message?: string }> => {
@@ -172,6 +203,39 @@ export const retryPrintJob = async (
     return {
       ok: false,
       message: "Druckjob konnte nicht erneut gesendet werden."
+    };
+  }
+};
+
+export const clearPrintJobs = async (
+  scope: "pending-failed" | "all"
+): Promise<{ ok: boolean; deletedCount?: number; message?: string }> => {
+  try {
+    const response = await fetch(resolvePrintApiPath("/jobs/clear"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ scope })
+    });
+    const payload = await parseJson<{
+      ok: boolean;
+      deletedCount?: number;
+      message?: string;
+    }>(response);
+
+    if (!response.ok || !payload) {
+      return {
+        ok: false,
+        message: payload?.message ?? "Druckwarteschlange konnte nicht geleert werden."
+      };
+    }
+
+    return payload;
+  } catch {
+    return {
+      ok: false,
+      message: "Druckwarteschlange konnte nicht geleert werden."
     };
   }
 };
