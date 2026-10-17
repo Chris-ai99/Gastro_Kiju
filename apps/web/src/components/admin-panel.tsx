@@ -81,6 +81,19 @@ type AdminChangelogEntry = {
 
 const adminChangelogEntries: AdminChangelogEntry[] = [
   {
+    version: "0.14.26-beta",
+    date: "2026-10-17",
+    time: "laufend",
+    type: "Fehlerbehebung / Abholung",
+    title: "Name der abholenden Person auf dem Abholbon",
+    summary:
+      "Das Abholbon ergänzt den Namen aus den gespeicherten Abholdaten, wenn ein Druckauftrag ihn nicht mitliefert.",
+    categories: ["Service", "Abholung", "Abholbon", "Druck", "Fehlerbehebung"],
+    changes: [
+      "Der Druckserver übernimmt den Namen der abholenden Person bei Bedarf vom gespeicherten Abholtisch und druckt ihn auf dem Abholbon."
+    ]
+  },
+  {
     version: "0.14.25-beta",
     date: "2026-10-09",
     time: "laufend",

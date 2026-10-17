@@ -17,6 +17,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { LiveEventsService } from "../events/live-events.service";
 import { PrintQueueService } from "../print/print-queue.service";
+import { withPickupTicketCustomerName } from "../print/pickup-ticket-request";
 
 const OPERATIONAL_STATE_ID = "operational-state";
 const checkpointKinds = new Set(["daily.reset", "staff.handover"]);
@@ -131,7 +132,11 @@ export class TransactionsService {
           }
 
           for (const [index, printJob] of (request.printJobs ?? []).entries()) {
-            const requestHash = hashPayload(printJob.request);
+            const printRequest = withPickupTicketCustomerName(
+              printJob.request,
+              nextState.tables
+            );
+            const requestHash = hashPayload(printRequest);
             const id = printJob.transactionId || `${request.transactionId}-print-${index + 1}`;
             const persisted = await database.printJob.upsert({
               where: {
@@ -144,7 +149,7 @@ export class TransactionsService {
                 id,
                 transactionId: request.transactionId,
                 requestHash,
-                request: asJson(printJob.request)
+                request: asJson(printRequest)
               },
               update: {}
             });

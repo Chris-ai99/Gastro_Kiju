@@ -297,6 +297,9 @@ const createPickupTicketJob = (request: Extract<CreatePrintJobRequest, { type: "
       tableLabel,
       pickupNumber,
       bedienung: request.bedienung,
+      customerName: request.customerName,
+      guestCount: request.guestCount,
+      locationName: request.locationName,
       createdAt: request.createdAt
     });
 

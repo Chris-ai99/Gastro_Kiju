@@ -20,6 +20,7 @@ import {
 } from "@kiju/print-bridge";
 import { sendEscPosDocumentToNetworkPrinter } from "@kiju/print-bridge/server";
 import type {
+  AppState,
   CourseKey,
   NetworkPrinterConfig,
   PersistedPrintJob,
@@ -27,9 +28,11 @@ import type {
 } from "@kiju/domain";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { withPickupTicketCustomerName } from "./pickup-ticket-request";
 import type { PrintJobRequest } from "./print.types";
 
 const PRINTER_CONFIG_ID = "network-printer";
+const OPERATIONAL_STATE_ID = "operational-state";
 const DEFAULT_PRINTER_CONFIG: NetworkPrinterConfig = {
   enabled: false,
   host: "",
@@ -227,13 +230,25 @@ export class PrintQueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueue(request: PrintJobRequest) {
+    let normalizedRequest = request;
+    if (request.type === "pickup-ticket" && !request.customerName?.trim()) {
+      const operationalState = await this.prisma.operationalState.findUnique({
+        where: { id: OPERATIONAL_STATE_ID }
+      });
+      const state = operationalState?.state as unknown as AppState | undefined;
+      normalizedRequest = withPickupTicketCustomerName(
+        request,
+        state?.tables
+      ) as PrintJobRequest;
+    }
+
     const id = `print-job-${randomUUID()}`;
     const job = await this.prisma.printJob.create({
       data: {
         id,
         transactionId: `print-direct-${id}`,
-        requestHash: hashRequest(request),
-        request: asJson(request)
+        requestHash: hashRequest(normalizedRequest),
+        request: asJson(normalizedRequest)
       }
     });
     const printer = await this.getPrinterConfig();
